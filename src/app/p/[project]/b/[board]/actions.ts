@@ -215,6 +215,9 @@ export async function updateCard(
   for (const [k, v] of Object.entries(patch))
     if (v !== undefined) clean[k] = v === "" ? null : v;
   if (!Object.keys(clean).length) return { ok: true };
+  // Hand ownership of the summary to the app: the next import must not replace
+  // these words with the frontmatter's. The exporter writes it back out.
+  if ("summary" in clean) clean.summary_edited_at = new Date().toISOString();
   const { error } = await c.db.from("cards").update(clean).eq("id", cardId);
   if (error) return { ok: false, error: error.message };
   await c.db.from("card_events").insert({

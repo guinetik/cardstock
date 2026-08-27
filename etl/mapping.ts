@@ -136,3 +136,26 @@ export function resolveTags(
   }
   return { ids, unresolved };
 }
+
+/**
+ * What an import should write to `summary`, or `undefined` to leave it alone.
+ *
+ * The summary is seeded from markdown but editable on the card page, so once a
+ * person has typed one the database owns it — an import must not quietly
+ * replace their words with the frontmatter's.
+ *
+ * The export deliberately does not write it back: `summary` sits near the top
+ * of the tracker's frontmatter, and the exporter re-appends everything it owns
+ * as a block at the end, so exporting it would reorder all 99 files. An edited
+ * summary therefore lives only in the app, and the file's `summary:` becomes a
+ * historical note for that card.
+ */
+export function summaryOnImport(
+  prev: { summary: string | null; summary_edited_at: string | null },
+  fmSummary: string | null | undefined,
+  askSummary: string | null,
+): string | null | undefined {
+  if (prev.summary_edited_at) return undefined;
+  if (fmSummary) return fmSummary;
+  return prev.summary ? undefined : askSummary;
+}

@@ -6,6 +6,7 @@ import {
   mapAudience,
   mapTags,
   resolveTags,
+  summaryOnImport,
   valueToPriority,
 } from "./mapping";
 import { bodyWithoutH1, dequote, extractAsk, parseFile } from "./parse";
@@ -232,5 +233,35 @@ describe("resolveTags", () => {
 
   test("is empty-safe", () => {
     expect(resolveTags([], byRef)).toEqual({ ids: [], unresolved: [] });
+  });
+});
+
+describe("summaryOnImport", () => {
+  const edited = {
+    summary: "typed in the app",
+    summary_edited_at: "2026-08-27T00:00:00Z",
+  };
+  const untouched = {
+    summary: "seeded from markdown",
+    summary_edited_at: null,
+  };
+  const blank = { summary: null, summary_edited_at: null };
+
+  test("never overwrites a summary edited in the app", () => {
+    expect(
+      summaryOnImport(edited, "from frontmatter", "from ask"),
+    ).toBeUndefined();
+    expect(summaryOnImport(edited, null, "from ask")).toBeUndefined();
+  });
+
+  test("frontmatter wins while the app has not touched it", () => {
+    expect(summaryOnImport(untouched, "from frontmatter", "from ask")).toBe(
+      "from frontmatter",
+    );
+  });
+
+  test("falls back to the Ask paragraph only when there is no summary yet", () => {
+    expect(summaryOnImport(blank, null, "from ask")).toBe("from ask");
+    expect(summaryOnImport(untouched, null, "from ask")).toBeUndefined();
   });
 });

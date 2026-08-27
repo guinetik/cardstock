@@ -4,7 +4,7 @@
  *   bun run etl:import --project <slug> --board <slug> --source <dir> [--dry-run]
  *
  * Markdown owns: title, status, body, epic, area, raised_by/raised/shipped, needs, relates, tags, extra keys.
- * DB owns: lane, rank, priority, effort, target, audience (after first import), summary (once edited), archive.
+ * DB owns: lane, rank, priority, effort, target, audience (after first import), summary (once edited in the app), archive.
  * Exceptions: new cards take their lane from status/needs; built/closed statuses re-pin every import;
  * effort/value seed the DB fields only while those are null. Unchanged files are skipped by hash.
  */
@@ -18,6 +18,7 @@ import {
   mapAudience,
   mapTags,
   resolveTags,
+  summaryOnImport,
   valueToPriority,
 } from "./mapping";
 import { bodyWithoutH1, extractAsk, parseFile } from "./parse";
@@ -48,7 +49,7 @@ if (!files.length) throw new Error(`no <id>.md files in ${source}`);
 const { data: existingRows } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, rank, priority, effort, source_hash, summary, audience",
+    "id, external_id, lane_id, rank, priority, effort, source_hash, summary, summary_edited_at, audience",
   )
   .eq("board_id", ctx.board.id);
 const existing = new Map((existingRows ?? []).map((c) => [c.external_id, c]));
@@ -157,8 +158,12 @@ for (const file of files) {
     if (prev.priority == null && fm.value)
       row.priority = valueToPriority(fm.value);
     if (prev.effort == null && fm.effort) row.effort = fm.effort;
-    if (fm.summary) row.summary = fm.summary;
-    else if (!prev.summary) row.summary = extractAsk(parsed.body) || null;
+    const nextSummary = summaryOnImport(
+      prev,
+      fm.summary,
+      extractAsk(parsed.body) || null,
+    );
+    if (nextSummary !== undefined) row.summary = nextSummary;
   }
 
   if (dryRun) {
