@@ -1,26 +1,26 @@
 # Card detail chrome
 
-The card page is one `.glass-card--static`. Do not nest a `.glass-panel` inside it — that is a box in a box and is what made the top feel off.
+The card page is one `.paper-card--static`. Do not nest a `.paper-lane` inside it — that is a box in a box and is what made the top feel off.
 
 ## Fields
 
 Summary, ratings, dates, and audience sit in a labeled grid (`sm: 2 cols`, `lg: 3`). Labels are 10px uppercase grey. Controls use `--surface-input` and `--color-ink` so native selects stay readable in both themes.
 
-Epic / Area / Raised / Related is a hairline-divided definition list, not a third nested card.
+Epic / Area / Raised / Related is a hairline-ruled definition list with micro-caps labels, not a third nested card.
 
 ## Tags
 
-`.chip-status` is for status pills (uppercase, 10px). Tag names are sentence case and often long, so they use `.chip-tag` instead.
+`.stat` is for status — six pixels of pen colour and a word in mono caps, written in the margin. Tag names are sentence case and often long, so they are highlighter marks (`.mark`) instead.
 
-Resting state shows **only assigned tags**, one row per group that has any. Empty groups (e.g. Step on a card with no step) are omitted. **Edit tags** expands the full catalog; **Done** collapses it again. Clicking an assigned chip still removes it without entering edit.
+Resting state shows **only assigned tags**, one row per group that has any. Empty groups (e.g. Step on a card with no step) are omitted. **Edit tags** expands the full catalog; **Done** collapses it again. Clicking a marked tag still un-marks it without entering edit.
 
-| State | Surface | Ink |
-|---|---|---|
-| Off | `--fill-badge` / `--border-hairline` | `--color-ink2` |
-| On | `--fill-chip-info` / `--color-brand` border | `--color-ink-strong` |
+| State | Treatment |
+|---|---|
+| Marked | `.mark mark--{n}` — the group's highlighter, `n` from `markHue(groupIndex)` |
+| Unmarked | `.mark mark--off` — the same word under a pencil rule |
 
-Do not dump every tag in every group onto the card page. Do not use `text-primary` / `bg-primary/10` for selected tags.
+Hue belongs to the group, not the tag, so a tag is the same colour in the filter bar, on the board card, and here. Do not dump every tag in every group onto the card page. Do not use `text-primary` / `bg-primary/10` for selected tags.
 
 ## Links
 
-Related card ids (`#118`) and other in-page jumps use `.glass-link` (`color: var(--color-brand)`). Markdown links get the same brand via `--tw-prose-links` (see `docs/glass-typography.md`).
+Related card ids (`#118`) and other in-page jumps use `.paper-link` (`color: var(--pen-blue)`). Markdown links get the same pen via `--tw-prose-links` (see `docs/markdown-typography.md`).

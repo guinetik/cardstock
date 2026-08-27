@@ -1,78 +1,53 @@
 /*
- * Per-theme token contract. glass.css and glass-dark.css must declare
- * every name below. Brand tokens live in globals.css @theme, not here.
+ * Per-theme token contract. paper.css and paper-night.css must declare
+ * every name below — no more, no less. Brand-free by design: colour arrives
+ * as *pen* (a decision the app recorded) or *mark* (a highlighter swipe the
+ * reader made). Fonts live in globals.css, not here.
  *
- * --color-bg
- * --color-card
- * --color-fill
- * --color-sep
  * --color-ink
  * --color-ink2
- * --color-grey
- * --color-grey3
  * --color-ink-strong
- * --color-grey-soft
+ * --color-grey
  * --color-grey-faint
- * --color-grey-faintest
- * --color-grey-badge
  * --color-scrollbar
  * --surface-page
+ * --surface-panel
  * --surface-card
- * --surface-card-sunken
+ * --surface-well
  * --surface-input
  * --surface-raised
  * --surface-topbar
- * --surface-panel
- * --surface-warn
- * --surface-info
- * --surface-danger
- * --surface-success
- * --surface-attention
  * --border-hairline
  * --border-strong
  * --border-input
- * --border-panel
  * --border-divider
- * --border-focus-soft
- * --border-warn
- * --border-danger-soft
- * --border-success-soft
- * --border-attention-soft
+ * --pen-red
+ * --pen-amber
+ * --pen-green
+ * --pen-blue
+ * --pen-violet
+ * --pen-ink
+ * --mark-1
+ * --mark-2
+ * --mark-3
+ * --mark-4
+ * --mark-5
+ * --mark-blend
  * --fill-subtle
- * --fill-badge
  * --fill-subtle-strong
- * --fill-track
- * --fill-chip-info
  * --shadow-card
- * --shadow-card-sm
- * --shadow-modal
- * --shadow-inset-hi
- * --shadow-panel
- * --shadow-check
+ * --shadow-lift
+ * --shadow-well
  * --scrim
- * --radius-input
- * --radius-btn
  * --radius-card
- * --radius-opt
- * --radius-banner
- * --radius-modal
- * --blur-card
- * --blur-card-saturate
- * --blur-topbar
- * --field-a
- * --field-b
- * --field-c
+ * --radius-btn
+ * --radius-input
  * --display-weight
  * --display-tracking
- * --motion-duration-press
  * --motion-duration-hover
  * --motion-duration-ui
- * --motion-duration-stage
- * --motion-duration-reveal
  * --motion-ease-out
- * --motion-ease-in-out
- * --motion-ease-springy
- * --motion-distance-sm
- * --motion-scale-press
- * --motion-lift-hover
+ * --motion-press-y
+ * --motion-rise
+ * --motion-swell
  */

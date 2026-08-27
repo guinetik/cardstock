@@ -77,38 +77,34 @@ export default async function CardPage(
   const backHref = `/p/${project}/b/${board}`;
 
   return (
-    <main className="glass-card glass-card--static mx-auto w-full max-w-4xl p-6">
+    <main className="paper-card paper-card--static mx-auto w-full max-w-4xl p-6">
       <Link
         href={backHref}
         className="text-xs text-muted-foreground hover:underline"
       >
         ← {b.name}
       </Link>
-      <h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight">
+      <h1 className="mt-1 text-[27px] leading-tight">
         #{card.external_id} {card.title}
       </h1>
       <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span className="chip-status chip-status--muted">{card.status}</span>
-        {lane && (
-          <span className="chip-status chip-status--info">{lane.name}</span>
-        )}
+        <span className="stat stat--muted">{card.status}</span>
+        {lane && <span className="stat stat--info">{lane.name}</span>}
         {card.needs && (
-          <span className="chip-status chip-status--attention">
-            needs {card.needs}
-          </span>
+          <span className="stat stat--attention">needs {card.needs}</span>
         )}
         {card.priority && (
-          <span className="chip-status chip-status--muted">
+          <span className="stat stat--muted">
             {PRIORITY_LABEL[card.priority as 1 | 2 | 3]}
           </span>
         )}
         {card.effort && (
-          <span className="chip-status chip-status--muted">
+          <span className="stat stat--muted">
             Difficulty {EFFORT_LABEL[card.effort as "L" | "M" | "H"]}
           </span>
         )}
         {card.archived_at && (
-          <span className="chip-status chip-status--muted">
+          <span className="stat stat--muted">
             archived by {card.archived_by}
           </span>
         )}
@@ -141,14 +137,14 @@ export default async function CardPage(
         }
       />
 
-      <dl className="mt-6 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 border-t border-[var(--border-divider)] pt-5 text-sm">
-        <dt className="font-semibold">Epic</dt>
+      <dl className="mt-6 grid grid-cols-[6.5rem_1fr] gap-x-4 border-t border-[var(--border-hairline)] pt-5 text-sm [&>dd]:border-b [&>dd]:border-[var(--border-hairline)] [&>dd]:py-2 [&>dt]:border-b [&>dt]:border-[var(--border-hairline)] [&>dt]:py-2 [&>dt]:text-[10px] [&>dt]:font-semibold [&>dt]:uppercase [&>dt]:tracking-[0.11em] [&>dt]:text-[var(--color-grey-faint)]">
+        <dt>Epic</dt>
         <dd>{card.epic}</dd>
-        <dt className="font-semibold">Area</dt>
+        <dt>Area</dt>
         <dd>{card.area}</dd>
         {card.raised_by && (
           <>
-            <dt className="font-semibold">Raised</dt>
+            <dt>Raised</dt>
             <dd>
               {card.raised_by}
               {card.raised_on ? ` · ${card.raised_on}` : ""}
@@ -157,14 +153,14 @@ export default async function CardPage(
         )}
         {card.shipped_on && (
           <>
-            <dt className="font-semibold">Shipped</dt>
+            <dt>Shipped</dt>
             <dd>{card.shipped_on}</dd>
           </>
         )}
         {!!links?.length && (
           <>
-            <dt className="font-semibold">Related</dt>
-            <dd className="flex flex-wrap gap-2">
+            <dt>Related</dt>
+            <dd className="flex flex-wrap items-baseline gap-3">
               {links.map((l) => {
                 const t = l.cards as unknown as {
                   external_id: string;
@@ -174,7 +170,7 @@ export default async function CardPage(
                   <Link
                     key={`${l.kind}-${l.to_card}`}
                     href={`/p/${project}/b/${board}/c/${t.external_id}`}
-                    className="glass-link"
+                    className="paper-link"
                     title={t.title}
                   >
                     #{t.external_id}
@@ -187,7 +183,7 @@ export default async function CardPage(
         )}
         {Object.keys(card.frontmatter_extra ?? {}).length > 0 && (
           <>
-            <dt className="font-semibold">Extra</dt>
+            <dt>Extra</dt>
             <dd className="font-mono text-xs">
               {JSON.stringify(card.frontmatter_extra)}
             </dd>

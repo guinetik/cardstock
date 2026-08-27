@@ -12,10 +12,16 @@ async function signIn(page: import("@playwright/test").Page) {
 test("the account menu lives in the topbar and signs out", async ({ page }) => {
   await signIn(page);
   await page.goto("/p/demo/b/backlog");
+  await expect(page.locator("[data-lane]").first()).toBeVisible();
   // Sign out is reachable from the board *and* the projects page now.
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Account menu" }).click();
-  await expect(page.getByText(MEMBER)).toBeVisible();
+  // The trigger is server-rendered, so it is clickable a beat before React
+  // hydrates it and that first click is dropped. Retry the open, the way a
+  // person would, rather than racing hydration.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await expect(page.getByText(MEMBER)).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.waitForURL(/\/login/);
 });

@@ -1,6 +1,6 @@
 export const THEME_STORAGE_KEY = "theme";
 
-export type ThemeName = "glass" | "glass-dark";
+export type ThemeName = "paper" | "paper-night";
 
 export type ThemeRoot = {
   dataset: { theme?: string };
@@ -16,9 +16,9 @@ export function resolveTheme(
   stored: string | null,
   prefersDark: boolean,
 ): ThemeName {
-  if (stored === "light") return "glass";
-  if (stored === "dark") return "glass-dark";
-  return prefersDark ? "glass-dark" : "glass";
+  if (stored === "light") return "paper";
+  if (stored === "dark") return "paper-night";
+  return prefersDark ? "paper-night" : "paper";
 }
 
 /**
@@ -32,7 +32,7 @@ export function shouldFollowSystem(stored: string | null): boolean {
  * Write `data-theme` and `color-scheme` onto the document root (or a test double).
  */
 export function applyTheme(theme: ThemeName, root: ThemeRoot): void {
-  const scheme = theme === "glass-dark" ? "dark" : "light";
+  const scheme = theme === "paper-night" ? "dark" : "light";
   root.dataset.theme = theme;
   root.style.colorScheme = scheme;
   root.setAttribute("data-theme", theme);
@@ -49,9 +49,9 @@ export const THEME_BOOTSTRAP_SCRIPT = `(function(){
     try { stored = localStorage.getItem("theme"); } catch (e) {}
     var prefersDark = false;
     try { prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) {}
-    var theme = stored === "light" ? "glass" : stored === "dark" ? "glass-dark" : prefersDark ? "glass-dark" : "glass";
+    var theme = stored === "light" ? "paper" : stored === "dark" ? "paper-night" : prefersDark ? "paper-night" : "paper";
     var root = document.documentElement;
-    var scheme = theme === "glass-dark" ? "dark" : "light";
+    var scheme = theme === "paper-night" ? "dark" : "light";
     root.setAttribute("data-theme", theme);
     root.style.colorScheme = scheme;
     root.setAttribute("color-scheme", scheme);

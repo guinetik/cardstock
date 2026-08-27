@@ -14,12 +14,12 @@ export default async function Home() {
   return (
     <main className="mx-auto w-full max-w-4xl p-6">
       <header className="mb-8 flex items-baseline justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
+        <h1 className="text-[27px] leading-tight">Projects</h1>
         {member.role === "owner" && <ImportProjectDialog />}
       </header>
       <ul className="grid gap-4 sm:grid-cols-2">
         {(projects ?? []).map((p) => (
-          <li key={p.id} className="glass-card p-5">
+          <li key={p.id} className="paper-card p-5">
             <Link
               href={`/p/${p.slug}`}
               className="text-lg font-semibold hover:underline"
@@ -36,7 +36,7 @@ export default async function Home() {
                 <li key={b.slug}>
                   <Link
                     href={`/p/${p.slug}/b/${b.slug}`}
-                    className="text-sm text-primary hover:underline"
+                    className="paper-link text-sm"
                   >
                     {b.name} →
                   </Link>

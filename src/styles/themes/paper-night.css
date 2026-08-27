@@ -1,0 +1,64 @@
+/*
+ * Paper — night. The same desk under a lamp, not an inverted one: warm
+ * graphite rather than blue-black, ink becoming unbleached paper. The
+ * highlighter drops its multiply blend, because a marker over a dark page
+ * reads as a wash of the same hue rather than a darkening of it.
+ */
+:root[data-theme="paper-night"] {
+  --color-ink: #ece6d8;
+  --color-ink2: #c9c2b3;
+  --color-ink-strong: #f7f2e7;
+  --color-grey: #948d7e;
+  --color-grey-faint: #6b6558;
+  --color-scrollbar: rgb(148 141 126 / 0.4);
+
+  --surface-page: #191713;
+  --surface-panel: #1e1c17;
+  --surface-card: #23201a;
+  --surface-well: #100f0c;
+  --surface-input: #2c2921;
+  --surface-raised: #2c2921;
+  --surface-topbar: #23201a;
+
+  --border-hairline: #38332a;
+  --border-strong: #4c4639;
+  --border-input: #4c4639;
+  --border-divider: #4c4639;
+
+  --pen-red: oklch(0.72 0.14 30);
+  --pen-amber: oklch(0.76 0.13 80);
+  --pen-green: oklch(0.74 0.13 150);
+  --pen-blue: oklch(0.74 0.13 264);
+  --pen-violet: oklch(0.74 0.13 305);
+  --pen-ink: #17150f;
+
+  --mark-1: oklch(0.58 0.12 30 / 0.34);
+  --mark-2: oklch(0.62 0.13 85 / 0.32);
+  --mark-3: oklch(0.58 0.11 150 / 0.32);
+  --mark-4: oklch(0.58 0.1 250 / 0.34);
+  --mark-5: oklch(0.58 0.1 305 / 0.32);
+  --mark-blend: normal;
+
+  --fill-subtle: rgb(236 230 216 / 0.07);
+  --fill-subtle-strong: rgb(236 230 216 / 0.13);
+
+  --shadow-card: 0 1px 0 rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.36);
+  --shadow-lift:
+    0 2px 5px rgb(0 0 0 / 0.34), 0 16px 30px -10px rgb(0 0 0 / 0.55);
+  --shadow-well: inset 0 1px 3px rgb(0 0 0 / 0.5);
+  --scrim: rgb(4 3 2 / 0.55);
+
+  --radius-card: 2px;
+  --radius-btn: 2px;
+  --radius-input: 2px;
+
+  --display-weight: 500;
+  --display-tracking: -0.012em;
+
+  --motion-duration-hover: 220ms;
+  --motion-duration-ui: 280ms;
+  --motion-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-press-y: 1px;
+  --motion-rise: -2px;
+  --motion-swell: 1.012;
+}

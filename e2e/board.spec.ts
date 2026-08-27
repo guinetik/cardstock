@@ -52,8 +52,14 @@ test("priority, difficulty and target persist", async ({ page }) => {
   await page.waitForTimeout(600);
   await page.reload();
   const again = page.locator(`[data-id="${id}"]`);
-  await expect(again.locator('[data-priority="1"]')).toHaveClass(/bg-violet/);
-  await expect(again.locator('[data-effort="M"]')).toHaveClass(/bg-amber/);
+  await expect(again.locator('[data-priority="1"]')).toHaveAttribute(
+    "data-on",
+    "true",
+  );
+  await expect(again.locator('[data-effort="M"]')).toHaveAttribute(
+    "data-on",
+    "true",
+  );
   await expect(again.locator('input[type="date"]')).toHaveValue("2026-10-15");
   // and the timeline shows it under October 2026
   await page.goto(`${BOARD}/timeline`);

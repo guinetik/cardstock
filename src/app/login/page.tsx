@@ -12,11 +12,11 @@ export default async function LoginPage(props: PageProps<"/login">) {
   });
   return (
     <main className="flex min-h-full flex-1 items-center justify-center p-6">
-      <div className="glass-card w-full max-w-sm space-y-6 p-6">
+      <div className="paper-card w-full max-w-sm space-y-6 p-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">cardstock</h1>
-            <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <h1 className="text-[27px] leading-tight">cardstock</h1>
+            <span className="border border-[var(--border-strong)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
               beta
             </span>
           </div>

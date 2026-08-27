@@ -88,3 +88,27 @@ export const EFFORT_LABEL: Record<"L" | "M" | "H", string> = {
   M: "Medium",
   H: "High",
 };
+
+/**
+ * Highlighter hue per tag group, by the group's own order on the board. Amber
+ * leads because the first group is usually the one read most; red is last
+ * because a red mark should stay rare enough to mean something.
+ */
+export const MARK_HUES = [2, 4, 3, 5, 1] as const;
+
+/** The mark class for the nth tag group. */
+export function markHue(groupIndex: number): number {
+  return MARK_HUES[groupIndex % MARK_HUES.length]!;
+}
+
+/** Pen hue per decision — the same square in the board, the peek and the timeline. */
+export const PRIORITY_PEN: Record<1 | 2 | 3, string> = {
+  1: "sq--red",
+  2: "sq--blue",
+  3: "sq--violet",
+};
+export const EFFORT_PEN: Record<"L" | "M" | "H", string> = {
+  L: "sq--green",
+  M: "sq--amber",
+  H: "sq--red",
+};

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loadBoard } from "@/lib/board-data";
 import { currentMember } from "@/lib/supabase/server";
-import { PRIORITY_LABEL } from "@/lib/types";
+import { EFFORT_PEN, PRIORITY_LABEL, PRIORITY_PEN } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -34,30 +34,35 @@ export default async function TimelinePage(
   }
   const labelled = open.filter((c) => !c.target_date && c.target_label);
   const back = `/p/${project}/b/${board}`;
+  // A printed schedule: hairline-ruled rows, not a stack of cards.
   const row = (c: (typeof open)[number]) => (
     <li
       key={c.id}
-      className="glass-card flex items-baseline gap-3 px-3 py-2 text-sm"
+      className="flex items-baseline gap-4 border-b border-[var(--border-hairline)] py-2.5 text-sm"
     >
-      <span className="w-24 shrink-0 font-mono text-xs text-muted-foreground">
+      <span
+        className={`w-24 shrink-0 text-xs text-[var(--color-grey)] ${c.target_date ? "font-mono" : "italic"}`}
+      >
         {c.target_date ?? c.target_label}
       </span>
-      <Link
-        href={`${back}/c/${c.external_id}`}
-        className="font-medium hover:underline"
-      >
-        #{c.external_id} {c.title}
+      <Link href={`${back}/c/${c.external_id}`} className="hover:underline">
+        <span className="font-mono text-xs text-[var(--color-grey-faint)]">
+          #{c.external_id}
+        </span>{" "}
+        {c.title}
       </Link>
-      <span className="ml-auto flex shrink-0 gap-1 text-[10px] uppercase text-muted-foreground">
+      <span className="ml-auto flex shrink-0 items-center gap-1.5">
         {c.priority && (
-          <span className="rounded-full border px-1.5">
+          <span className={`sq sq--on ${PRIORITY_PEN[c.priority]}`}>
             {PRIORITY_LABEL[c.priority]}
           </span>
         )}
         {c.effort && (
-          <span className="rounded-full border px-1.5">{c.effort}</span>
+          <span className={`sq sq--on ${EFFORT_PEN[c.effort]}`}>
+            {c.effort}
+          </span>
         )}
-        <span className="rounded-full border px-1.5">
+        <span className="w-20 text-right text-[9px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
           {laneName.get(c.lane_id ?? "")?.name}
         </span>
       </span>
@@ -71,28 +76,28 @@ export default async function TimelinePage(
       >
         ← {data.board.name}
       </Link>
-      <h1 className="mt-1 text-2xl font-bold tracking-tight">Timeline</h1>
+      <h1 className="mt-1 text-[27px] leading-tight">Timeline</h1>
       <p className="text-sm text-muted-foreground">
         {dated.length} cards with a date, {labelled.length} with only a rough
         date, {open.length - dated.length - labelled.length} unscheduled.
       </p>
       {[...byMonth.entries()].map(([k, cards]) => (
         <section key={k} className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide">
+          <h2 className="mb-1 flex items-baseline gap-2 border-b border-[var(--border-strong)] pb-1.5 text-[17px]">
             {MONTH.format(new Date(`${k}-01T00:00:00Z`))}{" "}
             <span className="font-mono text-muted-foreground">
               {cards.length}
             </span>
           </h2>
-          <ul className="space-y-1.5">{cards.map(row)}</ul>
+          <ul>{cards.map(row)}</ul>
         </section>
       ))}
       {labelled.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="mb-1 flex items-baseline gap-2 border-b border-[var(--border-strong)] pb-1.5 text-[17px] text-[var(--color-grey)]">
             Rough dates
           </h2>
-          <ul className="space-y-1.5">{labelled.map(row)}</ul>
+          <ul>{labelled.map(row)}</ul>
         </section>
       )}
       {!dated.length && !labelled.length && (

@@ -16,7 +16,7 @@ import {
  * Follows `prefers-color-scheme` only until the user stores an explicit choice.
  */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<ThemeName>("glass");
+  const [theme, setTheme] = useState<ThemeName>("paper");
   const mqRef = useRef<MediaQueryList | null>(null);
   const onChangeRef = useRef<(() => void) | null>(null);
 
@@ -36,7 +36,7 @@ export function ThemeToggle() {
   useEffect(() => {
     const root = document.documentElement;
     const current =
-      root.dataset.theme === "glass-dark" ? "glass-dark" : "glass";
+      root.dataset.theme === "paper-night" ? "paper-night" : "paper";
     setTheme(current);
 
     let stored: string | null = null;
@@ -66,14 +66,14 @@ export function ThemeToggle() {
     return () => detachSystemListener();
   }, [detachSystemListener]);
 
-  const dark = theme === "glass-dark";
+  const dark = theme === "paper-night";
 
   /**
    * Persist light/dark and stop listening to the OS scheme.
    */
   function toggle() {
-    const next: ThemeName = dark ? "glass" : "glass-dark";
-    const stored = next === "glass-dark" ? "dark" : "light";
+    const next: ThemeName = dark ? "paper" : "paper-night";
+    const stored = next === "paper-night" ? "dark" : "light";
     try {
       localStorage.setItem(THEME_STORAGE_KEY, stored);
     } catch {

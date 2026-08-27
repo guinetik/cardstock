@@ -7,6 +7,7 @@ import {
   updateCard,
 } from "@/app/p/[project]/b/[board]/actions";
 import { Button } from "@/components/ui/button";
+import { markHue } from "@/lib/types";
 
 interface CardLite {
   id: string;
@@ -23,12 +24,12 @@ interface CardLite {
 const field =
   "h-8 w-full rounded-[var(--radius-input)] border border-[var(--border-input)] bg-[var(--surface-input)] px-2.5 text-sm text-[var(--color-ink)]";
 const fieldLabel =
-  "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-[var(--color-grey)]";
+  "mb-1 block text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]";
 
 /**
  * Inline editor for summary, ratings, dates, audience, and tags.
- * Saves on blur/change; lives on the card page (not a nested glass panel).
- * Tag groups rest as assigned chips only; Edit tags opens the catalog.
+ * Saves on blur/change; lives on the card page as part of the one sheet.
+ * Tag groups rest as marked tags only; Edit tags opens the catalog.
  *
  * @param props.card - Subset of card fields the editor mutates.
  * @param props.groups - Tag groups with their tags.
@@ -173,7 +174,10 @@ export function CardEditor({
         </label>
       </div>
       <div className="space-y-2">
-        {groups.map((g) => {
+        {groups.map((g, i) => {
+          // Each group keeps its own highlighter; unassigned tags rest under
+          // a pencil rule, so tagging is picking the marker up and putting it down.
+          const hue = markHue(i);
           const shown = editingTags
             ? g.tags
             : g.tags.filter((t) => tags.has(t.id));
@@ -183,18 +187,17 @@ export function CardEditor({
               key={g.id}
               className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-start gap-x-3"
             >
-              <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-grey)]">
+              <span className="pt-0.5 text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
                 {g.name}
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-x-1.5 gap-y-1">
                 {shown.map((t) => (
                   <button
                     key={t.id}
                     type="button"
+                    aria-pressed={tags.has(t.id)}
                     onClick={() => toggleTag(t.id)}
-                    className={
-                      tags.has(t.id) ? "chip-tag chip-tag--on" : "chip-tag"
-                    }
+                    className={`mark mark--${hue} ${tags.has(t.id) ? "" : "mark--off"}`}
                   >
                     {t.name}
                   </button>
@@ -205,7 +208,7 @@ export function CardEditor({
         })}
         <button
           type="button"
-          className="glass-link text-xs"
+          className="paper-link text-xs"
           aria-expanded={editingTags}
           onClick={() => setEditingTags((open) => !open)}
         >

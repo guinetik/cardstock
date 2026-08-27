@@ -76,9 +76,22 @@ export function matches(
   return true;
 }
 
-export type InboxSort = "newest" | "oldest";
+export type InboxSort = "newest" | "oldest" | "id-asc" | "id-desc";
 
+/**
+ * Order the inbox lane for triage.
+ *
+ * By date: newest or oldest first, with a card that has no raised date sorting
+ * last either way, and ties broken by id so the order is stable.
+ * By id: the card number alone, compared numerically — `#33` after `#7`, not
+ * before it — and the raised date is ignored.
+ */
 export function sortInbox(cards: Card[], how: InboxSort): Card[] {
+  const num = (c: Card) => Number(c.external_id);
+  if (how === "id-asc" || how === "id-desc") {
+    const dir = how === "id-asc" ? 1 : -1;
+    return cards.slice().sort((a, b) => (num(a) - num(b)) * dir);
+  }
   const key = (c: Card) => c.raised_on ?? "";
   return cards.slice().sort((a, b) => {
     const ka = key(a),
@@ -87,9 +100,7 @@ export function sortInbox(cards: Card[], how: InboxSort): Card[] {
     if (ka && !kb) return -1;
     if (ka !== kb)
       return how === "newest" ? (ka < kb ? 1 : -1) : ka < kb ? -1 : 1;
-    return how === "newest"
-      ? Number(b.external_id) - Number(a.external_id)
-      : Number(a.external_id) - Number(b.external_id);
+    return how === "newest" ? num(b) - num(a) : num(a) - num(b);
   });
 }
 

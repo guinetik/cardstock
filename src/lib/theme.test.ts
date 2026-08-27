@@ -10,20 +10,20 @@ import {
 
 describe("resolveTheme", () => {
   test("stored light always wins", () => {
-    expect(resolveTheme("light", true)).toBe("glass");
-    expect(resolveTheme("light", false)).toBe("glass");
+    expect(resolveTheme("light", true)).toBe("paper");
+    expect(resolveTheme("light", false)).toBe("paper");
   });
 
   test("stored dark always wins", () => {
-    expect(resolveTheme("dark", true)).toBe("glass-dark");
-    expect(resolveTheme("dark", false)).toBe("glass-dark");
+    expect(resolveTheme("dark", true)).toBe("paper-night");
+    expect(resolveTheme("dark", false)).toBe("paper-night");
   });
 
   test("null and garbage follow the OS", () => {
-    expect(resolveTheme(null, true)).toBe("glass-dark");
-    expect(resolveTheme(null, false)).toBe("glass");
-    expect(resolveTheme("system", true)).toBe("glass-dark");
-    expect(resolveTheme("", false)).toBe("glass");
+    expect(resolveTheme(null, true)).toBe("paper-night");
+    expect(resolveTheme(null, false)).toBe("paper");
+    expect(resolveTheme("system", true)).toBe("paper-night");
+    expect(resolveTheme("", false)).toBe("paper");
   });
 });
 
@@ -46,13 +46,13 @@ describe("applyTheme", () => {
         attrs[name] = value;
       },
     };
-    applyTheme("glass-dark", root);
-    expect(root.dataset.theme).toBe("glass-dark");
+    applyTheme("paper-night", root);
+    expect(root.dataset.theme).toBe("paper-night");
     expect(root.style.colorScheme).toBe("dark");
-    expect(attrs["data-theme"]).toBe("glass-dark");
+    expect(attrs["data-theme"]).toBe("paper-night");
     expect(attrs["color-scheme"]).toBe("dark");
-    applyTheme("glass", root);
-    expect(root.dataset.theme).toBe("glass");
+    applyTheme("paper", root);
+    expect(root.dataset.theme).toBe("paper");
     expect(root.style.colorScheme).toBe("light");
   });
 });

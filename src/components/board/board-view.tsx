@@ -96,7 +96,12 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       const lane = lanes.find((l) => l.id === laneId)!;
       m.set(
         laneId,
-        lane.kind === "inbox" && !list.some((c) => c.rank !== 0)
+        // The inbox is triaged with the sort control, not dragged into rank
+        // order, so it ignores rank. Every other lane is in the order someone
+        // put it in. (This used to require every inbox card to be rank 0,
+        // which the ETL made impossible — it always assigns a rank — so the
+        // control silently did nothing.)
+        lane.kind === "inbox"
           ? sortInbox(list, inboxSort)
           : list.sort((a, b) => a.rank - b.rank),
       );
@@ -318,41 +323,47 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      <header className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 pt-4 pb-2 sm:px-6">
-        <h1 className="text-lg font-bold tracking-tight">
-          {data.project.name} · {data.board.name}
-        </h1>
-        <span className="font-mono text-xs text-muted-foreground">
-          <b className="text-foreground">{open}</b> open ·{" "}
-          <b className="text-foreground">{unsorted}</b> unsorted
+      <header className="flex flex-wrap items-end gap-x-5 gap-y-2 px-4 pt-5 pb-3 sm:px-6">
+        <div>
+          <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.11em] text-[var(--color-grey-faint)]">
+            {data.project.name}
+          </p>
+          <h1 className="text-[27px] leading-none">{data.board.name}</h1>
+        </div>
+        <span className="pb-0.5 font-mono text-xs text-[var(--color-grey)]">
+          <b className="font-medium text-[var(--color-ink)]">{open}</b> open ·{" "}
+          <b className="font-medium text-[var(--color-ink)]">{unsorted}</b>{" "}
+          unsorted
         </span>
-        <nav className="ml-auto flex items-center gap-3 text-xs">
-          <button
-            type="button"
-            className="rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
-            onClick={() => setLaneDialog({ type: "add" })}
-            disabled={laneBusy !== null}
-          >
-            + Add lane
-          </button>
+        <nav className="ml-auto flex items-center gap-2 pb-0.5 text-[12.5px]">
           <a
-            className="hover:underline"
+            className="paper-link"
             href={`/p/${data.project.slug}/b/${data.board.slug}/timeline`}
           >
             Timeline
           </a>
           <a
-            className="hover:underline"
+            className="paper-link ml-2"
             href={`/p/${data.project.slug}/b/${data.board.slug}/export?internal=${filters.showInternal ? 1 : 0}${filters.showArchived ? "&archived=1" : ""}${filters.tags.size ? `&tags=${[...filters.tags].join(",")}` : ""}${filters.query ? `&q=${encodeURIComponent(filters.query)}` : ""}`}
           >
             Export CSV
           </a>
-          <a className="hover:underline" href={`/p/${data.project.slug}`}>
+          <a className="paper-link ml-2" href={`/p/${data.project.slug}`}>
             Project
           </a>
+          <button
+            type="button"
+            className="ml-2 h-7 rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 font-medium text-[var(--surface-card)] hover:opacity-90 disabled:opacity-50"
+            onClick={() => setLaneDialog({ type: "add" })}
+            disabled={laneBusy !== null}
+          >
+            Add lane
+          </button>
         </nav>
         {error && (
-          <p className="basis-full text-sm text-destructive">{error}</p>
+          <p className="basis-full border-l-2 border-[var(--pen-red)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--color-ink)]">
+            {error}
+          </p>
         )}
       </header>
       <FilterBar
@@ -363,6 +374,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         inboxSort={inboxSort}
         onInboxSort={changeInboxSort}
         onShowInternal={changeShowInternal}
+        priorityLabel={priorityLabel}
       />
       <LaneCrudDialog
         mode={laneDialog}

@@ -1,0 +1,69 @@
+/*
+ * Paper — daylight. Warm neutral stock in a fixed stacking order:
+ * page (the desk) < panel (a lane laid on it) < card (a sheet on the lane),
+ * with well cut *into* the desk for the drawer. Nothing is translucent and
+ * nothing is blurred, so an empty lane still reads as a place.
+ */
+:root[data-theme="paper"] {
+  --color-ink: #1b1915;
+  --color-ink2: #454039;
+  --color-ink-strong: #100e0b;
+  --color-grey: #726b60;
+  --color-grey-faint: #a09889;
+  --color-scrollbar: rgb(114 107 96 / 0.35);
+
+  --surface-page: #f2eee6;
+  --surface-panel: #ebe7dd;
+  --surface-card: #fcfbf8;
+  --surface-well: #dcd5c3;
+  --surface-input: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-topbar: #fcfbf8;
+
+  --border-hairline: #ded8ca;
+  --border-strong: #c7bfad;
+  --border-input: #c7bfad;
+  --border-divider: #c7bfad;
+
+  /* Pen: one hue wheel at oklch L .50 C .15 — the decisions the app records. */
+  --pen-red: oklch(0.5 0.15 30);
+  --pen-amber: oklch(0.52 0.13 75);
+  --pen-green: oklch(0.5 0.13 150);
+  --pen-blue: oklch(0.5 0.15 264);
+  --pen-violet: oklch(0.5 0.15 305);
+  --pen-ink: #fbf9f4;
+
+  /* Highlighter: the same wheel at L .91, multiplied over the stock. */
+  --mark-1: oklch(0.9 0.1 30 / 0.62);
+  --mark-2: oklch(0.92 0.14 85 / 0.62);
+  --mark-3: oklch(0.91 0.12 150 / 0.55);
+  --mark-4: oklch(0.91 0.09 250 / 0.62);
+  --mark-5: oklch(0.9 0.09 305 / 0.55);
+  --mark-blend: multiply;
+
+  --fill-subtle: rgb(114 107 96 / 0.09);
+  --fill-subtle-strong: rgb(114 107 96 / 0.16);
+
+  /* A sheet on a sheet: contact shadows, never a glow. */
+  --shadow-card: 0 1px 0 rgb(27 25 21 / 0.03), 0 1px 2px rgb(27 25 21 / 0.07);
+  --shadow-lift:
+    0 2px 4px rgb(27 25 21 / 0.08), 0 14px 28px -10px rgb(27 25 21 / 0.22);
+  --shadow-well: inset 0 1px 3px rgb(27 25 21 / 0.09);
+  --scrim: rgb(27 25 21 / 0.28);
+
+  /* Paper is cut, not moulded. */
+  --radius-card: 2px;
+  --radius-btn: 2px;
+  --radius-input: 2px;
+
+  --display-weight: 500;
+  --display-tracking: -0.012em;
+
+  --motion-duration-hover: 220ms;
+  --motion-duration-ui: 280ms;
+  --motion-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-press-y: 1px;
+  /* Lifting a sheet off the stack brings it nearer the eye. */
+  --motion-rise: -2px;
+  --motion-swell: 1.012;
+}

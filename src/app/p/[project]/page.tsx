@@ -27,7 +27,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
         >
           ← Projects
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+        <h1 className="text-[27px] leading-tight">{project.name}</h1>
         {project.description && (
           <p className="text-sm text-muted-foreground">{project.description}</p>
         )}
@@ -38,7 +38,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
         </h2>
         <ul className="grid gap-3 sm:grid-cols-2">
           {(project.boards ?? []).map((b) => (
-            <li key={b.slug} className="glass-card p-4">
+            <li key={b.slug} className="paper-card p-4">
               <Link
                 href={`/p/${project.slug}/b/${b.slug}`}
                 className="font-semibold hover:underline"
@@ -53,7 +53,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Members
         </h2>
-        <div className="glass-panel p-4">
+        <div className="paper-lane p-4">
           <ul className="mb-4 space-y-1 text-sm">
             {(members ?? []).map((m) => {
               const mm = m.members as unknown as {

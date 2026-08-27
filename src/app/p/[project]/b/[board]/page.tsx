@@ -13,7 +13,7 @@ export default async function BoardPage(
   if (!me) redirect("/login?error=member");
   const data = await loadBoard(project, board);
   const prefs = (me.prefs ?? {}) as {
-    inboxSort?: "newest" | "oldest";
+    inboxSort?: import("@/lib/filters").InboxSort;
     showInternal?: boolean;
   };
   return <BoardView data={data} me={{ email: me.email, prefs }} />;
