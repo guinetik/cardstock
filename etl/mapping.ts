@@ -114,3 +114,25 @@ export function isPinnedStatus(status: string): "built" | "done" | null {
     return "built";
   return null;
 }
+
+/**
+ * Turn board tag refs (`group:tag`) into tag ids, reporting the ones the board
+ * does not declare.
+ *
+ * A ref only resolves if the board's seed created that tag. Silently dropping
+ * a miss makes a seed that is missing half its vocabulary look like a clean
+ * import, so callers are handed the misses to report.
+ */
+export function resolveTags(
+  refs: string[],
+  tagByRef: Map<string, string>,
+): { ids: string[]; unresolved: string[] } {
+  const ids: string[] = [];
+  const unresolved: string[] = [];
+  for (const ref of refs) {
+    const id = tagByRef.get(ref);
+    if (id) ids.push(id);
+    else unresolved.push(ref);
+  }
+  return { ids, unresolved };
+}

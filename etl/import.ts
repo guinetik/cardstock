@@ -17,6 +17,7 @@ import {
   type Mapping,
   mapAudience,
   mapTags,
+  resolveTags,
   valueToPriority,
 } from "./mapping";
 import { bodyWithoutH1, extractAsk, parseFile } from "./parse";
@@ -64,6 +65,8 @@ for (const r of maxRankRows ?? [])
 let created = 0,
   updated = 0,
   skipped = 0;
+/** Tag refs the board's seed never declared → the cards that wanted them. */
+const unmappedTags = new Map<string, string[]>();
 const relatesByExternal = new Map<string, number[]>();
 const idByExternal = new Map<string, string>();
 
@@ -110,9 +113,13 @@ for (const file of files) {
     source_hash: parsed.hash,
     frontmatter_extra: extra,
   };
-  const tagIds = mapTags(fm, mapping)
-    .map((ref) => ctx.tagByRef.get(ref))
-    .filter((x): x is string => !!x);
+  const resolved = resolveTags(mapTags(fm, mapping), ctx.tagByRef);
+  const tagIds = resolved.ids;
+  for (const ref of resolved.unresolved) {
+    const seen = unmappedTags.get(ref);
+    if (seen) seen.push(externalId);
+    else unmappedTags.set(ref, [externalId]);
+  }
 
   if (!prev) {
     // Round trip: a file the export wrote carries lane/rank/priority — honour them for a new card.
@@ -210,3 +217,16 @@ if (!dryRun) {
 console.log(
   `${dryRun ? "[dry-run] " : ""}${projectSlug}/${boardSlug}: ${created} created, ${updated} updated, ${skipped} unchanged (${files.length} files)`,
 );
+
+// A tag the board never declared is dropped on the floor. Say so loudly —
+// otherwise a seed missing half its vocabulary reads as a clean import.
+if (unmappedTags.size) {
+  console.warn(
+    `\n${unmappedTags.size} tag ref(s) are not declared by this board's seed and were NOT applied:`,
+  );
+  for (const [ref, ids] of [...unmappedTags].sort())
+    console.warn(
+      `  ${ref} — ${ids.length} card(s): ${ids.slice(0, 8).join(", ")}${ids.length > 8 ? ", …" : ""}`,
+    );
+  console.warn("Add them to the board's seed and re-run the import.\n");
+}

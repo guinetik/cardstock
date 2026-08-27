@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ImportProjectDialog } from "@/components/import-project-dialog";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
 export default async function Home() {
@@ -12,9 +13,9 @@ export default async function Home() {
     .order("name");
   return (
     <main className="mx-auto w-full max-w-4xl p-6">
-      <header className="mb-8 flex items-baseline justify-between">
+      <header className="mb-8 flex items-baseline justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-        <span className="text-sm text-muted-foreground">{member.email}</span>
+        {member.role === "owner" && <ImportProjectDialog />}
       </header>
       <ul className="grid gap-4 sm:grid-cols-2">
         {(projects ?? []).map((p) => (

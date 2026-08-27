@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -26,7 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="text-sm font-semibold">
             cardstock
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-3">
+            <UserMenu />
+            <ThemeToggle />
+          </div>
         </header>
         {children}
       </body>

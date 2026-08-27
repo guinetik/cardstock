@@ -5,6 +5,7 @@ import {
   type Mapping,
   mapAudience,
   mapTags,
+  resolveTags,
   valueToPriority,
 } from "./mapping";
 import { bodyWithoutH1, dequote, extractAsk, parseFile } from "./parse";
@@ -208,5 +209,28 @@ describe("mapping", () => {
     expect(isPinnedStatus("handed")).toBe("built");
     expect(isPinnedStatus("done")).toBe("done");
     expect(isPinnedStatus("wip")).toBeNull();
+  });
+});
+
+describe("resolveTags", () => {
+  const byRef = new Map([
+    ["area:designer", "id-designer"],
+    ["kind:bug", "id-bug"],
+  ]);
+
+  test("returns ids for refs the board knows", () => {
+    const r = resolveTags(["area:designer", "kind:bug"], byRef);
+    expect(r.ids).toEqual(["id-designer", "id-bug"]);
+    expect(r.unresolved).toEqual([]);
+  });
+
+  test("reports refs the board does not declare instead of dropping them", () => {
+    const r = resolveTags(["area:designer", "area:nope", "kind:ghost"], byRef);
+    expect(r.ids).toEqual(["id-designer"]);
+    expect(r.unresolved).toEqual(["area:nope", "kind:ghost"]);
+  });
+
+  test("is empty-safe", () => {
+    expect(resolveTags([], byRef)).toEqual({ ids: [], unresolved: [] });
   });
 });

@@ -350,11 +350,6 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
           <a className="hover:underline" href={`/p/${data.project.slug}`}>
             Project
           </a>
-          <form action="/auth/signout" method="post">
-            <button type="submit" className="hover:underline">
-              Sign out
-            </button>
-          </form>
         </nav>
         {error && (
           <p className="basis-full text-sm text-destructive">{error}</p>
