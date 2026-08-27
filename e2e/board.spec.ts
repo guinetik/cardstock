@@ -189,15 +189,28 @@ test("work lanes can be created, renamed, reordered and removed", async ({
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
+  // Scope every query to this board. `key` and `external_id` are only unique
+  // *within* a board — an unscoped match reaches into every other project's
+  // board, which is how this test once moved a card on an unrelated board.
+  const [, projectSlug, , boardSlug] = BOARD.split("/").filter(Boolean);
+  const { data: board, error: boardError } = await db
+    .from("boards")
+    .select("id, projects!inner(slug)")
+    .eq("slug", boardSlug)
+    .eq("projects.slug", projectSlug)
+    .single();
+  expect(boardError).toBeNull();
   const { data: createdLane, error: laneError } = await db
     .from("lanes")
     .select("id")
+    .eq("board_id", board!.id)
     .eq("key", key)
     .single();
   expect(laneError).toBeNull();
   const { error: cardError } = await db
     .from("cards")
     .update({ lane_id: createdLane!.id, rank: 1 })
+    .eq("board_id", board!.id)
     .eq("external_id", cardId!);
   expect(cardError).toBeNull();
   await page.reload();
