@@ -8,26 +8,23 @@ const E: Array<"L" | "M" | "H"> = ["L", "M", "H"];
 const EFFORT_TITLE = { L: "Low", M: "Medium", H: "High" } as const;
 
 /**
- * Difficulty (effort L/M/H) and the owner's priority (P1–P3), as two rows of
- * the card's form: a label in the margin, the squares in the body. Click the
- * active one to clear it.
+ * Effort (L/M/H) and priority (P1–P3) on one row of the card's form: how hard
+ * on the left, how soon on the right. Click the active square to clear it.
  */
 export function Ratings({
   card,
   onPatch,
-  priorityLabel = "Priority",
 }: {
   card: Card;
   onPatch: (id: string, p: CardPatch) => void;
-  priorityLabel?: string;
 }) {
   return (
     <>
-      <span className="field-label">Diff</span>
+      <span className="field-label">Effort</span>
       <div
         className="flex items-center gap-1"
         role="radiogroup"
-        aria-label={`Difficulty for #${card.external_id}`}
+        aria-label={`Effort for #${card.external_id}`}
       >
         {E.map((v) => {
           const on = card.effort === v;
@@ -45,16 +42,12 @@ export function Ratings({
             </button>
           );
         })}
-        <span className="ml-1 text-[11px] text-[var(--color-grey-faint)]">
-          {card.effort ? EFFORT_TITLE[card.effort] : "how hard"}
-        </span>
       </div>
-
-      <span className="field-label">{priorityLabel}</span>
+      <span className="field-label">Priority</span>
       <div
         className="flex items-center gap-1"
         role="radiogroup"
-        aria-label={`${priorityLabel} for #${card.external_id}`}
+        aria-label={`Priority for #${card.external_id}`}
       >
         {P.map((v) => {
           const on = card.priority === v;
@@ -66,15 +59,12 @@ export function Ratings({
               data-on={on}
               className={`sq ${on ? `sq--on ${PRIORITY_PEN[v]}` : ""}`}
               onClick={() => onPatch(card.id, { priority: on ? null : v })}
-              title={`${priorityLabel} ${v}`}
+              title={`Priority ${v}`}
             >
               P{v}
             </button>
           );
         })}
-        <span className="ml-1 text-[11px] text-[var(--color-grey-faint)]">
-          {card.priority ? "" : "how soon"}
-        </span>
       </div>
     </>
   );

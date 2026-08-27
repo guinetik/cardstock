@@ -81,7 +81,6 @@ export function CardItem(props: {
   onArchive?: (id: string, on: boolean) => void;
   projectSlug?: string;
   boardSlug?: string;
-  priorityLabel?: string;
 }) {
   const { card, lane } = props;
   const days = lane?.kind === "waiting" ? daysInLane(card) : null;
@@ -136,7 +135,7 @@ export function CardItem(props: {
             {card.priority && (
               <span
                 className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
-                title={`${props.priorityLabel ?? "Priority"} ${card.priority}`}
+                title={`Priority ${card.priority}`}
               >
                 P{card.priority}
               </span>
@@ -144,7 +143,7 @@ export function CardItem(props: {
             {card.effort && (
               <span
                 className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
-                title="Difficulty"
+                title="Effort"
               >
                 {card.effort}
               </span>
@@ -155,12 +154,13 @@ export function CardItem(props: {
 
       <div className="card-peek">
         <div className="card-peek-inner">
-          {card.epic && (
-            <p className="mt-1 truncate text-[11px] text-[var(--color-grey)]">
-              {card.epic}
-            </p>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {/* Epic, state and the two actions share one line above the form. */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {card.epic && (
+              <span className="truncate text-[11px] text-[var(--color-grey)]">
+                {card.epic}
+              </span>
+            )}
             <span className={STATUS_CHIP[card.status] ?? "stat stat--muted"}>
               {card.status}
             </span>
@@ -192,6 +192,16 @@ export function CardItem(props: {
               >
                 Open issue
               </Link>
+            )}
+            {props.onArchive && (
+              <button
+                type="button"
+                className="paper-link text-[11.5px]"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => props.onArchive?.(card.id, !card.archived_at)}
+              >
+                {card.archived_at ? "Restore" : "Archive"}
+              </button>
             )}
           </div>
 
@@ -253,42 +263,17 @@ export function CardItem(props: {
                   />
                 </div>
 
-                <Ratings
-                  card={card}
-                  onPatch={props.onPatch}
-                  priorityLabel={props.priorityLabel}
-                />
+                <Ratings card={card} onPatch={props.onPatch} />
               </>
             )}
 
             {card.summary && (
               <>
                 <span className="field-label">Note</span>
-                <p className="text-[13px] leading-normal text-[var(--color-ink2)]">
+                <p className="line-clamp-3 text-[13px] leading-snug text-[var(--color-ink2)]">
                   {card.summary}
                 </p>
               </>
-            )}
-
-            {card.area && (
-              <>
-                <span className="field-label">Area</span>
-                <p className="text-[12px] text-[var(--color-ink2)]">
-                  {card.area}
-                </p>
-              </>
-            )}
-
-            {props.onArchive && (
-              <div className="col-start-2 mt-0.5">
-                <button
-                  type="button"
-                  className="rounded-[var(--radius-btn)] border border-[var(--border-strong)] bg-[var(--surface-input)] px-2.5 py-1 text-[11.5px] font-medium text-[var(--color-ink)]"
-                  onClick={() => props.onArchive?.(card.id, !card.archived_at)}
-                >
-                  {card.archived_at ? "Restore" : "Archive"}
-                </button>
-              </div>
             )}
           </section>
         </div>

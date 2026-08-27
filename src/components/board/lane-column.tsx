@@ -65,7 +65,6 @@ export function LaneColumn(props: {
   projectSlug: string;
   boardSlug: string;
   hiddenByDefault: boolean;
-  priorityLabel: string;
   manage?: {
     disabled: boolean;
     canMoveLeft: boolean;
@@ -217,7 +216,6 @@ export function LaneColumn(props: {
                 onArchive={props.onArchive}
                 projectSlug={props.projectSlug}
                 boardSlug={props.boardSlug}
-                priorityLabel={props.priorityLabel}
               />
             </SortableCard>
           ))}

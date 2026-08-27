@@ -39,9 +39,9 @@ something, never as a hole in the page — that was the failure of the transluce
 
 One hue wheel, two lightnesses.
 
-**Pen** — `oklch(0.50 0.15 h)` — is what the app recorded: priority, difficulty,
+**Pen** — `oklch(0.50 0.15 h)` — is what the app recorded: priority, effort,
 status, links. It appears as a filled `.sq` (P1 red, P2 blue, P3 violet;
-difficulty L green, M amber, H red) or as a `.stat` — six pixels of colour and a
+effort L green, M amber, H red) or as a `.stat` — six pixels of colour and a
 word in mono caps, written in the margin. Never a filled pill.
 
 **Highlighter** — `oklch(0.91 0.12 h / 0.6)`, multiplied over the stock — is the

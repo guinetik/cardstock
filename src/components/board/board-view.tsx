@@ -60,9 +60,6 @@ export interface Me {
 
 export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const router = useRouter();
-  const priorityLabel =
-    (data.board.settings as { priority_label?: string }).priority_label ??
-    "Priority";
   const [cards, setCards] = useState<Card[]>(data.cards);
   const [lanes, setLanes] = useState<Lane[]>(data.lanes);
   const [filters, setFilters] = useState<Filters>(() =>
@@ -374,7 +371,6 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         inboxSort={inboxSort}
         onInboxSort={changeInboxSort}
         onShowInternal={changeShowInternal}
-        priorityLabel={priorityLabel}
       />
       <LaneCrudDialog
         mode={laneDialog}
@@ -416,7 +412,6 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               projectSlug={data.project.slug}
               boardSlug={data.board.slug}
               hiddenByDefault={lane.kind === "archive" && !filters.showArchived}
-              priorityLabel={priorityLabel}
               manage={
                 lane.kind === "work"
                   ? {

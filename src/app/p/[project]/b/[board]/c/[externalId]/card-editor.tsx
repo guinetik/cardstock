@@ -35,20 +35,17 @@ const fieldLabel =
  * @param props.groups - Tag groups with their tags.
  * @param props.tagIds - Currently assigned tag ids.
  * @param props.backHref - Board URL for "Back to board".
- * @param props.priorityLabel - Board-specific label for the priority field.
  */
 export function CardEditor({
   card,
   groups,
   tagIds,
   backHref,
-  priorityLabel = "Priority",
 }: {
   card: CardLite;
   groups: { id: string; name: string; tags: { id: string; name: string }[] }[];
   tagIds: string[];
   backHref: string;
-  priorityLabel?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -102,7 +99,7 @@ export function CardEditor({
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label>
-          <span className={fieldLabel}>{priorityLabel}</span>
+          <span className={fieldLabel}>Priority</span>
           <select
             className={field}
             defaultValue={card.priority ?? ""}
@@ -121,7 +118,7 @@ export function CardEditor({
           </select>
         </label>
         <label>
-          <span className={fieldLabel}>Difficulty</span>
+          <span className={fieldLabel}>Effort</span>
           <select
             className={field}
             defaultValue={card.effort ?? ""}

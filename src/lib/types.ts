@@ -74,7 +74,6 @@ export interface BoardData {
 
 /** Board settings the UI reads. */
 export interface BoardSettings {
-  priority_label?: string;
   needs_lane?: string;
 }
 

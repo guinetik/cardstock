@@ -345,8 +345,8 @@
    */
   .card-form {
     display: grid;
-    grid-template-columns: 3.5rem minmax(0, 1fr);
-    gap: 0.4rem 0.75rem;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 0.3rem 0.65rem;
     align-items: baseline;
   }
   .card-form > .field-label {

@@ -37,7 +37,6 @@ export function FilterBar(props: {
   inboxSort: InboxSort;
   onInboxSort: (s: InboxSort) => void;
   onShowInternal: (v: boolean) => void;
-  priorityLabel: string;
 }) {
   const { filters: f, onChange } = props;
   const toggle = <T,>(set: Set<T>, v: T) => {
@@ -152,14 +151,14 @@ export function FilterBar(props: {
       )}
 
       <fieldset className="fieldset">
-        <legend>{props.priorityLabel}</legend>
+        <legend>Priority</legend>
         {([1, 2, 3] as const).map((p) => (
           <button
             key={p}
             type="button"
             aria-pressed={f.priority.has(p)}
             className={`sq ${f.priority.has(p) ? `sq--on ${PEN[p]}` : ""}`}
-            title={`${props.priorityLabel} ${p}`}
+            title={`Priority ${p}`}
             onClick={() => onChange({ ...f, priority: toggle(f.priority, p) })}
           >
             P{p}
@@ -168,7 +167,7 @@ export function FilterBar(props: {
       </fieldset>
 
       <fieldset className="fieldset">
-        <legend>Difficulty</legend>
+        <legend>Effort</legend>
         {(["L", "M", "H"] as const).map((e) => (
           <button
             key={e}

@@ -100,7 +100,7 @@ export default async function CardPage(
         )}
         {card.effort && (
           <span className="stat stat--muted">
-            Difficulty {EFFORT_LABEL[card.effort as "L" | "M" | "H"]}
+            Effort {EFFORT_LABEL[card.effort as "L" | "M" | "H"]}
           </span>
         )}
         {card.archived_at && (
@@ -131,10 +131,6 @@ export default async function CardPage(
         }
         tagIds={(tags ?? []).map((t) => t.tag_id)}
         backHref={backHref}
-        priorityLabel={
-          (b.settings as { priority_label?: string } | null)?.priority_label ??
-          "Priority"
-        }
       />
 
       <dl className="mt-6 grid grid-cols-[6.5rem_1fr] gap-x-4 border-t border-[var(--border-hairline)] pt-5 text-sm [&>dd]:border-b [&>dd]:border-[var(--border-hairline)] [&>dd]:py-2 [&>dt]:border-b [&>dt]:border-[var(--border-hairline)] [&>dt]:py-2 [&>dt]:text-[10px] [&>dt]:font-semibold [&>dt]:uppercase [&>dt]:tracking-[0.11em] [&>dt]:text-[var(--color-grey-faint)]">
