@@ -15,6 +15,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:seed-members": "bun run etl/seed-members.ts",
+    "db:test": "docker exec -i supabase_db_cardstock psql -U postgres -v ON_ERROR_STOP=1 -f - < supabase/tests/owner_rls.sql",
     "etl:import": "bun run etl/import.ts",
     "etl:import-board-state": "bun run etl/import-board-state.ts",
     "etl:schema": "bun run etl/emit-schema.ts",

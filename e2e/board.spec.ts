@@ -2,14 +2,12 @@ import { expect, type Page, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 const EMAIL = process.env.E2E_MEMBER_EMAIL ?? "e2e@example.com";
-const PASSWORD = process.env.E2E_MEMBER_PASSWORD ?? "e2e-password-local-only";
 const BOARD = process.env.E2E_BOARD_PATH ?? "/p/demo/b/backlog";
 
 async function signIn(page: Page) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(EMAIL);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in with password" }).click();
+  await page.getByRole("button", { name: "Sign in (local dev)" }).click();
   await page.waitForURL(/\/(p\/|$)/);
 }
 
@@ -184,15 +182,13 @@ test("work lanes can be created, renamed, reordered and removed", async ({
 
   const card = page.locator('[data-lane="done"] [data-id]').first();
   const cardId = await card.getAttribute("data-id");
+  // Service role: this is a test back door for setting up board state, not the
+  // behaviour under test. Local Supabase only.
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
   );
-  const { error: authError } = await db.auth.signInWithPassword({
-    email: EMAIL,
-    password: PASSWORD,
-  });
-  expect(authError).toBeNull();
   const { data: createdLane, error: laneError } = await db
     .from("lanes")
     .select("id")

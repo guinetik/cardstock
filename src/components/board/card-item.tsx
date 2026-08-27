@@ -94,11 +94,7 @@ export function CardItem(props: {
         </span>
         <p className="min-w-0 text-[15px] font-semibold leading-snug">
           {props.projectSlug ? (
-            <Link
-              href={detail}
-              className="hover:underline"
-              onPointerDown={(e) => e.stopPropagation()}
-            >
+            <Link href={detail} className="hover:underline">
               {card.title}
             </Link>
           ) : (

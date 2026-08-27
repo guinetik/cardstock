@@ -25,7 +25,7 @@ Two projects to create, then a handful of values to wire. Nothing secret goes to
 
 ## 2. Members
 
-On your machine, with `.env.local` pointing at the hosted project (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) and `MEMBER_EMAILS=you@…,owner@…,teammate@…`:
+On your machine, with `.env.local` pointing at the hosted project (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`), `OWNER_EMAIL=you@…` and optionally `MEMBER_EMAILS=teammate@…`:
 
 ```sh
 bun run db:seed-members --project <slug>
@@ -33,7 +33,7 @@ bun run etl:import --project <slug> --board <slug> --source <your tracker dir> -
 bun run etl:import-board-state --project <slug> --board <slug> --file <export>.json   # optional: carry over a file-based board
 ```
 
-Leave `E2E_MEMBER_*` unset against a hosted project; the script refuses to create the password user there anyway.
+Leave `E2E_MEMBER_*` unset against a hosted project; the script refuses to create the test user there anyway.
 
 ## 3. Vercel
 
@@ -41,11 +41,11 @@ Leave `E2E_MEMBER_*` unset against a hosted project; the script refuses to creat
 2. Environment variables (Production + Preview):
    - `NEXT_PUBLIC_SUPABASE_URL` — the project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon/publishable key
-   - do **not** add `SUPABASE_SERVICE_ROLE_KEY` or `NEXT_PUBLIC_ALLOW_PASSWORD_LOGIN`
-3. Deploy. The first sign-in is a magic link to an allowlisted email; anyone else sees *"This board is invite-only."*
+   - do **not** add `SUPABASE_SERVICE_ROLE_KEY` or `NEXT_PUBLIC_DEV_LOGIN` (dev sign-in refuses to run against a hosted URL, but there is no reason to ship either)
+3. Deploy. The first sign-in is a magic link to the owner's address; anyone not on the allowlist is told the beta is invite-only, and no mail is sent to them.
 
 ## 4. Day to day
 
 - New tracker items: run `etl:import` from your machine (it is a local tool by design), the board updates on the next page load.
-- Adding a person: project page → *Add member* (or `MEMBER_EMAILS` + `db:seed-members`).
+- Adding a person: **owner only**. Project page → *Add member*, or `insert into public.members (email, role) values ('…', 'admin');`, or `MEMBER_EMAILS` + `db:seed-members`.
 - Schema changes: add a migration under `supabase/migrations/`, `bunx supabase db push`.

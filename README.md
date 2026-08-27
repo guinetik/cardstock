@@ -19,13 +19,17 @@ bun · Next.js 16 (App Router, Turbopack, `proxy.ts`) · React 19 · TypeScript 
 bun install
 bunx supabase start                       # Postgres + Auth + Mailpit in Docker
 bun run db:reset                          # migrations + seed (demo project + board)
-cp .env.example .env.local                # fill MEMBER_EMAILS
-bun run db:seed-members --project demo    # allowlist + project membership (+ local test user)
+cp .env.example .env.local                # set OWNER_EMAIL
+bun run db:seed-members --project demo    # owner + allowlist + project membership
 bun run etl:import --project demo --board backlog --source examples/tracker
 bun run dev                               # http://localhost:3000
 ```
 
-Sign in with a magic link (locally the mail lands in Mailpit at http://127.0.0.1:54324), or with the local-only password form when `NEXT_PUBLIC_ALLOW_PASSWORD_LOGIN=1`.
+cardstock is **invite-only**: `members` is the allowlist, and an email that is not on it never gets a session — the link request is refused, the magic-link callback signs the user back out, and row-level security shows them nothing.
+
+The **Owner** is whoever deploys the app and owns its infrastructure. `OWNER_EMAIL` bootstraps that row on a fresh database; from then on `members.role = 'owner'` is the source of truth, and only an owner may add people (by SQL today, by UI later). There is no owner UI yet — this is the setup it will sit on.
+
+Sign in with a magic link (locally the mail lands in Mailpit at http://127.0.0.1:54324). With `NEXT_PUBLIC_DEV_LOGIN=1` the login screen also offers a passwordless **Sign in (local dev)** button — it refuses to run unless `NODE_ENV` is not `production` *and* the Supabase URL points at this machine, and the allowlist still applies.
 
 ## ETL
 
@@ -34,7 +38,8 @@ Sign in with a magic link (locally the mail lands in Mailpit at http://127.0.0.1
 | `bun run etl:import --project <p> --board <b> --source <dir>` | Parse `<id>.md` files, validate against `etl/schema.ts`, upsert by `(board, external_id)`. Markdown owns title/status/body/epic/area/dates/needs/relates/tags; the DB owns lane/rank/priority/effort/target/audience/archive. Built/closed statuses re-pin to Built/Done; unchanged files are skipped by hash. |
 | `bun run etl:import-board-state --project <p> --board <b> --file <export.json>` | Apply a `designer-board/1` export (lane, rank, target, effort, value→priority) on top of imported cards. |
 | `bun run etl:schema` | Emit `docs/frontmatter.schema.json` from the zod schema. |
-| `bun run db:seed-members --project <slug>` | Members from `MEMBER_EMAILS` → `members` + `project_members`. |
+| `bun run db:seed-members --project <slug>` | `OWNER_EMAIL` → owner, `MEMBER_EMAILS` → admins, both into `members` + `project_members`. |
+| `bun run db:test` | Access-control checks against the local database (owner, allowlist, RLS). |
 
 Scheme tags map 1:1 onto a board's tag groups; per-project overrides go in a JSON passed with `--mapping` (default `etl/mappings/default.json`). Keep a real project's seed SQL and mapping next to its tracker, outside this repo.
 

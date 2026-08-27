@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
 loadEnvConfig(process.cwd());
 
 // Local stack: `bunx supabase start`, `bun run db:seed-members`, an import, then `bun run test:e2e`.
-// Uses the installed Chrome (no browser download) and the password test member from .env.local.
+// Uses the installed Chrome (no browser download) and the dev sign-in button (no password).
 export default defineConfig({
   testDir: "e2e",
   globalSetup: "./e2e/global-setup.ts",

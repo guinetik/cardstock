@@ -2,13 +2,20 @@
 import { revalidatePath } from "next/cache";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
-/** Add an email to the allowlist and to this project. Everyone is admin for now. */
+/**
+ * Add an email to the allowlist and to this project.
+ *
+ * Owner-only: RLS enforces it, but check here too so the caller gets a reason
+ * rather than a policy violation.
+ */
 export async function addMember(
   _prev: { error?: string } | null,
   form: FormData,
 ) {
   const me = await currentMember();
   if (!me) return { error: "Not signed in." };
+  if (me.role !== "owner")
+    return { error: "Only the owner can invite people while in beta." };
   const projectId = String(form.get("projectId") ?? "");
   const email = String(form.get("email") ?? "")
     .trim()

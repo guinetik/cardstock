@@ -1,103 +1,82 @@
 "use client";
-import { useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { devSignIn, type LoginResult, requestMagicLink } from "./actions";
 
 export function LoginForm({
   next,
-  allowPassword,
+  devLogin,
 }: {
   next: string;
-  allowPassword: boolean;
+  devLogin: boolean;
 }) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [linkState, sendLink, sendingLink] = useActionState<
+    LoginResult | null,
+    FormData
+  >(requestMagicLink, null);
+  const [devState, signInDev, signingInDev] = useActionState<
+    LoginResult | null,
+    FormData
+  >(devSignIn, null);
 
-  async function sendLink(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    const db = supabaseBrowser();
-    const { error } = await db.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        shouldCreateUser: true,
-      },
-    });
-    setBusy(false);
-    if (error) setErr(error.message);
-    else setSent(true);
-  }
+  useEffect(() => {
+    // The session cookie is set; a full load lets proxy.ts pick it up.
+    if (devState?.ok) window.location.assign(next);
+  }, [devState?.ok, next]);
 
-  async function signInWithPassword(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    const db = supabaseBrowser();
-    const { error } = await db.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) setErr(error.message);
-    else window.location.assign(next);
-  }
-
-  if (sent)
+  if (linkState?.ok)
     return (
       <p className="text-sm">
         Check your inbox — the link signs you in on this device.
       </p>
     );
 
+  const error = linkState?.error ?? devState?.error;
+
   return (
     <div className="space-y-6">
       <form
-        onSubmit={sendLink}
+        action={sendLink}
         className="space-y-3"
         data-testid="magic-link-form"
       >
+        <input type="hidden" name="next" value={next} />
         <Input
           type="email"
+          name="email"
           required
           placeholder="you@company.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email"
         />
-        <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? "Sending…" : "Email me a sign-in link"}
+        <Button type="submit" className="w-full" disabled={sendingLink}>
+          {sendingLink ? "Sending…" : "Email me a sign-in link"}
         </Button>
       </form>
-      {allowPassword && (
+      {devLogin && (
         <form
-          onSubmit={signInWithPassword}
+          action={signInDev}
           className="space-y-3 border-t pt-4"
-          data-testid="password-form"
+          data-testid="dev-login-form"
         >
-          <p className="text-xs text-muted-foreground">
-            Local development only — password sign-in.
-          </p>
-          <Input
-            type="password"
-            placeholder="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            aria-label="Password"
-          />
+          <input type="hidden" name="email" value={email} />
           <Button
             type="submit"
             variant="outline"
             className="w-full"
-            disabled={busy}
+            disabled={signingInDev}
           >
-            Sign in with password
+            {signingInDev ? "Signing in…" : "Sign in (local dev)"}
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Local development only — no password. The invite list still applies.
+          </p>
         </form>
       )}
-      {err && <p className="text-sm text-destructive">{err}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
