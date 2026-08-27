@@ -1,0 +1,4 @@
+[test]
+# Discover `etl/*.test.ts` and `src/**/*.test.ts`. Playwright lives in e2e/.
+root = "."
+pathIgnorePatterns = ["e2e/**", ".next/**"]

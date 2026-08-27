@@ -1,0 +1,10 @@
+#field {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(62vmax 62vmax at -14% -22%, var(--field-a), transparent 55%),
+    radial-gradient(54vmax 54vmax at 118% 18%, var(--field-b), transparent 55%),
+    radial-gradient(48vmax 48vmax at 24% 128%, var(--field-c), transparent 55%);
+}
