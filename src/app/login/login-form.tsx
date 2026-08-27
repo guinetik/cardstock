@@ -2,7 +2,13 @@
 import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { devSignIn, type LoginResult, requestMagicLink } from "./actions";
+import { MIN_PASSWORD } from "@/lib/auth";
+import {
+  devSignIn,
+  type LoginResult,
+  setInitialPassword,
+  signIn,
+} from "./actions";
 
 export function LoginForm({
   next,
@@ -12,37 +18,39 @@ export function LoginForm({
   devLogin: boolean;
 }) {
   const [email, setEmail] = useState("");
-  const [linkState, sendLink, sendingLink] = useActionState<
+  const [onboarding, setOnboarding] = useState(false);
+  const [inState, doSignIn, signingIn] = useActionState<
     LoginResult | null,
     FormData
-  >(requestMagicLink, null);
+  >(signIn, null);
+  const [pwState, doSetPassword, settingPassword] = useActionState<
+    LoginResult | null,
+    FormData
+  >(setInitialPassword, null);
   const [devState, signInDev, signingInDev] = useActionState<
     LoginResult | null,
     FormData
   >(devSignIn, null);
 
+  const ok = inState?.ok || pwState?.ok || devState?.ok;
   useEffect(() => {
     // The session cookie is set; a full load lets proxy.ts pick it up.
-    if (devState?.ok) window.location.assign(next);
-  }, [devState?.ok, next]);
+    if (ok) window.location.assign(next);
+  }, [ok, next]);
 
-  if (linkState?.ok)
-    return (
-      <p className="text-sm">
-        Check your inbox — the link signs you in on this device.
-      </p>
-    );
-
-  const error = linkState?.error ?? devState?.error;
+  const error = inState?.error ?? pwState?.error ?? devState?.error;
+  const busy = signingIn || settingPassword;
 
   return (
     <div className="space-y-6">
       <form
-        action={sendLink}
+        action={onboarding ? doSetPassword : doSignIn}
         className="space-y-3"
-        data-testid="magic-link-form"
+        data-testid={onboarding ? "set-password-form" : "sign-in-form"}
+        // Remount on switch so the browser does not carry the typed password
+        // from one mode into the other.
+        key={onboarding ? "onboard" : "signin"}
       >
-        <input type="hidden" name="next" value={next} />
         <Input
           type="email"
           name="email"
@@ -52,10 +60,44 @@ export function LoginForm({
           onChange={(e) => setEmail(e.target.value)}
           aria-label="Email"
         />
-        <Button type="submit" className="w-full" disabled={sendingLink}>
-          {sendingLink ? "Sending…" : "Email me a sign-in link"}
+        <Input
+          type="password"
+          name="password"
+          required
+          minLength={onboarding ? MIN_PASSWORD : undefined}
+          autoComplete={onboarding ? "new-password" : "current-password"}
+          placeholder={onboarding ? "Choose a password" : "Password"}
+          aria-label={onboarding ? "New password" : "Password"}
+        />
+        {onboarding && (
+          <Input
+            type="password"
+            name="confirm"
+            required
+            minLength={MIN_PASSWORD}
+            autoComplete="new-password"
+            placeholder="Confirm password"
+            aria-label="Confirm password"
+          />
+        )}
+        <Button type="submit" className="w-full" disabled={busy}>
+          {busy
+            ? "Working…"
+            : onboarding
+              ? "Set password and sign in"
+              : "Sign in"}
         </Button>
       </form>
+      <button
+        type="button"
+        className="text-xs text-muted-foreground underline underline-offset-2"
+        onClick={() => setOnboarding((v) => !v)}
+        data-testid="toggle-onboarding"
+      >
+        {onboarding
+          ? "Already have a password? Sign in"
+          : "First time here? Set your password"}
+      </button>
       {devLogin && (
         <form
           action={signInDev}

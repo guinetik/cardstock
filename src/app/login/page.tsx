@@ -21,8 +21,8 @@ export default async function LoginPage(props: PageProps<"/login">) {
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Invite-only while in beta. Enter the email you were invited with and
-            we&rsquo;ll send you a sign-in link — no password.
+            Invite-only while in beta. Sign in with the email you were invited
+            with. Setting a password the first time is the whole onboarding.
           </p>
         </div>
         {error === "link" && (

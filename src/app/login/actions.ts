@@ -1,7 +1,11 @@
 "use server";
 import { createClient } from "@supabase/supabase-js";
-import { headers } from "next/headers";
-import { isDevLoginEnabled, isLocalSupabase, normalizeEmail } from "@/lib/auth";
+import {
+  isDevLoginEnabled,
+  isLocalSupabase,
+  normalizeEmail,
+  passwordProblem,
+} from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export type LoginResult = { ok?: true; error?: string };
@@ -12,19 +16,56 @@ export type LoginResult = { ok?: true; error?: string };
 const NOT_INVITED =
   "cardstock is invite-only while in beta. That email isn't on the list — ask the owner for an invite.";
 
+/** Shown for a wrong password and for an address that has no password yet, so
+ *  the form does not report which of the two went wrong. */
+const BAD_CREDENTIALS =
+  "That email and password don't match. If you were just invited, set your password first.";
+
+/** Sign in with an email and password. */
+export async function signIn(
+  _prev: LoginResult | null,
+  form: FormData,
+): Promise<LoginResult> {
+  const email = normalizeEmail(String(form.get("email") ?? ""));
+  const password = String(form.get("password") ?? "");
+  if (!email) return { error: "Enter a valid email address." };
+  if (!password) return { error: "Enter your password." };
+
+  const db = await supabaseServer();
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if (error) return { error: BAD_CREDENTIALS };
+
+  // The allowlist, not auth.users, decides who is let in: someone whose invite
+  // was withdrawn keeps their credentials but loses their access.
+  const { data: member } = await db
+    .from("members")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (!member) {
+    await db.auth.signOut();
+    return { error: NOT_INVITED };
+  }
+  return { ok: true };
+}
+
 /**
- * Send a magic link, but only to an invited address.
+ * Onboarding: an invited person chooses their password and is signed in.
  *
- * The allowlist is checked first, through the `is_invited` RPC: no mail is
- * sent and no auth user is created for a stranger.
+ * The allowlist is checked first, through the `is_invited` RPC, so no auth user
+ * is created for a stranger. `signUp` refuses to touch an account that already
+ * has a password, which is what makes this safe to leave open: it can create a
+ * first password but never replace one.
  */
-export async function requestMagicLink(
+export async function setInitialPassword(
   _prev: LoginResult | null,
   form: FormData,
 ): Promise<LoginResult> {
   const email = normalizeEmail(String(form.get("email") ?? ""));
   if (!email) return { error: "Enter a valid email address." };
-  const next = String(form.get("next") ?? "/");
+  const password = String(form.get("password") ?? "");
+  const problem = passwordProblem(password, String(form.get("confirm") ?? ""));
+  if (problem) return { error: problem };
 
   const db = await supabaseServer();
   const { data: invited, error: rpcError } = await db.rpc("is_invited", {
@@ -33,17 +74,24 @@ export async function requestMagicLink(
   if (rpcError) return { error: rpcError.message };
   if (!invited) return { error: NOT_INVITED };
 
-  const origin = (await headers()).get("origin") ?? "";
-  const { error } = await db.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      // The allowlist, not this flag, is the gate — an invited member signing
-      // in for the first time still needs their auth user created here.
-      shouldCreateUser: true,
-    },
-  });
-  return error ? { error: error.message } : { ok: true };
+  const { data, error } = await db.auth.signUp({ email, password });
+  if (error)
+    return {
+      error:
+        // Only reachable by someone already on the allowlist, so this reveals
+        // nothing to a stranger.
+        error.status === 422
+          ? "That account already has a password — sign in with it instead."
+          : error.message,
+    };
+  // No session means the project still has email confirmations switched on,
+  // which would put us back on links. Say so rather than showing a blank page.
+  if (!data.session)
+    return {
+      error:
+        "This instance still requires email confirmation. Ask the owner to turn it off.",
+    };
+  return { ok: true };
 }
 
 /**
