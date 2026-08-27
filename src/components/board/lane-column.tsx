@@ -115,7 +115,7 @@ export function LaneColumn(props: {
   return (
     <section
       data-lane={lane.key}
-      className={`paper-lane flex h-full shrink-0 flex-col gap-2 self-stretch p-2.5 ${width} ${drawer ? "paper-lane--drawer" : ""} ${isOver ? "paper-lane--over" : ""}`}
+      className={`paper-lane flex h-full shrink-0 flex-col gap-2 self-stretch p-2 ${width} ${drawer ? "paper-lane--drawer" : ""} ${isOver ? "paper-lane--over" : ""}`}
     >
       <div className={`lane-head ${KIND_RULE[lane.kind]}`}>
         <h2 className={`lane-name ${KIND_INK[lane.kind]}`}>{lane.name}</h2>

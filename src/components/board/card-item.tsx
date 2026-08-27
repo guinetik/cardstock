@@ -53,7 +53,9 @@ export function SortableCard({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`${hidden ? "hidden" : ""} ${isDragging ? "opacity-40" : ""}`}
+      // A 3px gutter so the hover swell has somewhere to grow: without it the
+      // card outgrows the lane's scroll container and it scrolls sideways.
+      className={`px-[3px] ${hidden ? "hidden" : ""} ${isDragging ? "opacity-40" : ""}`}
       data-id={card.external_id}
       {...attributes}
       {...listeners}

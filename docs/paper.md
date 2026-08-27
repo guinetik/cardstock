@@ -81,6 +81,11 @@ perspective, not a spring — a sheet nearer the eye is a larger sheet. Page-sca
 sheets (`.paper-card--static`) and the drag ghost opt out, and
 `prefers-reduced-motion` drops the movement entirely.
 
+Board cards sit in a 3px horizontal gutter (`SortableCard`) so the swell has
+somewhere to grow. Without it a hovered card outgrows the lane's scroll
+container and the lane scrolls sideways — and the container cannot simply clip,
+because clipping would cut the lift shadow off at the sides.
+
 ## Lanes
 
 The header is the divider tab, and the rule under the name says what kind of
