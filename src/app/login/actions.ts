@@ -78,10 +78,11 @@ export async function setInitialPassword(
   if (error)
     return {
       error:
-        // Only reachable by someone already on the allowlist, so this reveals
-        // nothing to a stranger.
-        error.status === 422
-          ? "That account already has a password — sign in with it instead."
+        // Matched on the code, not the 422 status, which Supabase also uses for
+        // a rejected password. Only reachable by someone already on the
+        // allowlist, so this reveals nothing to a stranger.
+        error.code === "user_already_exists"
+          ? "That account has already been set up — sign in instead."
           : error.message,
     };
   // No session means the project still has email confirmations switched on,

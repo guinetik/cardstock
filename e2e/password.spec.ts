@@ -113,7 +113,7 @@ test("a second attempt cannot overwrite an existing password", async ({
 
   // Someone who knows the address tries to claim the account.
   await setPassword(page, INVITEE, OTHER_PASSWORD);
-  await expect(page.getByText(/already has a password/i)).toBeVisible();
+  await expect(page.getByText(/already been set up/i)).toBeVisible();
   await expect(page).toHaveURL(/\/login/);
 
   // The original password still works, so nothing was taken over.
