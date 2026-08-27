@@ -32,11 +32,11 @@ select b.id, v.key, v.name, v.position, v.kind, v.sla from b, (values
   ('nice-to-have', 'Nice-to-have', 4,  'work',    null),
   ('parked',       'Parked',       5,  'work',    null),
   ('needs-input',  'Needs input',  6,  'waiting', 5),
+  -- No gate lanes here: delivery gates are one project's way of working, not
+  -- something the demo board should teach.
   ('built',        'Built',        7,  'built',   null),
-  ('gate-1',       'Gate 1',       8,  'work',    null),
-  ('gate-2',       'Gate 2',       9,  'work',    null),
-  ('done',         'Done',         10, 'done',    null),
-  ('archive',      'Archive',      11, 'archive', null)
+  ('done',         'Done',         8,  'done',    null),
+  ('archive',      'Archive',      9,  'archive', null)
 ) as v(key, name, position, kind, sla)
 on conflict (board_id, key) do nothing;
 
@@ -76,3 +76,32 @@ select g.id, v.key, v.name from g join (values
   ('objective', 'growth',     'Growth')
 ) as v(gkey, key, name) on v.gkey = g.key
 on conflict (group_id, key) do nothing;
+
+-- The lane inserts are ON CONFLICT DO NOTHING, so a demo board seeded before
+-- the gates were removed still carries them. Drop them here, along with any
+-- lane an interrupted e2e run left behind, so every environment converges on
+-- the list above. Only empty lanes go: a lane holding cards is somebody's
+-- work, and losing it silently would be worse than an out-of-date board.
+with b as (
+  select b.id from public.boards b
+  join public.projects p on p.id = b.project_id
+  where p.slug = 'demo' and b.slug = 'backlog'
+)
+delete from public.lanes l
+using b
+where l.board_id = b.id
+  and (l.key like 'gate-%' or l.key like 'crud-lane-%')
+  and not exists (select 1 from public.cards c where c.lane_id = l.id);
+
+-- Close the gaps the deletions leave, so positions stay 0..n-1.
+with b as (
+  select b.id from public.boards b
+  join public.projects p on p.id = b.project_id
+  where p.slug = 'demo' and b.slug = 'backlog'
+), ordered as (
+  select l.id, row_number() over (order by l.position) - 1 as pos
+  from public.lanes l join b on b.id = l.board_id
+)
+update public.lanes l set position = o.pos
+from ordered o where o.id = l.id and l.position <> o.pos;
+
