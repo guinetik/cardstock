@@ -1,13 +1,15 @@
 import { expect, test } from "@playwright/test";
+import {
+  createMember,
+  dropMember,
+  OWNER,
+  signIn,
+  signInAs,
+} from "./support/sign-in";
 
-const MEMBER = process.env.E2E_MEMBER_EMAIL ?? "e2e@example.com";
-
-async function signIn(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(MEMBER);
-  await page.getByRole("button", { name: "Sign in (local dev)" }).click();
-  await page.waitForURL(/\/(p\/|$)/);
-}
+/** A throwaway non-owner, so this file does not depend on the seed's shape. */
+const NON_OWNER = "e2e-shell-admin@example.test";
+const NON_OWNER_PASSWORD = "correct horse battery";
 
 test("the account menu lives in the topbar and signs out", async ({ page }) => {
   await signIn(page);
@@ -20,7 +22,7 @@ test("the account menu lives in the topbar and signs out", async ({ page }) => {
   // person would, rather than racing hydration.
   await expect(async () => {
     await page.getByRole("button", { name: "Account menu" }).click();
-    await expect(page.getByText(MEMBER)).toBeVisible({ timeout: 1000 });
+    await expect(page.getByText(OWNER)).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 15_000 });
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.waitForURL(/\/login/);
@@ -34,10 +36,7 @@ test("the login screen has no account menu", async ({ page }) => {
 });
 
 test("the owner can open the import-project explainer", async ({ page }) => {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(process.env.OWNER_EMAIL ?? "");
-  await page.getByRole("button", { name: "Sign in (local dev)" }).click();
-  await page.waitForURL(/\/(p\/|$)/);
+  await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Import project" }).click();
   await expect(
@@ -50,9 +49,14 @@ test("the owner can open the import-project explainer", async ({ page }) => {
 });
 
 test("a non-owner does not see the import button", async ({ page }) => {
-  await signIn(page); // e2e member is an admin, not the owner
-  await page.goto("/");
-  await expect(
-    page.getByRole("button", { name: "Import project" }),
-  ).toHaveCount(0);
+  await createMember(NON_OWNER, NON_OWNER_PASSWORD, "admin");
+  try {
+    await signInAs(page, NON_OWNER, NON_OWNER_PASSWORD);
+    await page.goto("/");
+    await expect(
+      page.getByRole("button", { name: "Import project" }),
+    ).toHaveCount(0);
+  } finally {
+    await dropMember(NON_OWNER);
+  }
 });

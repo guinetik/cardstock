@@ -3,20 +3,9 @@ import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MIN_PASSWORD } from "@/lib/auth";
-import {
-  devSignIn,
-  type LoginResult,
-  setInitialPassword,
-  signIn,
-} from "./actions";
+import { type LoginResult, setInitialPassword, signIn } from "./actions";
 
-export function LoginForm({
-  next,
-  devLogin,
-}: {
-  next: string;
-  devLogin: boolean;
-}) {
+export function LoginForm({ next }: { next: string }) {
   const [email, setEmail] = useState("");
   const [onboarding, setOnboarding] = useState(false);
   const [inState, doSignIn, signingIn] = useActionState<
@@ -27,18 +16,15 @@ export function LoginForm({
     LoginResult | null,
     FormData
   >(setInitialPassword, null);
-  const [devState, signInDev, signingInDev] = useActionState<
-    LoginResult | null,
-    FormData
-  >(devSignIn, null);
-
-  const ok = inState?.ok || pwState?.ok || devState?.ok;
+  const ok = inState?.ok || pwState?.ok;
   useEffect(() => {
     // The session cookie is set; a full load lets proxy.ts pick it up.
     if (ok) window.location.assign(next);
   }, [ok, next]);
 
-  const error = inState?.error ?? pwState?.error ?? devState?.error;
+  // Only the active mode's error: switching modes must not leave the other
+  // form's complaint on screen, where it reads as a reply to what you just did.
+  const error = onboarding ? pwState?.error : inState?.error;
   const busy = signingIn || settingPassword;
 
   return (
@@ -98,26 +84,6 @@ export function LoginForm({
           ? "Already have a password? Sign in"
           : "First time here? Set your password"}
       </button>
-      {devLogin && (
-        <form
-          action={signInDev}
-          className="space-y-3 border-t pt-4"
-          data-testid="dev-login-form"
-        >
-          <input type="hidden" name="email" value={email} />
-          <Button
-            type="submit"
-            variant="outline"
-            className="w-full"
-            disabled={signingInDev}
-          >
-            {signingInDev ? "Signing in…" : "Sign in (local dev)"}
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Local development only — no password. The invite list still applies.
-          </p>
-        </form>
-      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );

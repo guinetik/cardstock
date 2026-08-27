@@ -6,6 +6,9 @@
  * source of truth: further members can be added by SQL, or by a UI later.
  * MEMBER_EMAILS are seeded as ordinary admins.
  *
+ * This only fills the allowlist. Signing in needs a password too, which is what
+ * `bun run db:dev-password` gives a local account.
+ *
  *   bun run db:seed-members --project <slug>
  */
 import { arg, serviceClient } from "./db";
@@ -16,11 +19,6 @@ const emails = (process.env.MEMBER_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
-const e2eEmail = process.env.E2E_MEMBER_EMAIL?.toLowerCase();
-const isLocal =
-  (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").includes("127.0.0.1") ||
-  (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").includes("localhost");
-
 if (!ownerEmail && !emails.length)
   throw new Error("set OWNER_EMAIL (and optionally MEMBER_EMAILS)");
 const db = serviceClient();
@@ -36,7 +34,6 @@ if (!project)
 const roster = new Map<string, "owner" | "admin">();
 if (ownerEmail) roster.set(ownerEmail, "owner");
 for (const email of emails) if (!roster.has(email)) roster.set(email, "admin");
-if (e2eEmail && isLocal && !roster.has(e2eEmail)) roster.set(e2eEmail, "admin");
 
 for (const [email, role] of roster) {
   const { data: m, error } = await db
@@ -55,23 +52,4 @@ for (const [email, role] of roster) {
       { onConflict: "project_id,member_id" },
     );
   console.log(`${role} ${email} → ${projectSlug}`);
-}
-
-// Playwright signs in through the dev button, so the test member needs an auth
-// user but no password.
-if (e2eEmail) {
-  if (!isLocal)
-    console.warn(
-      "E2E member requested but Supabase URL is not local — skipping the auth user",
-    );
-  else {
-    const { data: list } = await db.auth.admin.listUsers({ perPage: 1000 });
-    const found = list?.users.find((u) => u.email?.toLowerCase() === e2eEmail);
-    if (!found)
-      await db.auth.admin.createUser({
-        email: e2eEmail,
-        email_confirm: true,
-      });
-    console.log(`e2e auth user ${e2eEmail} ready (local only)`);
-  }
 }

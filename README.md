@@ -11,7 +11,7 @@ A hosted board over a markdown tracker. Your team keeps writing one `.md` per it
 
 ## Stack
 
-bun · Next.js 16 (App Router, Turbopack, `proxy.ts`) · React 19 · TypeScript · Tailwind 4 + shadcn · Biome · Supabase (Postgres, Auth magic link) via `@supabase/ssr` · dnd-kit · `bun test` + Playwright · Vercel.
+bun · Next.js 16 (App Router, Turbopack, `proxy.ts`) · React 19 · TypeScript · Tailwind 4 + shadcn · Biome · Supabase (Postgres, Auth email + password) via `@supabase/ssr` · dnd-kit · `bun test` + Playwright · Vercel.
 
 ## Run it locally
 
@@ -25,11 +25,24 @@ bun run etl:import --project demo --board backlog --source examples/tracker
 bun run dev                               # http://localhost:3000
 ```
 
-cardstock is **invite-only**: `members` is the allowlist, and an email that is not on it never gets a session — the link request is refused, the magic-link callback signs the user back out, and row-level security shows them nothing.
+cardstock is **invite-only**: `members` is the allowlist, and an email that is not on it never gets a session — onboarding is refused before any account is created, sign-in signs the user straight back out, and row-level security shows them nothing.
 
 The **Owner** is whoever deploys the app and owns its infrastructure. `OWNER_EMAIL` bootstraps that row on a fresh database; from then on `members.role = 'owner'` is the source of truth, and only an owner may add people (by SQL today, by UI later). There is no owner UI yet — this is the setup it will sit on.
 
-Sign in with a magic link (locally the mail lands in Mailpit at http://127.0.0.1:54324). With `NEXT_PUBLIC_DEV_LOGIN=1` the login screen also offers a passwordless **Sign in (local dev)** button — it refuses to run unless `NODE_ENV` is not `production` *and* the Supabase URL points at this machine, and the allowlist still applies.
+Sign in with an email and a password. Someone who has just been invited picks their password on the login screen the first time — that is the whole onboarding, and no mail is involved. `signUp` cannot replace a password that already exists, so the form can create a first one but never take over an account.
+
+This needs **email confirmation switched off** on the Supabase project (Authentication → Sign In / Providers → Email); the local `supabase/config.toml` already has it off. When it is on, setting a password returns no session and the screen says so.
+
+A fresh local database has an allowlist but no passwords, so give yourself one:
+
+```sh
+bun run db:seed-members --project <slug>   # OWNER_EMAIL onto the allowlist
+bun run db:dev-password                    # OWNER_EMAIL, password admin123
+```
+
+`db:dev-password` refuses to run against anything but a Supabase on this machine. The e2e suite signs in the same way a person does, with that account.
+
+Resetting a forgotten password is not built yet — it needs mail. Until then, clear the account in the Supabase dashboard and let the person onboard again.
 
 ## ETL
 

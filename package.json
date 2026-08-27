@@ -20,7 +20,8 @@
     "etl:import-board-state": "bun run etl/import-board-state.ts",
     "etl:schema": "bun run etl/emit-schema.ts",
     "etl:export": "bun run etl/export.ts",
-    "db:apply": "bun run etl/apply-sql.ts"
+    "db:apply": "bun run etl/apply-sql.ts",
+    "db:dev-password": "bun run etl/dev-password.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -13,8 +13,8 @@ Two projects to create, then a handful of values to wire. Nothing secret goes to
    bun run db:apply --file supabase/seed.sql              # demo project (SUPABASE_DB_URL = the hosted connection string); your project's seed the same way
    ```
 3. **Authentication → URL Configuration**: Site URL `https://<your-vercel-domain>`; add `https://<your-vercel-domain>/auth/callback` (and any preview domains) to Redirect URLs.
-4. **Authentication → Providers → Email**: keep *Enable email provider* on; *Confirm email* can stay on — magic links confirm anyway.
-5. **Authentication → SMTP Settings**: wire Resend *before* inviting anyone. Supabase's built-in sender is capped at **2 emails per hour** for the whole project (the same default is visible locally as `email_sent` under `[auth.rate_limit]` in `supabase/config.toml`) — two sign-ins in an hour and the third person's magic link silently never arrives.
+4. **Authentication → Sign In / Providers → Email**: keep *Enable email provider* on and switch *Confirm email* **off**. Sign-in is email + password and an invited person sets theirs on first use; with confirmation on, that returns no session and nobody can onboard. The invite itself is the confirmation — the allowlist is what decides who gets in.
+5. **Authentication → SMTP Settings**: not needed for sign-in — nothing in the flow sends mail. Wire Resend when password reset arrives, and note the built-in sender is capped at **2 emails per hour** for the whole project (visible locally as `email_sent` under `[auth.rate_limit]` in `supabase/config.toml`).
    - Resend → **Domains** → add a domain you control, add the SPF/DKIM records it prints to your DNS, wait for *Verified*. The shared `onboarding@resend.dev` sender only delivers to the address that owns the Resend account, so it cannot serve an allowlist.
    - Resend → **API Keys** → create one with *Sending access*.
    - Back in Supabase, enable custom SMTP: host `smtp.resend.com`, port `587`, username `resend`, password = the Resend API key, sender address `something@<your verified domain>`.
@@ -33,7 +33,7 @@ bun run etl:import --project <slug> --board <slug> --source <your tracker dir> -
 bun run etl:import-board-state --project <slug> --board <slug> --file <export>.json   # optional: carry over a file-based board
 ```
 
-Leave `E2E_MEMBER_*` unset against a hosted project; the script refuses to create the test user there anyway.
+Seeding only fills the allowlist. Each person sets their own password the first time they sign in, so there is nothing else to provision — but the project must have **Confirm email** switched off (Authentication → Sign In / Providers → Email), or `signUp` returns no session and nobody can onboard.
 
 ## 3. Vercel
 
@@ -41,8 +41,8 @@ Leave `E2E_MEMBER_*` unset against a hosted project; the script refuses to creat
 2. Environment variables (Production + Preview):
    - `NEXT_PUBLIC_SUPABASE_URL` — the project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon/publishable key
-   - do **not** add `SUPABASE_SERVICE_ROLE_KEY` or `NEXT_PUBLIC_DEV_LOGIN` (dev sign-in refuses to run against a hosted URL, but there is no reason to ship either)
-3. Deploy. The first sign-in is a magic link to the owner's address; anyone not on the allowlist is told the beta is invite-only, and no mail is sent to them.
+   - do **not** add `SUPABASE_SERVICE_ROLE_KEY` — the app never needs it, and it bypasses every row-level policy
+3. Deploy. The owner onboards like anyone else: *First time here? Set your password* on `/login`, using `OWNER_EMAIL`. Anyone not on the allowlist is told the beta is invite-only, and no account is created for them.
 
 ## 4. Day to day
 

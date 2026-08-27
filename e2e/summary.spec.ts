@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { signIn } from "./support/sign-in";
 
 /**
  * The summary is seeded from markdown but editable in the app. Once a person
@@ -9,11 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 test("a summary edited in the app survives the next import", async ({
   page,
 }) => {
-  const EMAIL = process.env.E2E_MEMBER_EMAIL ?? "e2e@example.com";
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(EMAIL);
-  await page.getByRole("button", { name: "Sign in (local dev)" }).click();
-  await page.waitForURL(/\/(p\/|$)/);
+  await signIn(page);
 
   const typed = `edited in the app ${Date.now()}`;
   await page.goto("/p/demo/b/backlog/c/1");

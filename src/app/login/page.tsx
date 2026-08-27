@@ -1,15 +1,9 @@
-import { isDevLoginEnabled } from "@/lib/auth";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage(props: PageProps<"/login">) {
   const sp = await props.searchParams;
   const next = typeof sp.next === "string" ? sp.next : "/";
   const error = typeof sp.error === "string" ? sp.error : null;
-  const devLogin = isDevLoginEnabled({
-    NODE_ENV: process.env.NODE_ENV,
-    NEXT_PUBLIC_DEV_LOGIN: process.env.NEXT_PUBLIC_DEV_LOGIN,
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  });
   return (
     <main className="flex min-h-full flex-1 items-center justify-center p-6">
       <div className="paper-card w-full max-w-sm space-y-6 p-6">
@@ -36,7 +30,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
             invite.
           </p>
         )}
-        <LoginForm next={next} devLogin={devLogin} />
+        <LoginForm next={next} />
       </div>
     </main>
   );

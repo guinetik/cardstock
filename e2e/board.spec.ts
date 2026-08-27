@@ -1,15 +1,8 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { signIn } from "./support/sign-in";
 
-const EMAIL = process.env.E2E_MEMBER_EMAIL ?? "e2e@example.com";
 const BOARD = process.env.E2E_BOARD_PATH ?? "/p/demo/b/backlog";
-
-async function signIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(EMAIL);
-  await page.getByRole("button", { name: "Sign in (local dev)" }).click();
-  await page.waitForURL(/\/(p\/|$)/);
-}
 
 test.beforeEach(async ({ page }) => {
   await signIn(page);
