@@ -94,21 +94,58 @@ export function valueToPriority(
   return v === "H" ? 1 : v === "M" ? 2 : v === "L" ? 3 : null;
 }
 
+/**
+ * Statuses whose lane the importer re-applies on every run, overriding whatever
+ * the board says.
+ *
+ * A board can narrow this with `pin_statuses`. Pinning is right when the status
+ * alone determines the lane — shipped work should not sit in Now because nobody
+ * moved it. It is wrong once a lane means something the file cannot know: a
+ * board with delivery gates knows a card is *built*, but only a person knows
+ * which gate it has reached, so `built` is better left to the board there.
+ */
+export const DEFAULT_PIN_STATUSES = [
+  "built",
+  "handed",
+  "held",
+  "shipped",
+  "done",
+];
+
+export interface PinSettings {
+  pin_statuses?: string[];
+}
+
+function pinned(status: string, settings: PinSettings): boolean {
+  return (settings.pin_statuses ?? DEFAULT_PIN_STATUSES).includes(status);
+}
+
 /** Lane key for a card's tracker status, via the board's `status_to_lane`; `needs` wins for open items. */
 export function laneForStatus(
   status: string,
   needs: string | null | undefined,
-  settings: { status_to_lane?: Record<string, string>; needs_lane?: string },
+  settings: {
+    status_to_lane?: Record<string, string>;
+    needs_lane?: string;
+  } & PinSettings,
   fallback = "unsorted",
 ): string {
-  const pinned = ["built", "handed", "held", "shipped", "done"].includes(
-    status,
-  );
-  if (!pinned && needs && settings.needs_lane) return settings.needs_lane;
+  if (!pinned(status, settings) && needs && settings.needs_lane)
+    return settings.needs_lane;
   return settings.status_to_lane?.[status] ?? fallback;
 }
 
-export function isPinnedStatus(status: string): "built" | "done" | null {
+/**
+ * The lane a status pins to, or null when the board is left to decide.
+ *
+ * The returned key is only a fallback for a board with no `status_to_lane`
+ * entry; what matters to the caller is whether this is null.
+ */
+export function isPinnedStatus(
+  status: string,
+  settings: PinSettings = {},
+): "built" | "done" | null {
+  if (!pinned(status, settings)) return null;
   if (status === "shipped" || status === "done") return "done";
   if (status === "built" || status === "handed" || status === "held")
     return "built";

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  DEFAULT_PIN_STATUSES,
   isPinnedStatus,
   laneForStatus,
   type Mapping,
@@ -210,6 +211,44 @@ describe("mapping", () => {
     expect(isPinnedStatus("handed")).toBe("built");
     expect(isPinnedStatus("done")).toBe("done");
     expect(isPinnedStatus("wip")).toBeNull();
+  });
+
+  test("a board can narrow which statuses pin", () => {
+    // A board with delivery gates knows a card is built but not which gate it
+    // reached, so it leaves `built` to the board and still pins the rest.
+    const s = { pin_statuses: ["shipped", "done", "handed", "held"] };
+    expect(isPinnedStatus("built", s)).toBeNull();
+    expect(isPinnedStatus("shipped", s)).toBe("done");
+    expect(isPinnedStatus("handed", s)).toBe("built");
+    expect(isPinnedStatus("held", s)).toBe("built");
+  });
+
+  test("an unpinned status lets `needs` choose the lane again", () => {
+    const s = {
+      status_to_lane: { built: "done" },
+      needs_lane: "needs-input",
+      pin_statuses: ["shipped", "done"],
+    };
+    expect(laneForStatus("built", "Owner", s)).toBe("needs-input");
+    // With no `needs`, the status mapping still applies.
+    expect(laneForStatus("built", null, s)).toBe("done");
+  });
+
+  test("an empty pin list pins nothing", () => {
+    expect(isPinnedStatus("shipped", { pin_statuses: [] })).toBeNull();
+    expect(isPinnedStatus("done", { pin_statuses: [] })).toBeNull();
+  });
+
+  test("a board that says nothing keeps the default five", () => {
+    for (const st of DEFAULT_PIN_STATUSES)
+      expect(isPinnedStatus(st, {})).not.toBeNull();
+    expect(DEFAULT_PIN_STATUSES).toEqual([
+      "built",
+      "handed",
+      "held",
+      "shipped",
+      "done",
+    ]);
   });
 });
 

@@ -39,6 +39,7 @@ const mapping = JSON.parse(await readFile(mappingPath, "utf8")) as Mapping;
 const settings = ctx.settings as {
   status_to_lane?: Record<string, string>;
   needs_lane?: string;
+  pin_statuses?: string[];
 };
 
 const files = (await readdir(source))
@@ -88,7 +89,7 @@ for (const file of files) {
     continue;
   }
 
-  const pin = isPinnedStatus(fm.status);
+  const pin = isPinnedStatus(fm.status, settings);
   const laneKey = pin
     ? (settings.status_to_lane?.[fm.status] ?? pin)
     : laneForStatus(fm.status, fm.needs, settings);
@@ -167,8 +168,14 @@ for (const file of files) {
   }
 
   if (dryRun) {
+    // Report the lane only when this run actually sets one. An existing card
+    // whose status does not pin keeps the lane the board gave it, and naming
+    // the computed lane here read as a move that was never going to happen.
+    const laneNote = row.lane_id
+      ? ` → ${ctx.lanes.find((l) => l.id === row.lane_id)?.key ?? lane.key}`
+      : "";
     console.log(
-      `${prev ? "update" : "create"} #${externalId} → ${lane.key} [${mapTags(fm, mapping).join(", ")}]`,
+      `${prev ? "update" : "create"} #${externalId}${laneNote} [${mapTags(fm, mapping).join(", ")}]`,
     );
     prev ? updated++ : created++;
     continue;
