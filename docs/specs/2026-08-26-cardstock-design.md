@@ -68,11 +68,11 @@ Body sections (`## Ask`, `## Status`, …) are stored whole in `body_md`; `summa
 `etl/` is a bun workspace of plain TypeScript run with the **service-role key from `.env.local`, never from the browser or Vercel**.
 
 - `bun run etl:import --project <slug> --board <slug> --source <dir>` — parse every `*.md`, validate, upsert by `(board, external_id)`.
-  **Markdown owns:** title, status, body, epic, area, raised_by/raised/shipped/needs, relates, tags (mapped through `etl/mappings/<slug>.json` into the board's tag groups), `frontmatter_extra`.
-  **DB owns:** lane, rank, priority, effort, target_date/label, audience, summary (once edited), archive.
+  **Markdown owns:** title, status, body (until `body_edited_at` is set), epic, area, raised_by/raised/shipped/needs, relates, tags (mapped through `etl/mappings/<slug>.json` into the board's tag groups), `frontmatter_extra`.
+  **DB owns:** lane, rank, priority, effort, target_date/label, audience, summary (once edited), body_md (once `body_edited_at` is set), archive.
   **Exceptions:** a *new* card takes its lane from `settings.status_to_lane` (then `needs` → the waiting lane); on every import a card whose status is built/handed/held or shipped/done is re-pinned to the built/done lane; `effort`/`value` in frontmatter seed the DB fields only when those are null (`value` H/M/L → priority 1/2/3). Unchanged files (same `source_hash`) are skipped. Every change writes a `card_events` row with `kind: 'imported'`.
 - `bun run etl:import-board-state <file.json>` — applies a `designer-board/1` export (lanes, rank, target, effort, value) on top of imported cards; lane names go through `settings.lane_aliases` (`Needs input` → the waiting lane key). Used once to seed the hosted board from the last file-based review.
-- `bun run etl:export --project <slug> --board <slug> --source <dir>` — **v1.1**, contract fixed now: writes `lane`, `rank`, `priority`, `effort`, `target`, and `archived` into each card's frontmatter, leaves every other key and the body untouched, and reports files it would change. Not built in this pass.
+- `bun run etl:export --project <slug> --board <slug> --source <dir>` — writes `lane`, `rank`, `priority`, `effort`, `target`, and `archived` into each card's frontmatter. When `body_edited_at` is set, also writes `body_md` back with the tracker H1 (`# #n — title`) restored. Files nobody has edited in the app stay byte-identical aside from managed keys.
 
 ## App
 
@@ -81,7 +81,7 @@ Body sections (`## Ask`, `## Status`, …) are stored whole in `body_md`; `summa
 - `/p/[project]` — project home: boards, members (add by email — creates the `members` allowlist row and the `project_members` row).
 - `/p/[project]/b/[board]` — the kanban. Filter bar: search, one dropdown per tag group, priority, effort, audience (the product owner's default hides `internal`: *"get that out of my list"*), "show archived". Lanes in `position` order with counts, min/max per lane, per-lane sort; cards drag with dnd-kit (pointer + keyboard sensors), optimistic update, server action persists and writes the event. Card face: `#external_id`, status badge, `needs` badge, title, summary, epic + raised date, target, priority P1–P3, effort L/M/H, tag chips. CSV export of the current filter (*"as long as I can slice it and dice it"*).
 - `/p/[project]/b/[board]/timeline` — cards with a `target_date`, grouped by month, then unscheduled; the "September, October, November, December in front of me" view.
-- `/p/[project]/b/[board]/c/[external_id]` — card detail: editable summary, fields, tags, links (`blocked_by` chips), rendered body, attachments (v1.1), event history, Archive / Restore.
+- `/p/[project]/b/[board]/c/[external_id]` — card detail: editable summary, fields, tags, links (`blocked_by` chips), rendered body (editable via MDXEditor), comments stored at the bottom of `body_md` after `## Comments`, attachments (v1.1), event history, Archive / Restore.
 - `/p/[project]/b/[board]/settings` — lanes (name, kind, SLA, order) and tag groups/tags. Minimal, admin only (everyone).
 - Server components read through the SSR Supabase client; mutations are server actions; `proxy.ts` redirects signed-out requests to `/login`.
 

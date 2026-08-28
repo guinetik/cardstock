@@ -24,3 +24,11 @@ Hue belongs to the group, not the tag, so a tag is the same colour in the filter
 ## Links
 
 Related card ids (`#118`) and other in-page jumps use `.paper-link` (`color: var(--pen-blue)`). Markdown links get the same pen via `--tw-prose-links` (see `docs/markdown-typography.md`).
+
+## Body
+
+Read by default (`.prose`, wiki-links as bold). **Edit** opens MDXEditor; **Save** writes `body_md` and stamps `body_edited_at`. **Cancel** discards the draft. Comments are not in the editor.
+
+## Comments
+
+Below the article. Each block is `### YYYY-MM-DD HH:mm · email` plus a blockquote in the file. The page shows timestamp, email, and rendered markdown. Append-only: textarea + **Post**. Empty Post shows “Write a comment first.” The first comment creates the `## Comments` fence; there is no empty-fence placeholder.
