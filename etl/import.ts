@@ -4,7 +4,7 @@
  *   bun run etl:import --project <slug> --board <slug> --source <dir> [--dry-run]
  *
  * Markdown owns: title, status, body, epic, area, raised_by/raised/shipped, needs, relates, tags, extra keys.
- * DB owns: lane, rank, priority, effort, planned_start, target, audience (after first import), summary (once edited in the app), archive.
+ * DB owns: lane, rank, priority, effort, planned_start, target, audience (after first import), summary (once edited in the app), body_md (once body_edited_at is set), archive.
  * Lane is board state. A new card takes the lane its file names, or the inbox;
  * an existing card moves only when the file's `lane:` differs from what it said
  * at the last sync, so a drag survives a file that has not changed its mind.
@@ -22,6 +22,7 @@ import {
   mapAudience,
   mapTags,
   resolveTags,
+  bodyOnImport,
   summaryOnImport,
   valueToPriority,
 } from "./mapping";
@@ -55,7 +56,7 @@ if (!files.length) throw new Error(`no <id>.md files in ${source}`);
 const { data: existingRows } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, lane_from_source, epic_id, planned_start_date, rank, priority, effort, source_hash, summary, summary_edited_at, audience",
+    "id, external_id, lane_id, lane_from_source, epic_id, planned_start_date, rank, priority, effort, source_hash, summary, summary_edited_at, audience, body_md, body_edited_at",
   )
   .eq("board_id", ctx.board.id);
 const existing = new Map((existingRows ?? []).map((c) => [c.external_id, c]));
@@ -145,7 +146,6 @@ for (const file of files) {
     board_id: ctx.board.id,
     external_id: externalId,
     title: fm.title,
-    body_md: bodyWithoutH1(parsed.body),
     status: fm.status,
     epic: fm.epic,
     epic_id: resolvedEpicId,
@@ -229,6 +229,18 @@ for (const file of files) {
     );
     if (nextSummary !== undefined) row.summary = nextSummary;
   }
+
+  const fileBody = bodyWithoutH1(parsed.body);
+  const nextBody = bodyOnImport(
+    prev
+      ? {
+          body_md: prev.body_md as string,
+          body_edited_at: prev.body_edited_at as string | null,
+        }
+      : null,
+    fileBody,
+  );
+  if (nextBody !== undefined) row.body_md = nextBody;
 
   if (dryRun) {
     // Report the lane only when this run actually sets one: an existing card

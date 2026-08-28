@@ -21,7 +21,7 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { arg, flag, loadBoard, serviceClient } from "./db";
-import { type Managed, writeManaged } from "./frontmatter-write";
+import { type Managed, writeBody, writeManaged } from "./frontmatter-write";
 
 const projectSlug = arg("project");
 const boardSlug = arg("board");
@@ -35,7 +35,7 @@ const laneKey = new Map(ctx.lanes.map((l) => [l.id, l.key]));
 const { data: cards, error } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, lane_from_source, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by",
+    "id, external_id, lane_id, lane_from_source, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, body_md, body_edited_at, title",
   )
   .eq("board_id", ctx.board.id)
   .order("rank");
@@ -75,6 +75,10 @@ for (const c of cards ?? []) {
     archived_by: c.archived_at ? (c.archived_by ?? null) : null,
   };
   const after = writeManaged(before, managed);
+  const rewritten =
+    c.body_edited_at != null
+      ? writeBody(after, c.external_id, c.title, c.body_md ?? "")
+      : after;
 
   // After this export the file says what the board says, so that is the new
   // merge base — and that is true whether or not the file needed rewriting. A
@@ -88,18 +92,18 @@ for (const c of cards ?? []) {
       .update({ lane_from_source: managed.lane })
       .eq("id", c.id);
 
-  if (after === before) {
+  if (rewritten === before) {
     unchanged++;
     continue;
   }
   changed++;
   if (dryRun) {
     console.log(
-      `would update ${c.external_id}.md → ${managed.lane}#${managed.rank}${managed.priority ? ` P${managed.priority}` : ""}${managed.effort ? ` ${managed.effort}` : ""}${managed.target ? ` ${managed.target}` : ""}`,
+      `would update ${c.external_id}.md → ${managed.lane}#${managed.rank}${managed.priority ? ` P${managed.priority}` : ""}${managed.effort ? ` ${managed.effort}` : ""}${managed.target ? ` ${managed.target}` : ""}${c.body_edited_at ? " body" : ""}`,
     );
     continue;
   }
-  await writeFile(file, after, "utf8");
+  await writeFile(file, rewritten, "utf8");
 }
 console.log(
   `${dryRun ? "[dry-run] " : ""}${projectSlug}/${boardSlug} → ${source}: ${changed} files updated, ${unchanged} unchanged${missing.length ? `; no file for: ${missing.map((m) => `#${m}`).join(", ")}` : ""}`,

@@ -214,3 +214,21 @@ export function summaryOnImport(
   if (fmSummary) return fmSummary;
   return prev.summary ? undefined : askSummary;
 }
+
+/**
+ * What an import should write to `body_md`, or `undefined` to leave it alone.
+ *
+ * Once someone edits the body or posts a comment in the app, the database owns
+ * `body_md`. The exporter writes it back; an import must not replace it.
+ *
+ * @param prev - Existing card, or `null` for a create.
+ * @param fileBody - `bodyWithoutH1` of the tracker file.
+ */
+export function bodyOnImport(
+  prev: { body_md: string; body_edited_at: string | null } | null,
+  fileBody: string,
+): string | undefined {
+  if (!prev) return fileBody;
+  if (prev.body_edited_at) return undefined;
+  return fileBody;
+}

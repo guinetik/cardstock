@@ -71,3 +71,35 @@ export function formatScalar(v: string | number): string {
     return s;
   return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
+
+/**
+ * Replace everything after the closing frontmatter fence with the tracker H1
+ * plus `bodyMd`. Used only when the app owns the body (`body_edited_at` set).
+ *
+ * @param text - Full file (frontmatter + old body).
+ * @param externalId - Tracker id, used in `# #n — title`.
+ * @param title - Card title.
+ * @param bodyMd - `cards.body_md` (no H1).
+ */
+export function writeBody(
+  text: string,
+  externalId: string,
+  title: string,
+  bodyMd: string,
+): string {
+  const nl = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  if (lines[0]?.trim() !== "---")
+    throw new Error("file does not open with a --- frontmatter fence");
+  let end = -1;
+  for (let i = 1; i < lines.length; i++)
+    if (lines[i].trim() === "---") {
+      end = i;
+      break;
+    }
+  if (end < 0) throw new Error("frontmatter fence is never closed");
+  const body = bodyMd.replace(/\r?\n/g, nl).replace(/(\r?\n)+$/, "");
+  const h1 = `# #${externalId} — ${title}`;
+  const out = [...lines.slice(0, end + 1), h1, "", body].join(nl);
+  return out.endsWith(nl) ? out : `${out}${nl}`;
+}

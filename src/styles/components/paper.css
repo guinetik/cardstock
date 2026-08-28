@@ -505,3 +505,29 @@
     color: var(--pen-red);
   }
 }
+
+/* MDXEditor on the issue page — paper stock, not the library's default chrome. */
+.issue-editor .mdxeditor {
+  --baseBg: var(--surface-input);
+  --baseBorder: var(--border-input);
+  --baseText: var(--color-ink);
+  --baseBorderRadius: var(--radius-input);
+  font-family: inherit;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-input);
+  background: var(--surface-input);
+  color: var(--color-ink);
+}
+.issue-editor .mdxeditor-toolbar {
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--surface-card);
+  border-radius: var(--radius-input) var(--radius-input) 0 0;
+}
+.issue-editor .mdxeditor-root-contenteditable {
+  padding: 0.75rem;
+}
+.issue-editor .mdxeditor,
+.issue-editor .mdxeditor-toolbar,
+.issue-editor .mdxeditor-popup-container {
+  border-radius: var(--radius-input);
+}
