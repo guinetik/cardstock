@@ -5,6 +5,7 @@ import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
 import { CardEditor } from "./card-editor";
+import { IssueBodyPanel } from "./issue-body-panel";
 import { IssueComments } from "./issue-comments";
 
 export const dynamic = "force-dynamic";
@@ -190,9 +191,10 @@ export default async function CardPage(
         )}
       </dl>
 
-      <article
-        className="prose prose-sm mt-6 max-w-none"
-        dangerouslySetInnerHTML={{ __html: html }}
+      <IssueBodyPanel
+        cardId={card.id}
+        bodyMarkdown={issue.body}
+        bodyHtml={html}
       />
 
       <IssueComments
