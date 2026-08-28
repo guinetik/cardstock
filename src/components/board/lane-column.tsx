@@ -84,12 +84,22 @@ export function LaneColumn(props: {
   if (props.hiddenByDefault) return null;
   const drawer = lane.kind === "inbox";
 
-  // Collapsed, a lane is its own tab edge — and still a drop target.
-  if (view === "min") {
+  // Collapsed, a lane is its own tab edge — and still a drop target. Both
+  // states are the same <section> so the width can animate between them:
+  // swapping elements would make the board snap open and shut.
+  const min = view === "min";
+  const width = min
+    ? "w-7"
+    : view === "max"
+      ? "w-[min(880px,44vw)]"
+      : "w-[clamp(280px,22vw,420px)]";
+
+  if (min) {
     return (
       <section
         data-lane={lane.key}
-        className={`lane-spine flex h-full w-7 shrink-0 flex-col items-center gap-2 self-stretch py-2 ${isOver ? "paper-lane--over" : ""}`}
+        ref={setNodeRef}
+        className={`paper-lane lane-spine flex h-full shrink-0 flex-col items-center gap-2 self-stretch py-2 ${width} ${isOver ? "paper-lane--over" : ""}`}
       >
         <h2 className={`lane-name ${KIND_INK[lane.kind]}`}>{lane.name}</h2>
         <span
@@ -100,7 +110,6 @@ export function LaneColumn(props: {
         </span>
         <button
           type="button"
-          ref={setNodeRef}
           className="flex-1 self-stretch"
           aria-label={`Expand ${lane.name}`}
           onClick={() => props.onView("")}
@@ -108,9 +117,6 @@ export function LaneColumn(props: {
       </section>
     );
   }
-
-  const width =
-    view === "max" ? "w-[min(880px,44vw)]" : "w-[clamp(280px,22vw,420px)]";
 
   return (
     <section

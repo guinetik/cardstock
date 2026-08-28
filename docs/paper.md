@@ -81,6 +81,17 @@ perspective, not a spring — a sheet nearer the eye is a larger sheet. Page-sca
 sheets (`.paper-card--static`) and the drag ghost opt out, and
 `prefers-reduced-motion` drops the movement entirely.
 
+Two easings, and the difference matters. `--motion-ease-out` is for things that
+only change colour or depth. Anything that changes **size or place** — a lane
+collapsing, a card opening — uses `--motion-ease-settle`, because
+`--motion-ease-out` puts four fifths of the distance in the first fifth of the
+time and reads as a jump however long you make it.
+
+A card waits `--motion-dwell` (180ms) before opening, so brushing past a lane
+does not set off a row of expansions; leaving closes it immediately, with no
+delay. `.card-rest` hides on the same delay via `transition: display 0s
+allow-discrete`, otherwise the card sits blank while the peek waits.
+
 Board cards sit in a 3px horizontal gutter (`SortableCard`) so the swell has
 somewhere to grow. Without it a hovered card outgrows the lane's scroll
 container and the lane scrolls sideways — and the container cannot simply clip,
@@ -98,4 +109,30 @@ hairline-separated, lifting only under the pointer. An in-tray is emptied, not
 read.
 
 Collapsed, a lane becomes `.lane-spine`: its own tab edge, name turned on its
-side, count at the foot, still a drop target.
+side, count at the foot, still a drop target. Both states are the same
+`<section>` so the width animates; swapping elements made the board snap.
+
+## Spring-loaded lanes — built, switched off
+
+`COLLAPSE_LANES_ON_DRAG` in `board-view.tsx` is `false`. Everything below it
+works; flip the constant to bring it back.
+
+The idea: while a card is in hand the binder is held open at one tab. On pickup
+every lane but the one the card came from collapses to a spine, so no drop
+target is off-screen and nobody scrolls sideways with the mouse button down.
+Dwell over a spine for `SPRING_MS` (450ms) and that lane springs open, the way a
+Finder folder does, so a card can be **filed and ranked in one drag** instead of
+two. The dwell is what makes it bearable — crossing lanes on the way somewhere
+does not open them. Only one lane is sprung at a time; leaving the board closes
+it after `SPRING_LEAVE_MS` so a wobble at a lane's edge does not slam it shut
+mid-aim.
+
+**Why it is off:** collapsing the whole board the moment a card leaves the
+ground is more disorienting than the scrolling it saves. The idea may be worth
+another shape — springing a lane open *without* collapsing the rest, say.
+
+Two pieces of it stay switched on because they are right either way: lane width
+transitions rather than snapping (both lane states are one `<section>`), and
+`DndContext` runs `MeasuringStrategy.Always`, since dnd-kit otherwise measures
+droppable rects once at drag start and any mid-drag layout change drops cards
+into the lane that *used* to be under the pointer.

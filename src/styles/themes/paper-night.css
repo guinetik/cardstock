@@ -55,9 +55,11 @@
   --display-weight: 500;
   --display-tracking: -0.012em;
 
-  --motion-duration-hover: 220ms;
-  --motion-duration-ui: 280ms;
+  --motion-duration-hover: 320ms;
+  --motion-duration-ui: 420ms;
+  --motion-dwell: 180ms;
   --motion-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-ease-settle: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-press-y: 1px;
   --motion-rise: -2px;
   --motion-swell: 1.012;

@@ -74,6 +74,11 @@ test("drag a card from Unsorted to Next and it survives reload", async ({
   await page.mouse.down();
   await page.mouse.move(from.x + 70, from.y + 30, { steps: 4 });
   await page.mouse.move(to.x + to.width / 2, to.y + 120, { steps: 15 });
+  // The card moves into the lane optimistically, before the drop. Wait for
+  // that rather than racing the release.
+  await expect(
+    page.locator(`[data-lane="next"] [data-id="${id}"]`),
+  ).toBeVisible();
   await page.mouse.up();
   await expect(
     page.locator(`[data-lane="next"] [data-id="${id}"]`),

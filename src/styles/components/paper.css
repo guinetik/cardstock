@@ -70,6 +70,9 @@
     background: var(--surface-panel);
     border: 1px solid var(--border-hairline);
     border-radius: var(--radius-card);
+    /* Lanes collapse to tab edges while a card is in hand; snapping between
+       the two widths reads as the board detonating. */
+    transition: width var(--motion-duration-ui) var(--motion-ease-settle);
   }
   /* The drawer is the one lane cut into the desk rather than laid on it. */
   .paper-lane--drawer {
@@ -332,12 +335,19 @@
   .card-peek {
     display: grid;
     grid-template-rows: 0fr;
+    /* No delay here, so leaving a card closes it at once. The delay lives on
+       the hover rule below, which is the opening half of the transition. */
     transition: grid-template-rows var(--motion-duration-ui)
-      var(--motion-ease-out);
+      var(--motion-ease-settle);
   }
   .card-peek-inner {
     min-height: 0;
     overflow: hidden;
+  }
+  /* The resting summary steps aside exactly when the peek opens, not before —
+     otherwise the card is briefly blank while the peek waits out its dwell. */
+  .card-rest {
+    transition: display 0s allow-discrete;
   }
   /*
    * The back of the card is a filled-in form: a label column in the margin,
@@ -366,9 +376,11 @@
 @media (hover: hover) {
   .paper-card:is(:hover, :focus-within):not(.paper-card--overlay) .card-peek {
     grid-template-rows: 1fr;
+    transition-delay: var(--motion-dwell);
   }
   .paper-card:is(:hover, :focus-within):not(.paper-card--overlay) .card-rest {
     display: none;
+    transition-delay: var(--motion-dwell);
   }
 }
 
@@ -382,6 +394,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .paper-lane,
   .paper-card,
   .paper-card:hover,
   .paper-card:focus-within,

@@ -8,6 +8,7 @@ import {
   DragOverlay,
   type DragStartEvent,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   pointerWithin,
   useSensor,
@@ -15,7 +16,14 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   archiveCard,
   createLane,
@@ -53,6 +61,21 @@ const boardCollisionDetection: CollisionDetection = (args) => {
   return closestCorners(args);
 };
 
+/**
+ * Spring-loaded lanes: on pickup every lane but the source collapses to a tab
+ * edge, and dwelling over one springs it open, so a card can be filed and
+ * ranked in a single drag. Built and working, but switched off — collapsing
+ * the whole board the moment a card leaves the ground turned out to be more
+ * disorienting than the sideways scrolling it saves. Flip this to bring it
+ * back; everything below it is live.
+ */
+const COLLAPSE_LANES_ON_DRAG = false;
+
+/** How long a dragged card must dwell over a collapsed lane before it opens. */
+const SPRING_MS = 450;
+/** Grace before a sprung lane closes once the card leaves the board. */
+const SPRING_LEAVE_MS = 250;
+
 export interface Me {
   email: string;
   prefs: { inboxSort?: InboxSort; showInternal?: boolean };
@@ -72,6 +95,11 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     {},
   );
   const [active, setActive] = useState<Card | null>(null);
+  // The lane the card was picked up from, and the one currently sprung open.
+  const [dragFrom, setDragFrom] = useState<string | null>(null);
+  const [sprung, setSprung] = useState<string | null>(null);
+  const springTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverLane = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [laneBusy, setLaneBusy] = useState<string | null>(null);
   const [laneDialog, setLaneDialog] = useState<LaneDialogMode>(null);
@@ -116,12 +144,67 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     return cards.find((c) => c.id === id)?.lane_id ?? null;
   }
 
+  /**
+   * Spring-loaded lanes. Dwelling a dragged card over a collapsed lane opens
+   * it, the way a Finder folder springs open, so the card can be filed *and*
+   * ranked inside the lane in one drag instead of two. The dwell is what makes
+   * it bearable: crossing lanes on the way somewhere does not open them.
+   */
+  const clearSpringTimer = useCallback(() => {
+    if (springTimer.current) {
+      clearTimeout(springTimer.current);
+      springTimer.current = null;
+    }
+  }, []);
+  useEffect(() => clearSpringTimer, [clearSpringTimer]);
+
+  /**
+   * While a card is in hand the binder is held open at one tab: the lane it
+   * came from stays open and every other lane becomes a divider edge, so no
+   * drop target is off-screen. A lane the card dwells over springs open.
+   */
+  const viewFor = (laneId: string): "max" | "min" | "" => {
+    const chosen = laneView[laneId] ?? "";
+    if (!COLLAPSE_LANES_ON_DRAG || !active) return chosen;
+    if (laneId === dragFrom || laneId === sprung)
+      return chosen === "min" ? "" : chosen;
+    return "min";
+  };
+
+  function springTowards(laneId: string | null) {
+    if (!COLLAPSE_LANES_ON_DRAG) return;
+    if (hoverLane.current === laneId) return;
+    hoverLane.current = laneId;
+    clearSpringTimer();
+    if (laneId === null) {
+      // Off the board entirely — close after a beat, so a wobble at the edge
+      // of a lane does not slam it shut mid-aim.
+      springTimer.current = setTimeout(() => setSprung(null), SPRING_LEAVE_MS);
+      return;
+    }
+    if (laneId === sprung || laneId === dragFrom) return;
+    springTimer.current = setTimeout(() => setSprung(laneId), SPRING_MS);
+  }
+
+  function endDrag() {
+    clearSpringTimer();
+    hoverLane.current = null;
+    setActive(null);
+    setDragFrom(null);
+    setSprung(null);
+  }
+
   function onDragStart(e: DragStartEvent) {
-    setActive(cards.find((c) => c.id === e.active.id) ?? null);
+    const card = cards.find((c) => c.id === e.active.id) ?? null;
+    setActive(card);
+    setDragFrom(card?.lane_id ?? null);
+    setSprung(null);
+    hoverLane.current = card?.lane_id ?? null;
   }
 
   function onDragOver(e: DragOverEvent) {
     const { active, over } = e;
+    springTowards(over ? findLane(String(over.id)) : null);
     if (!over) return;
     const from = findLane(String(active.id)),
       to = findLane(String(over.id));
@@ -145,7 +228,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
 
   function onDragEnd(e: DragEndEvent) {
     const { active, over } = e;
-    setActive(null);
+    endDrag();
     if (!over) return;
     const laneId = findLane(String(over.id));
     if (!laneId) return;
@@ -389,10 +472,13 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         id="board-dnd"
         sensors={sensors}
         collisionDetection={boardCollisionDetection}
+        // Lanes collapse and spring open mid-drag, so the cached droppable
+        // rects from drag start are wrong the moment a card is picked up.
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setActive(null)}
+        onDragCancel={endDrag}
       >
         <main
           className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:px-6"
@@ -405,7 +491,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               cards={byLane.get(lane.id) ?? []}
               visible={visible}
               groups={data.groups}
-              view={laneView[lane.id] ?? ""}
+              view={viewFor(lane.id)}
               onView={(v) => setLaneView((s) => ({ ...s, [lane.id]: v }))}
               onPatch={patch}
               onArchive={archive}
