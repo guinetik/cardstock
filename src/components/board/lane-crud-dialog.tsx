@@ -97,9 +97,9 @@ function LaneDialogForm(
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {mode.type === "add" &&
-              "The lane key is generated from this name and remains stable for markdown exports."}
+              "We’ll make an ID from this name. The ID never changes, so it’s safe to use in your markdown."}
             {mode.type === "rename" &&
-              "The name is what the board shows. The key is what markdown stores, and it does not change."}
+              "The ID is what you write in a card’s frontmatter. You can change the display name here — the ID stays the same."}
             {mode.type === "delete" &&
               `${props.cardCount} card${props.cardCount === 1 ? "" : "s"} will be moved before the lane is removed.`}
           </DialogDescription>
@@ -125,7 +125,7 @@ function LaneDialogForm(
               // when a file and the board seem to disagree — and it can read
               // nothing like the name above it.
               <label className="grid gap-1.5" htmlFor="lane-key">
-                <span className="text-xs font-medium">Markdown key</span>
+                <span className="text-xs font-medium">Lane ID</span>
                 <Input
                   id="lane-key"
                   readOnly
