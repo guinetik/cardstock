@@ -4,7 +4,7 @@
  *   bun run etl:import --project <slug> --board <slug> --source <dir> [--dry-run]
  *
  * Markdown owns: title, status, body, epic, area, raised_by/raised/shipped, needs, relates, tags, extra keys.
- * DB owns: lane, rank, priority, effort, target, audience (after first import), summary (once edited in the app), archive.
+ * DB owns: lane, rank, priority, effort, planned_start, target, audience (after first import), summary (once edited in the app), archive.
  * Lane is board state. A new card takes the lane its file names, or the inbox;
  * an existing card moves only when the file's `lane:` differs from what it said
  * at the last sync, so a drag survives a file that has not changed its mind.
@@ -55,10 +55,34 @@ if (!files.length) throw new Error(`no <id>.md files in ${source}`);
 const { data: existingRows } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, lane_from_source, rank, priority, effort, source_hash, summary, summary_edited_at, audience",
+    "id, external_id, lane_id, lane_from_source, epic_id, planned_start_date, rank, priority, effort, source_hash, summary, summary_edited_at, audience",
   )
   .eq("board_id", ctx.board.id);
 const existing = new Map((existingRows ?? []).map((c) => [c.external_id, c]));
+
+const { data: epicRows } = await db
+  .from("epics")
+  .select("id, source_name")
+  .eq("board_id", ctx.board.id);
+const epicByName = new Map((epicRows ?? []).map((e) => [e.source_name, e.id]));
+
+async function epicId(sourceName: string): Promise<string | null> {
+  const name = sourceName.trim();
+  const known = epicByName.get(name);
+  if (known) return known;
+  if (dryRun) return null;
+  const { data, error } = await db
+    .from("epics")
+    .upsert(
+      { board_id: ctx.board.id, source_name: name },
+      { onConflict: "board_id,source_name" },
+    )
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`epic '${name}': ${error?.message}`);
+  epicByName.set(name, data.id);
+  return data.id;
+}
 
 const { data: maxRankRows } = await db
   .from("cards")
@@ -90,17 +114,21 @@ for (const file of files) {
   relatesByExternal.set(externalId, fm.relates ?? []);
 
   const prev = existing.get(externalId);
+  const resolvedEpicId = await epicId(fm.epic);
   if (prev && prev.source_hash === parsed.hash) {
     // An unchanged file still needs a merge base the first time we see it, or
     // a card whose file never changes again could never be moved by that file.
     // Recording the file's own claim — not the board's lane — is what makes
     // this safe: the two may already disagree, and the board's lane wins until
     // the file says something new.
-    if (!dryRun && prev.lane_from_source == null && fm.lane)
-      await db
-        .from("cards")
-        .update({ lane_from_source: fm.lane })
-        .eq("id", prev.id);
+    if (!dryRun) {
+      const calibration: Record<string, unknown> = {};
+      if (prev.lane_from_source == null && fm.lane)
+        calibration.lane_from_source = fm.lane;
+      if (prev.epic_id !== resolvedEpicId) calibration.epic_id = resolvedEpicId;
+      if (Object.keys(calibration).length)
+        await db.from("cards").update(calibration).eq("id", prev.id);
+    }
     skipped++;
     idByExternal.set(externalId, prev.id);
     continue;
@@ -120,6 +148,7 @@ for (const file of files) {
     body_md: bodyWithoutH1(parsed.body),
     status: fm.status,
     epic: fm.epic,
+    epic_id: resolvedEpicId,
     area: fm.area,
     raised_by: fm.raised_by ?? null,
     raised_on: isoOrNull(fm.raised),
@@ -167,6 +196,7 @@ for (const file of files) {
       effort: fm.effort ?? null,
       target_date: iso(fm.target),
       target_label: fm.target && !iso(fm.target) ? fm.target : null,
+      planned_start_date: isoOrNull(fm.planned_start),
       archived_at: fm.archived
         ? new Date(`${fm.archived.replace(" ", "T")}Z`).toISOString()
         : null,
@@ -190,6 +220,8 @@ for (const file of files) {
     if (prev.priority == null && fm.value)
       row.priority = valueToPriority(fm.value);
     if (prev.effort == null && fm.effort) row.effort = fm.effort;
+    if (prev.planned_start_date == null && isoOrNull(fm.planned_start))
+      row.planned_start_date = isoOrNull(fm.planned_start);
     const nextSummary = summaryOnImport(
       prev,
       fm.summary,

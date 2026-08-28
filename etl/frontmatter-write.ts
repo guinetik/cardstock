@@ -12,6 +12,7 @@ export const MANAGED_KEYS = [
   "rank",
   "priority",
   "effort",
+  "planned_start",
   "target",
   "archived",
   "archived_by",

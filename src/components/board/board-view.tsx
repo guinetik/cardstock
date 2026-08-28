@@ -418,6 +418,12 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         <nav className="ml-auto flex items-center gap-2 pb-0.5 text-[12.5px]">
           <a
             className="paper-link"
+            href={`/p/${data.project.slug}/b/${data.board.slug}/cockpit`}
+          >
+            Epic cockpit
+          </a>
+          <a
+            className="paper-link ml-2"
             href={`/p/${data.project.slug}/b/${data.board.slug}/timeline`}
           >
             Timeline

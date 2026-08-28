@@ -15,6 +15,7 @@ interface CardLite {
   summary: string | null;
   priority: number | null;
   effort: string | null;
+  planned_start_date: string | null;
   target_date: string | null;
   target_label: string | null;
   audience: string;
@@ -146,6 +147,17 @@ export function CardEditor({
             <option value="all">Everyone</option>
             <option value="internal">Internal only</option>
           </select>
+        </label>
+        <label>
+          <span className={fieldLabel}>Planned start</span>
+          <input
+            type="date"
+            className={`${field} font-mono`}
+            defaultValue={card.planned_start_date ?? ""}
+            onChange={(e) =>
+              save({ planned_start_date: e.target.value || null })
+            }
+          />
         </label>
         <label>
           <span className={fieldLabel}>Target</span>

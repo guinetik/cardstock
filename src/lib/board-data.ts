@@ -44,7 +44,7 @@ export async function loadBoard(
     db
       .from("cards")
       .select(
-        "id, external_id, title, summary, status, epic, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, target_date, target_label, audience, archived_at, archived_by, updated_at",
+        "id, external_id, title, summary, status, epic, epic_id, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at",
       )
       .eq("board_id", board.id)
       .order("rank"),

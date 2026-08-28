@@ -74,7 +74,11 @@ export default async function CardPage(
     ),
     { async: false, gfm: true },
   ) as string;
-  const backHref = `/p/${project}/b/${board}`;
+  const query = await props.searchParams;
+  const backHref =
+    query.from === "cockpit"
+      ? `/p/${project}/b/${board}/cockpit${typeof query.epic === "string" ? `/${encodeURIComponent(query.epic)}` : ""}`
+      : `/p/${project}/b/${board}`;
 
   return (
     <main className="paper-card paper-card--static mx-auto w-full max-w-4xl p-6">
@@ -116,6 +120,7 @@ export default async function CardPage(
           summary: card.summary,
           priority: card.priority,
           effort: card.effort,
+          planned_start_date: card.planned_start_date,
           target_date: card.target_date,
           target_label: card.target_label,
           audience: card.audience,

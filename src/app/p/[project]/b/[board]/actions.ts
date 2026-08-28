@@ -199,6 +199,7 @@ export interface CardPatch {
   summary?: string | null;
   priority?: 1 | 2 | 3 | null;
   effort?: "L" | "M" | "H" | null;
+  planned_start_date?: string | null;
   target_date?: string | null;
   target_label?: string | null;
   audience?: "all" | "internal";

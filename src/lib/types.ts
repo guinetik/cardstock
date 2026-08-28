@@ -40,6 +40,7 @@ export interface Card {
   summary: string | null;
   status: string;
   epic: string | null;
+  epic_id: string | null;
   area: string | null;
   raised_by: string | null;
   raised_on: string | null;
@@ -50,13 +51,42 @@ export interface Card {
   priority: 1 | 2 | 3 | null;
   effort: "L" | "M" | "H" | null;
   target_date: string | null;
+  planned_start_date: string | null;
   target_label: string | null;
   audience: "all" | "internal";
   archived_at: string | null;
   archived_by: string | null;
   updated_at: string;
+  created_at: string;
   tag_ids: string[];
   lane_entered_at: string | null;
+}
+
+export type EpicConfidence = "confident" | "concerned" | "unknown";
+
+export interface Epic {
+  id: string;
+  board_id: string;
+  source_name: string;
+  outcome: string | null;
+  owner_label: string | null;
+  start_date: string | null;
+  target_date: string | null;
+  priority: 1 | 2 | 3 | null;
+  confidence: EpicConfidence;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EpicSnapshot {
+  epic_id: string;
+  captured_on: string;
+  task_count: number;
+  delivered_count: number;
+  total_effort: number;
+  delivered_effort: number;
+  remaining_effort: number;
+  estimated_count: number;
 }
 
 export interface BoardData {

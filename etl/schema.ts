@@ -64,6 +64,7 @@ export const frontmatterSchema = z.looseObject({
   shipped: dateish,
   merged: dateish,
   target: z.string().nullable().optional(),
+  planned_start: dateish,
   branch: z.string().nullable().optional(),
   spec: z.string().nullable().optional(),
   plan: z.string().nullable().optional(),

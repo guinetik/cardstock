@@ -8,6 +8,7 @@
  *   rank      position within the lane (1-based, dense)
  *   priority  1 | 2 | 3            (owner priority; absent when unset)
  *   effort    L | M | H            (difficulty; absent when unset)
+ *   planned_start  ISO date         (planned beginning; absent when unset)
  *   target    ISO date, else the rough-date label
  *   archived  ISO timestamp + archived_by
  * Nothing else in the file changes. Cards with no file are reported. Files whose block would not
@@ -34,7 +35,7 @@ const laneKey = new Map(ctx.lanes.map((l) => [l.id, l.key]));
 const { data: cards, error } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, lane_from_source, rank, priority, effort, target_date, target_label, archived_at, archived_by",
+    "id, external_id, lane_id, lane_from_source, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by",
   )
   .eq("board_id", ctx.board.id)
   .order("rank");
@@ -66,6 +67,7 @@ for (const c of cards ?? []) {
     rank: dense.get(c.external_id) ?? null,
     priority: c.priority ?? null,
     effort: c.effort ?? null,
+    planned_start: c.planned_start_date ?? null,
     target: c.target_date ?? c.target_label ?? null,
     archived: c.archived_at
       ? c.archived_at.slice(0, 19).replace("T", " ")

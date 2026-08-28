@@ -437,3 +437,71 @@
   --tw-prose-th-borders: var(--border-strong);
   --tw-prose-td-borders: var(--border-hairline);
 }
+
+@layer components {
+  .cockpit-instrument,
+  .cockpit-epic {
+    border: 1px solid var(--border-hairline);
+    background: var(--surface-card);
+    box-shadow: var(--shadow-card);
+  }
+  .cockpit-epic {
+    position: relative;
+    min-width: 0;
+    padding: 1rem;
+    transition:
+      translate var(--motion-duration-hover) var(--motion-ease-out),
+      box-shadow var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  .cockpit-epic::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    content: "";
+    background: var(--color-grey-faint);
+  }
+  .cockpit-epic--at-risk::before {
+    background: var(--pen-red);
+  }
+  .cockpit-epic--attention::before {
+    background: var(--pen-amber);
+  }
+  .cockpit-epic--on-track::before {
+    background: var(--pen-green);
+  }
+  .cockpit-epic:hover {
+    translate: 0 var(--motion-rise);
+    box-shadow: var(--shadow-lift);
+  }
+  .cockpit-task-square {
+    transition:
+      opacity 120ms ease-out,
+      stroke 120ms ease-out;
+    stroke: transparent;
+    stroke-width: 2;
+  }
+  .cockpit-map a:is(:hover, :focus) .cockpit-task-square {
+    opacity: 0.78;
+    stroke: var(--color-ink);
+  }
+  .cockpit-tooltip {
+    position: fixed;
+    z-index: 80;
+    display: grid;
+    width: min(17rem, calc(100vw - 2rem));
+    gap: 0.2rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-lift);
+    color: var(--color-ink);
+    font-size: 11px;
+    pointer-events: none;
+  }
+  .cockpit-tooltip span {
+    color: var(--color-grey);
+  }
+  .stat--danger {
+    color: var(--pen-red);
+  }
+}

@@ -36,6 +36,8 @@ All tables in `public`, RLS enabled. `members` and `projects` are readable by an
 | `boards` | `project_id fk`, `slug text`, `name`, `settings jsonb` (`status_to_lane`, `lane_aliases`, `needs_lane`, `recent_days`); unique `(project_id, slug)` |
 | `lanes` | `board_id fk`, `key text`, `name`, `position int`, `kind text check in ('inbox','work','waiting','built','done','archive')`, `sla_days int null`, `wip_limit int null`; unique `(board_id, key)` |
 | `cards` | `board_id fk`, `external_id text` (tracker `id`), `title`, `summary text`, `body_md text`, `status text` (tracker vocabulary), `epic`, `area`, `raised_by`, `raised_on date`, `shipped_on date`, `needs text`, `lane_id fk`, `rank double precision`, `priority smallint check 1..3 null`, `effort text check in ('L','M','H') null`, `target_date date null`, `target_label text`, `audience text default 'all' check in ('all','internal')`, `archived_at timestamptz`, `archived_by text`, `source_path`, `source_hash`, `frontmatter_extra jsonb default '{}'`; unique `(board_id, external_id)` |
+| `epics` | Source-owned name plus app-owned outcome, owner label, planned start, committed date, priority and confidence; unique `(board_id, source_name)` |
+| `epic_snapshots` | One honest UTC-day baseline per epic for task and weighted work-left history |
 | `tag_groups` | `board_id fk`, `key`, `name`, `position`, `color`; unique `(board_id, key)` |
 | `tags` | `group_id fk`, `key`, `name`, `color`; unique `(group_id, key)` |
 | `card_tags` | `card_id fk`, `tag_id fk`; pk both |
@@ -81,6 +83,7 @@ Body sections (`## Ask`, `## Status`, …) are stored whole in `body_md`; `summa
 - `/p/[project]` — project home: boards, members (add by email — creates the `members` allowlist row and the `project_members` row).
 - `/p/[project]/b/[board]` — the kanban. Filter bar: search, one dropdown per tag group, priority, effort, audience (the product owner's default hides `internal`: *"get that out of my list"*), "show archived". Lanes in `position` order with counts, min/max per lane, per-lane sort; cards drag with dnd-kit (pointer + keyboard sensors), optimistic update, server action persists and writes the event. Card face: `#external_id`, status badge, `needs` badge, title, summary, epic + raised date, target, priority P1–P3, effort L/M/H, tag chips. CSV export of the current filter (*"as long as I can slice it and dice it"*).
 - `/p/[project]/b/[board]/timeline` — cards with a `target_date`, grouped by month, then unscheduled; the "September, October, November, December in front of me" view.
+- `/p/[project]/b/[board]/cockpit` — generic epic fleet view with accessible task-light maps, explainable delivery outlooks, commitment editing, work-left history, and task Gantt detail.
 - `/p/[project]/b/[board]/c/[external_id]` — card detail: editable summary, fields, tags, links (`blocked_by` chips), rendered body, attachments (v1.1), event history, Archive / Restore.
 - `/p/[project]/b/[board]/settings` — lanes (name, kind, SLA, order) and tag groups/tags. Minimal, admin only (everyone).
 - Server components read through the SSR Supabase client; mutations are server actions; `proxy.ts` redirects signed-out requests to `/login`.

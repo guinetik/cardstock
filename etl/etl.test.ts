@@ -99,9 +99,11 @@ describe("validateFrontmatter", () => {
       tags: ["tracker-item"],
       reconfirmed: "2026-08-21, 2026-08-26",
       raised: "TBD",
+      planned_start: "2026-09-01",
     });
     expect(data.reconfirmed).toBe("2026-08-21, 2026-08-26");
     expect(isoOrNull(data.raised)).toBeNull();
+    expect(isoOrNull(data.planned_start)).toBe("2026-09-01");
     expect(isoOrNull("2026-08-26")).toBe("2026-08-26");
   });
   test("normalises effort/value", () => {

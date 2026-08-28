@@ -124,6 +124,16 @@
         }
       ]
     },
+    "planned_start": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "branch": {
       "anyOf": [
         {

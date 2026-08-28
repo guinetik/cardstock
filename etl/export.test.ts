@@ -34,6 +34,7 @@ describe("writeManaged", () => {
       rank: 2,
       priority: 1,
       effort: "M",
+      planned_start: "2026-10-01",
       target: "2026-10-15",
     });
     const { frontmatter, body } = parseFile(out);
@@ -41,6 +42,7 @@ describe("writeManaged", () => {
     expect(frontmatter.rank).toBe("2");
     expect(frontmatter.priority).toBe("1");
     expect(frontmatter.effort).toBe("M"); // replaced, not duplicated
+    expect(frontmatter.planned_start).toBe("2026-10-01");
     expect(frontmatter.target).toBe("2026-10-15");
     expect(frontmatter.custom_key).toBe("keep me");
     expect(frontmatter.tags).toEqual(["designer", "tracker-item", "wizard"]);
