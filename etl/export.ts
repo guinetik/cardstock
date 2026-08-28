@@ -12,6 +12,10 @@
  *   archived  ISO timestamp + archived_by
  * Nothing else in the file changes. Cards with no file are reported. Files whose block would not
  * change are left untouched (so mtimes and git stay quiet).
+ *
+ * Writing `lane` also moves the card's merge base (`lane_from_source`) to match:
+ * the file and the board now agree, and the next import must not read the value
+ * this export wrote as the file having moved the card.
  */
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -30,7 +34,7 @@ const laneKey = new Map(ctx.lanes.map((l) => [l.id, l.key]));
 const { data: cards, error } = await db
   .from("cards")
   .select(
-    "external_id, lane_id, rank, priority, effort, target_date, target_label, archived_at, archived_by",
+    "id, external_id, lane_id, lane_from_source, rank, priority, effort, target_date, target_label, archived_at, archived_by",
   )
   .eq("board_id", ctx.board.id)
   .order("rank");
@@ -69,6 +73,19 @@ for (const c of cards ?? []) {
     archived_by: c.archived_at ? (c.archived_by ?? null) : null,
   };
   const after = writeManaged(before, managed);
+
+  // After this export the file says what the board says, so that is the new
+  // merge base — and that is true whether or not the file needed rewriting. A
+  // file already agreeing with the board is exactly the case where the base
+  // must be recorded: skip it and the card never gets one, and the file can
+  // never move it. Without this the next import would also read the lane this
+  // export wrote as the file having moved the card, undoing a later drag.
+  if (!dryRun && managed.lane !== c.lane_from_source)
+    await db
+      .from("cards")
+      .update({ lane_from_source: managed.lane })
+      .eq("id", c.id);
+
   if (after === before) {
     unchanged++;
     continue;

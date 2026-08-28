@@ -10,12 +10,10 @@ on conflict (slug) do nothing;
 
 insert into public.boards (project_id, slug, name, settings)
 select p.id, 'backlog', 'Product backlog',
+  -- No status-to-lane mapping: a status says what state the work is in, a lane
+  -- says where a person filed it, and the importer never derives one from the
+  -- other. A card lands where its `lane:` says, or in the inbox.
   jsonb_build_object(
-    'status_to_lane', jsonb_build_object(
-      'backlog', 'unsorted', 'blocked', 'parked', 'wip', 'now',
-      'held', 'built', 'built', 'built', 'handed', 'built',
-      'shipped', 'done', 'done', 'done'),
-    'needs_lane', 'needs-input',
     'lane_aliases', jsonb_build_object('Needs input', 'needs-input'),
     'recent_days', 30
   )
@@ -105,3 +103,10 @@ with b as (
 update public.lanes l set position = o.pos
 from ordered o where o.id = l.id and l.position <> o.pos;
 
+-- The board insert is ON CONFLICT DO NOTHING, so a board seeded before the
+-- importer stopped deriving lanes from statuses still carries the keys that
+-- used to do it. Drop them rather than leave config that decides nothing.
+update public.boards b
+  set settings = (b.settings - 'status_to_lane' - 'pin_statuses' - 'needs_lane')
+from public.projects p
+where p.id = b.project_id and p.slug = 'demo' and b.slug = 'backlog';

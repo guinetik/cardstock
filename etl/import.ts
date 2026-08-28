@@ -5,15 +5,18 @@
  *
  * Markdown owns: title, status, body, epic, area, raised_by/raised/shipped, needs, relates, tags, extra keys.
  * DB owns: lane, rank, priority, effort, target, audience (after first import), summary (once edited in the app), archive.
- * Exceptions: new cards take their lane from status/needs; built/closed statuses re-pin every import;
- * effort/value seed the DB fields only while those are null. Unchanged files are skipped by hash.
+ * Lane is board state. A new card takes the lane its file names, or the inbox;
+ * an existing card moves only when the file's `lane:` differs from what it said
+ * at the last sync, so a drag survives a file that has not changed its mind.
+ * Status never decides a lane. effort/value seed the DB fields only while those
+ * are null. Unchanged files are skipped by hash.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { arg, flag, loadBoard, serviceClient } from "./db";
 import {
-  isPinnedStatus,
-  laneForStatus,
+  laneForNewCard,
+  laneMoveFromSource,
   type Mapping,
   mapAudience,
   mapTags,
@@ -36,11 +39,9 @@ const mappingPath = arg(
 const db = serviceClient();
 const ctx = await loadBoard(db, projectSlug, boardSlug);
 const mapping = JSON.parse(await readFile(mappingPath, "utf8")) as Mapping;
-const settings = ctx.settings as {
-  status_to_lane?: Record<string, string>;
-  needs_lane?: string;
-  pin_statuses?: string[];
-};
+// The board's inbox is where a file with no `lane:` lands. Nothing else about
+// a card decides its lane any more — not its status, not its `needs`.
+const inboxKey = ctx.lanes.find((l) => l.kind === "inbox")?.key ?? "unsorted";
 
 const files = (await readdir(source))
   .filter((f) => /^\d+\.md$/.test(f))
@@ -50,7 +51,7 @@ if (!files.length) throw new Error(`no <id>.md files in ${source}`);
 const { data: existingRows } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, rank, priority, effort, source_hash, summary, summary_edited_at, audience",
+    "id, external_id, lane_id, lane_from_source, rank, priority, effort, source_hash, summary, summary_edited_at, audience",
   )
   .eq("board_id", ctx.board.id);
 const existing = new Map((existingRows ?? []).map((c) => [c.external_id, c]));
@@ -84,15 +85,22 @@ for (const file of files) {
 
   const prev = existing.get(externalId);
   if (prev && prev.source_hash === parsed.hash) {
+    // An unchanged file still needs a merge base the first time we see it, or
+    // a card whose file never changes again could never be moved by that file.
+    // Recording the file's own claim — not the board's lane — is what makes
+    // this safe: the two may already disagree, and the board's lane wins until
+    // the file says something new.
+    if (!dryRun && prev.lane_from_source == null && fm.lane)
+      await db
+        .from("cards")
+        .update({ lane_from_source: fm.lane })
+        .eq("id", prev.id);
     skipped++;
     idByExternal.set(externalId, prev.id);
     continue;
   }
 
-  const pin = isPinnedStatus(fm.status, settings);
-  const laneKey = pin
-    ? (settings.status_to_lane?.[fm.status] ?? pin)
-    : laneForStatus(fm.status, fm.needs, settings);
+  const laneKey = laneForNewCard(fm.lane, ctx.laneByKey.keys(), inboxKey);
   const lane = ctx.laneByKey.get(laneKey) ?? ctx.laneByKey.get("unsorted");
   if (!lane)
     throw new Error(
@@ -123,11 +131,15 @@ for (const file of files) {
     else unmappedTags.set(ref, [externalId]);
   }
 
+  // The lane the file claims, recorded either way: it is the base the next
+  // import compares against, and it only means "what the file said", not
+  // "where the card is".
+  row.lane_from_source = fm.lane ?? null;
+
   if (!prev) {
     // Round trip: a file the export wrote carries lane/rank/priority — honour them for a new card.
-    const rtLane = fm.lane && !pin ? ctx.laneByKey.get(fm.lane) : undefined;
-    const laneFinal = rtLane ?? lane;
-    // The file's rank only means something in the lane the file names — a pin may have overridden it.
+    const laneFinal = lane;
+    // The file's rank only means something in the lane the file names.
     const rank =
       fm.rank != null && fm.lane === laneFinal.key
         ? Number(fm.rank)
@@ -150,11 +162,18 @@ for (const file of files) {
       audience: mapAudience(fm, mapping),
     });
   } else {
-    // DB owns board fields; pins re-apply; effort/priority seed only into null.
-    if (pin && prev.lane_id !== lane.id) {
-      const rank = (maxRank.get(lane.id) ?? 0) + 1;
-      maxRank.set(lane.id, rank);
-      Object.assign(row, { lane_id: lane.id, rank });
+    // The board owns lane. The file only moves a card when it has changed its
+    // mind since the last sync — otherwise a stale `lane:` would undo a drag.
+    const moveTo = laneMoveFromSource(fm.lane, prev.lane_from_source);
+    const target = moveTo ? ctx.laneByKey.get(moveTo) : undefined;
+    if (moveTo && !target)
+      throw new Error(
+        `#${externalId} names lane '${moveTo}', which this board does not have`,
+      );
+    if (target && prev.lane_id !== target.id) {
+      const rank = (maxRank.get(target.id) ?? 0) + 1;
+      maxRank.set(target.id, rank);
+      Object.assign(row, { lane_id: target.id, rank });
     }
     if (prev.priority == null && fm.value)
       row.priority = valueToPriority(fm.value);
@@ -168,9 +187,8 @@ for (const file of files) {
   }
 
   if (dryRun) {
-    // Report the lane only when this run actually sets one. An existing card
-    // whose status does not pin keeps the lane the board gave it, and naming
-    // the computed lane here read as a move that was never going to happen.
+    // Report the lane only when this run actually sets one: an existing card
+    // the file has not moved keeps the lane the board gave it.
     const laneNote = row.lane_id
       ? ` → ${ctx.lanes.find((l) => l.id === row.lane_id)?.key ?? lane.key}`
       : "";

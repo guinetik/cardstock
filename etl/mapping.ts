@@ -95,61 +95,45 @@ export function valueToPriority(
 }
 
 /**
- * Statuses whose lane the importer re-applies on every run, overriding whatever
- * the board says.
+ * Where a card goes when a file is seen for the first time.
  *
- * A board can narrow this with `pin_statuses`. Pinning is right when the status
- * alone determines the lane — shipped work should not sit in Now because nobody
- * moved it. It is wrong once a lane means something the file cannot know: a
- * board with delivery gates knows a card is *built*, but only a person knows
- * which gate it has reached, so `built` is better left to the board there.
+ * Only two things decide a lane: what the file says, and — when it says nothing
+ * — the board's inbox. Status deliberately has no say. Status is what state the
+ * work is in; lane is where a person filed it, and no file can know that. A
+ * board that derives one from the other can never disagree with its tracker,
+ * which makes a human's decision the thing that gets overwritten.
  */
-export const DEFAULT_PIN_STATUSES = [
-  "built",
-  "handed",
-  "held",
-  "shipped",
-  "done",
-];
-
-export interface PinSettings {
-  pin_statuses?: string[];
-}
-
-function pinned(status: string, settings: PinSettings): boolean {
-  return (settings.pin_statuses ?? DEFAULT_PIN_STATUSES).includes(status);
-}
-
-/** Lane key for a card's tracker status, via the board's `status_to_lane`; `needs` wins for open items. */
-export function laneForStatus(
-  status: string,
-  needs: string | null | undefined,
-  settings: {
-    status_to_lane?: Record<string, string>;
-    needs_lane?: string;
-  } & PinSettings,
+export function laneForNewCard(
+  fmLane: string | null | undefined,
+  laneKeys: Iterable<string>,
+  inboxKey: string | null,
   fallback = "unsorted",
 ): string {
-  if (!pinned(status, settings) && needs && settings.needs_lane)
-    return settings.needs_lane;
-  return settings.status_to_lane?.[status] ?? fallback;
+  const known = new Set(laneKeys);
+  if (fmLane && known.has(fmLane)) return fmLane;
+  if (inboxKey && known.has(inboxKey)) return inboxKey;
+  return fallback;
 }
 
 /**
- * The lane a status pins to, or null when the board is left to decide.
+ * Whether an import should move an existing card, given the lane its file
+ * claims now and the lane it claimed at the last sync.
  *
- * The returned key is only a fallback for a board with no `status_to_lane`
- * entry; what matters to the caller is whether this is null.
+ * The comparison is against the merge base, never against where the card
+ * actually sits. A file that has not changed its mind says nothing about the
+ * board, so a drag survives; a file that has says so deliberately, so it wins.
+ *
+ * A null base means the card predates lane tracking: record the file's lane,
+ * move nothing. Otherwise the first import after the change would treat every
+ * file as having just moved its card.
  */
-export function isPinnedStatus(
-  status: string,
-  settings: PinSettings = {},
-): "built" | "done" | null {
-  if (!pinned(status, settings)) return null;
-  if (status === "shipped" || status === "done") return "done";
-  if (status === "built" || status === "handed" || status === "held")
-    return "built";
-  return null;
+export function laneMoveFromSource(
+  fmLane: string | null | undefined,
+  base: string | null | undefined,
+): string | null {
+  if (base == null) return null;
+  if (!fmLane || fmLane === base) return null;
+  return fmLane;
 }
 
 /**

@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-  DEFAULT_PIN_STATUSES,
-  isPinnedStatus,
-  laneForStatus,
+  laneForNewCard,
+  laneMoveFromSource,
   type Mapping,
   mapAudience,
   mapTags,
@@ -193,62 +192,63 @@ describe("mapping", () => {
     expect(valueToPriority("L")).toBe(3);
     expect(valueToPriority(null)).toBeNull();
   });
-  test("lane for status", () => {
-    const s = {
-      status_to_lane: {
-        backlog: "unsorted",
-        wip: "now",
-        shipped: "done",
-        built: "built",
-      },
-      needs_lane: "needs-input",
-    };
-    expect(laneForStatus("backlog", null, s)).toBe("unsorted");
-    expect(laneForStatus("wip", null, s)).toBe("now");
-    expect(laneForStatus("backlog", "Owner", s)).toBe("needs-input");
-    expect(laneForStatus("shipped", "Owner", s)).toBe("done"); // pins beat needs
-    expect(laneForStatus("weird", null, s)).toBe("unsorted");
-    expect(isPinnedStatus("handed")).toBe("built");
-    expect(isPinnedStatus("done")).toBe("done");
-    expect(isPinnedStatus("wip")).toBeNull();
+  test("a new card takes the lane its file names", () => {
+    const keys = ["unsorted", "now", "gate-1", "done"];
+    expect(laneForNewCard("gate-1", keys, "unsorted")).toBe("gate-1");
+    expect(laneForNewCard("now", keys, "unsorted")).toBe("now");
   });
 
-  test("a board can narrow which statuses pin", () => {
-    // A board with delivery gates knows a card is built but not which gate it
-    // reached, so it leaves `built` to the board and still pins the rest.
-    const s = { pin_statuses: ["shipped", "done", "handed", "held"] };
-    expect(isPinnedStatus("built", s)).toBeNull();
-    expect(isPinnedStatus("shipped", s)).toBe("done");
-    expect(isPinnedStatus("handed", s)).toBe("built");
-    expect(isPinnedStatus("held", s)).toBe("built");
+  test("a new card with no lane lands in the inbox", () => {
+    const keys = ["triage", "now", "done"];
+    expect(laneForNewCard(null, keys, "triage")).toBe("triage");
+    expect(laneForNewCard(undefined, keys, "triage")).toBe("triage");
   });
 
-  test("an unpinned status lets `needs` choose the lane again", () => {
-    const s = {
-      status_to_lane: { built: "done" },
-      needs_lane: "needs-input",
-      pin_statuses: ["shipped", "done"],
-    };
-    expect(laneForStatus("built", "Owner", s)).toBe("needs-input");
-    // With no `needs`, the status mapping still applies.
-    expect(laneForStatus("built", null, s)).toBe("done");
+  test("a lane the board does not have falls back to the inbox", () => {
+    // A tracker may name a lane from another board, or one since deleted.
+    // Inventing a column for it would be worse than filing it for triage.
+    expect(laneForNewCard("gate-9", ["unsorted", "now"], "unsorted")).toBe(
+      "unsorted",
+    );
   });
 
-  test("an empty pin list pins nothing", () => {
-    expect(isPinnedStatus("shipped", { pin_statuses: [] })).toBeNull();
-    expect(isPinnedStatus("done", { pin_statuses: [] })).toBeNull();
+  test("status has no say in where a new card lands", () => {
+    // The whole point: two cards differing only in status land together.
+    const keys = ["unsorted", "now", "done"];
+    expect(laneForNewCard(null, keys, "unsorted")).toBe(
+      laneForNewCard(null, keys, "unsorted"),
+    );
+    expect(laneForNewCard("now", keys, "unsorted")).toBe("now");
+  });
+});
+
+describe("laneMoveFromSource", () => {
+  test("moves when the file has changed its mind", () => {
+    expect(laneMoveFromSource("gate-2", "gate-1")).toBe("gate-2");
   });
 
-  test("a board that says nothing keeps the default five", () => {
-    for (const st of DEFAULT_PIN_STATUSES)
-      expect(isPinnedStatus(st, {})).not.toBeNull();
-    expect(DEFAULT_PIN_STATUSES).toEqual([
-      "built",
-      "handed",
-      "held",
-      "shipped",
-      "done",
-    ]);
+  test("does not move when the file says what it said last time", () => {
+    // The card may have been dragged to Gate 3 since; the file is silent about
+    // that, and silence must not be read as a request to move it back.
+    expect(laneMoveFromSource("gate-1", "gate-1")).toBeNull();
+  });
+
+  test("does not move when the file names no lane", () => {
+    expect(laneMoveFromSource(null, "gate-1")).toBeNull();
+    expect(laneMoveFromSource(undefined, "gate-1")).toBeNull();
+    expect(laneMoveFromSource("", "gate-1")).toBeNull();
+  });
+
+  test("never moves a card that has no merge base yet", () => {
+    // Null base means this board predates lane tracking. Treating the file as
+    // authoritative here would stampede every card to whatever its file says,
+    // discarding the arrangement someone already built by hand.
+    expect(laneMoveFromSource("gate-1", null)).toBeNull();
+    expect(laneMoveFromSource("gate-1", undefined)).toBeNull();
+  });
+
+  test("a file that clears its lane is not a move", () => {
+    expect(laneMoveFromSource(null, "gate-1")).toBeNull();
   });
 });
 

@@ -72,11 +72,6 @@ export interface BoardData {
   cards: Card[];
 }
 
-/** Board settings the UI reads. */
-export interface BoardSettings {
-  needs_lane?: string;
-}
-
 export const PRIORITY_LABEL: Record<1 | 2 | 3, string> = {
   1: "P1",
   2: "P2",
