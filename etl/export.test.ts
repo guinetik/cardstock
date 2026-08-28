@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatScalar, writeManaged } from "./frontmatter-write";
+import { formatScalar, writeBody, writeManaged } from "./frontmatter-write";
 import { parseFile } from "./parse";
 import { validateFrontmatter } from "./schema";
 
@@ -89,6 +89,24 @@ describe("writeManaged", () => {
       rank: 1,
     });
     expect(parseFile(out).frontmatter.lane).toBe("design-review-next");
+  });
+});
+
+describe("writeBody", () => {
+  test("replaces the body and restores the tracker H1", () => {
+    const out = writeBody(FILE, "152", "Filter what to sync", "## Ask\n\nEdited.");
+    const { body } = parseFile(out);
+    expect(body.trim()).toBe(
+      "# #152 — Filter what to sync\n\n## Ask\n\nEdited.",
+    );
+    expect(parseFile(out).frontmatter.id).toBe("152");
+  });
+
+  test("keeps CRLF files CRLF", () => {
+    const crlf = FILE.replace(/\n/g, "\r\n");
+    const out = writeBody(crlf, "152", "Filter what to sync", "## Ask");
+    expect(out.includes("\r\n")).toBe(true);
+    expect(out.split("\r\n").join("").includes("\n")).toBe(false);
   });
 });
 

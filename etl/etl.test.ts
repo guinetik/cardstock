@@ -7,6 +7,7 @@ import {
   mapAudience,
   mapTags,
   resolveTags,
+  bodyOnImport,
   summaryOnImport,
   valueToPriority,
 } from "./mapping";
@@ -342,5 +343,27 @@ describe("summaryOnImport", () => {
   test("falls back to the Ask paragraph only when there is no summary yet", () => {
     expect(summaryOnImport(blank, null, "from ask")).toBe("from ask");
     expect(summaryOnImport(untouched, null, "from ask")).toBeUndefined();
+  });
+});
+
+describe("bodyOnImport", () => {
+  const edited = {
+    body_md: "## Ask\n\napp",
+    body_edited_at: "2026-08-27T00:00:00Z",
+  };
+  const untouched = { body_md: "## Ask\n\nfile", body_edited_at: null };
+
+  test("never overwrites a body edited in the app", () => {
+    expect(bodyOnImport(edited, "## Ask\n\nfrom file")).toBeUndefined();
+  });
+
+  test("file wins while the app has not touched it", () => {
+    expect(bodyOnImport(untouched, "## Ask\n\nfrom file")).toBe(
+      "## Ask\n\nfrom file",
+    );
+  });
+
+  test("new card takes the file body", () => {
+    expect(bodyOnImport(null, "## Ask\n\nfrom file")).toBe("## Ask\n\nfrom file");
   });
 });
