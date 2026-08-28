@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  buildVocabulary,
   laneForNewCard,
   laneMoveFromSource,
   type Mapping,
@@ -150,26 +151,65 @@ describe("mapping", () => {
     area: "Designer",
     tags: ["tracker-item", "bug"],
   }).data;
-  test("scheme tags map 1:1 onto groups; JSON overrides still apply and dedupe", () => {
+  // A board's own tags are the taxonomy — these are the ones staffeto declares.
+  const vocab = buildVocabulary([
+    "area:terminations",
+    "area:cross-cutting",
+    "step:step-2",
+    "step:login",
+    "kind:bug",
+    "objective:self-serve",
+  ]);
+
+  test("a bare tag resolves to whichever group declares it", () => {
     const f2 = {
       ...fm,
-      tags: [
-        "tracker-item",
-        "int:terminations",
-        "step-2",
-        "bug",
-        "self-serve",
-        "cross-cutting",
-      ],
+      tags: ["tracker-item", "step-2", "bug", "self-serve", "cross-cutting"],
     };
-    expect(mapTags(f2, {})).toEqual([
-      "area:terminations",
+    expect(mapTags(f2, {}, vocab).refs).toEqual([
       "step:step-2",
       "kind:bug",
       "objective:self-serve",
       "area:cross-cutting",
     ]);
-    expect(mapTags(fm, mapping)).toEqual(["kind:bug", "area:ui"]);
+  });
+
+  test("group:tag is explicit, and aliases rename the group", () => {
+    const f2 = { ...fm, tags: ["int:terminations", "area:cross-cutting"] };
+    expect(mapTags(f2, { group_aliases: { int: "area" } }, vocab).refs).toEqual(
+      ["area:terminations", "area:cross-cutting"],
+    );
+  });
+
+  test("a tag no group declares is left for the unresolved report", () => {
+    const f2 = { ...fm, tags: ["tracker-item", "not-a-real-tag"] };
+    expect(mapTags(f2, {}, vocab).refs).toEqual([]);
+  });
+
+  test("a tag two groups claim is ambiguous, and applied to neither", () => {
+    // Guessing would file cards under the wrong concept without saying so.
+    const both = buildVocabulary(["kind:internal", "objective:internal"]);
+    const f2 = { ...fm, tags: ["internal"] };
+    const out = mapTags(f2, {}, both);
+    expect(out.refs).toEqual([]);
+    expect(out.ambiguous).toEqual(["internal"]);
+  });
+
+  test("an ambiguous tag can still be named explicitly", () => {
+    const both = buildVocabulary(["kind:internal", "objective:internal"]);
+    const f2 = { ...fm, tags: ["kind:internal"] };
+    expect(mapTags(f2, {}, both).refs).toEqual(["kind:internal"]);
+  });
+
+  test("nothing is hardcoded: a board that declares nothing resolves nothing", () => {
+    // The old importer knew `bug` was a Kind regardless of the board.
+    const empty = buildVocabulary([]);
+    const f2 = { ...fm, tags: ["bug", "self-serve", "step-2"] };
+    expect(mapTags(f2, {}, empty).refs).toEqual([]);
+  });
+
+  test("JSON overrides still apply and dedupe", () => {
+    expect(mapTags(fm, mapping, vocab).refs).toEqual(["kind:bug", "area:ui"]);
   });
   test("internal kind or engineering epic → internal audience", () => {
     expect(mapAudience({ ...fm, tags: ["tracker-item", "internal"] }, {})).toBe(

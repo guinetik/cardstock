@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { cleanLaneName, laneKeyFromName } from "@/lib/lanes";
+import { cleanName, keyFromName } from "@/lib/keys";
 import { needsNormalize, normalized } from "@/lib/rank";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import type { Lane } from "@/lib/types";
@@ -48,13 +48,13 @@ export async function createLane(
   const c = await ctx();
   if (!c) return { ok: false, error: "Not signed in." };
   if (!UUID.test(boardId)) return { ok: false, error: "Invalid board." };
-  const clean = cleanLaneName(name);
+  const clean = cleanName(name);
   if (!clean)
     return {
       ok: false,
       error: "Lane name must be between 1 and 80 characters.",
     };
-  const key = laneKeyFromName(clean);
+  const key = keyFromName(clean);
   if (!key)
     return { ok: false, error: "Lane name must contain a letter or number." };
 
@@ -76,7 +76,7 @@ export async function renameLane(
   const c = await ctx();
   if (!c) return { ok: false, error: "Not signed in." };
   if (!UUID.test(laneId)) return { ok: false, error: "Invalid lane." };
-  const clean = cleanLaneName(name);
+  const clean = cleanName(name);
   if (!clean)
     return {
       ok: false,

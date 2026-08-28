@@ -2,6 +2,8 @@ import type { Frontmatter } from "./schema";
 
 export interface Mapping {
   by_tag?: Record<string, string[]>;
+  /** Group key a tracker writes → the group key this board uses (`int` → `area`). */
+  group_aliases?: Record<string, string>;
   by_epic?: Record<string, string[]>;
   by_area?: Record<string, string[]>;
   audience_internal_when?: {
@@ -16,57 +18,89 @@ const lc = (s: unknown) =>
     .trim()
     .toLowerCase();
 
-const KIND = new Set([
-  "bug",
-  "enhancement",
-  "nice-to-have",
-  "new-integration",
-  "new-feature",
-  "question",
-  "internal",
-]);
-const OBJECTIVE = new Set([
-  "self-serve",
-  "internal-ui",
-  "claude-marketplace",
-  "website",
-  "growth",
-]);
-const SURFACE = new Set([
-  "home",
-  "live-integrations",
-  "login",
-  "runtime",
-  "logs",
-  "email",
-  "spec-doc",
-  "settings",
-  "docs",
-]);
+/**
+ * What tag keys this board actually has, and which group each belongs to.
+ *
+ * Built from the board's own rows, because that is where the taxonomy lives.
+ * The importer used to carry three literal word lists deciding that `bug` was a
+ * Kind and `login` was a Step, which meant a board could add a group in the
+ * database and the importer would still drop every tag in it.
+ */
+export interface Vocabulary {
+  /** tag key → the group keys declaring it; more than one means ambiguous. */
+  byTagKey: Map<string, string[]>;
+  groupKeys: Set<string>;
+}
 
-/** The scheme's tag vocabulary maps 1:1 onto the board's groups; the JSON mapping only adds overrides. */
-export function schemeRef(tag: string): string | null {
+/** Build the vocabulary from the board's `group:tag` refs. */
+export function buildVocabulary(refs: Iterable<string>): Vocabulary {
+  const byTagKey = new Map<string, string[]>();
+  const groupKeys = new Set<string>();
+  for (const ref of refs) {
+    const i = ref.indexOf(":");
+    if (i < 0) continue;
+    const group = ref.slice(0, i);
+    const tag = ref.slice(i + 1);
+    groupKeys.add(group);
+    byTagKey.set(tag, [...(byTagKey.get(tag) ?? []), group]);
+  }
+  return { byTagKey, groupKeys };
+}
+
+export type TagRef = { ref: string } | { ambiguous: string } | null;
+
+/**
+ * Turn one frontmatter tag into a board ref.
+ *
+ * `group:tag` is explicit and wins, after group aliases — a tracker that writes
+ * `int:` for the group a board calls `area` says so in its mapping file, rather
+ * than the product knowing that "int" means anything.
+ *
+ * A bare tag resolves by looking itself up: `bug` is whatever group declares a
+ * tag with that key. If two groups declare it the tag is ambiguous and is left
+ * alone, because guessing would silently file cards under the wrong concept.
+ */
+export function tagRef(
+  tag: string,
+  vocab: Vocabulary,
+  aliases: Record<string, string> = {},
+): TagRef {
   const t = lc(tag);
-  if (t.startsWith("area:")) return `area:${t.slice(5)}`;
-  if (t.startsWith("int:")) return `area:${t.slice(4)}`; // alias for trackers that say "integration"
-  if (t === "cross-cutting") return "area:cross-cutting";
-  if (/^step-[1-8]$/.test(t) || SURFACE.has(t)) return `step:${t}`;
-  if (KIND.has(t)) return `kind:${t}`;
-  if (OBJECTIVE.has(t)) return `objective:${t}`;
-  return null;
+  if (!t) return null;
+  const i = t.indexOf(":");
+  if (i >= 0) {
+    const raw = t.slice(0, i);
+    const group = lc(aliases[raw] ?? raw);
+    // An unknown group is reported as unresolved, like an unknown tag: the
+    // board is missing something the tracker expects, and that is worth saying.
+    return { ref: `${group}:${t.slice(i + 1)}` };
+  }
+  const groups = vocab.byTagKey.get(t);
+  if (!groups?.length) return null;
+  if (groups.length > 1) return { ambiguous: t };
+  return { ref: `${groups[0]}:${t}` };
 }
 
 /** Board tag refs (`group:tag`) for a tracker item, deduplicated, in first-seen order. */
-export function mapTags(fm: Frontmatter, mapping: Mapping): string[] {
-  const out: string[] = [];
-  const add = (refs?: (string | null)[]) => {
-    for (const r of refs ?? []) if (r && !out.includes(r)) out.push(r);
+export function mapTags(
+  fm: Frontmatter,
+  mapping: Mapping,
+  vocab: Vocabulary,
+): { refs: string[]; ambiguous: string[] } {
+  const refs: string[] = [];
+  const ambiguous: string[] = [];
+  const add = (list?: (string | null)[]) => {
+    for (const r of list ?? []) if (r && !refs.includes(r)) refs.push(r);
   };
-  add(fm.tags.map(schemeRef));
+  for (const t of fm.tags) {
+    const r = tagRef(t, vocab, mapping.group_aliases);
+    if (r && "ref" in r) add([r.ref]);
+    else if (r && !ambiguous.includes(r.ambiguous)) ambiguous.push(r.ambiguous);
+  }
   for (const t of fm.tags) add(mapping.by_tag?.[lc(t)]);
   add(mapping.by_epic?.[lc(fm.epic)]);
   add(mapping.by_area?.[lc(fm.area)]);
-  return out;
+  return { refs, ambiguous };
 }
 
 export function mapAudience(

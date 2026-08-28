@@ -15,6 +15,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { arg, flag, loadBoard, serviceClient } from "./db";
 import {
+  buildVocabulary,
   laneForNewCard,
   laneMoveFromSource,
   type Mapping,
@@ -42,6 +43,9 @@ const mapping = JSON.parse(await readFile(mappingPath, "utf8")) as Mapping;
 // The board's inbox is where a file with no `lane:` lands. Nothing else about
 // a card decides its lane any more — not its status, not its `needs`.
 const inboxKey = ctx.lanes.find((l) => l.kind === "inbox")?.key ?? "unsorted";
+// The board's own tags are the taxonomy: a bare `bug` in a file is whatever
+// group declares a tag with that key.
+const vocab = buildVocabulary(ctx.tagByRef.keys());
 
 const files = (await readdir(source))
   .filter((f) => /^\d+\.md$/.test(f))
@@ -70,6 +74,8 @@ let created = 0,
   skipped = 0;
 /** Tag refs the board's seed never declared → the cards that wanted them. */
 const unmappedTags = new Map<string, string[]>();
+/** Bare tags more than one group claims → the cards that used them. */
+const ambiguousTags = new Map<string, string[]>();
 const relatesByExternal = new Map<string, number[]>();
 const idByExternal = new Map<string, string>();
 
@@ -123,7 +129,13 @@ for (const file of files) {
     source_hash: parsed.hash,
     frontmatter_extra: extra,
   };
-  const resolved = resolveTags(mapTags(fm, mapping), ctx.tagByRef);
+  const mapped = mapTags(fm, mapping, vocab);
+  for (const t of mapped.ambiguous) {
+    const seen = ambiguousTags.get(t);
+    if (seen) seen.push(externalId);
+    else ambiguousTags.set(t, [externalId]);
+  }
+  const resolved = resolveTags(mapped.refs, ctx.tagByRef);
   const tagIds = resolved.ids;
   for (const ref of resolved.unresolved) {
     const seen = unmappedTags.get(ref);
@@ -193,7 +205,7 @@ for (const file of files) {
       ? ` → ${ctx.lanes.find((l) => l.id === row.lane_id)?.key ?? lane.key}`
       : "";
     console.log(
-      `${prev ? "update" : "create"} #${externalId}${laneNote} [${mapTags(fm, mapping).join(", ")}]`,
+      `${prev ? "update" : "create"} #${externalId}${laneNote} [${mapped.refs.join(", ")}]`,
     );
     prev ? updated++ : created++;
     continue;
