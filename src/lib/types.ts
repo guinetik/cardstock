@@ -99,6 +99,7 @@ export interface BoardData {
   };
   lanes: Lane[];
   groups: TagGroup[];
+  epics: Pick<Epic, "id" | "source_name" | "outcome">[];
   cards: Card[];
 }
 

@@ -26,6 +26,7 @@ import {
 } from "react";
 import {
   archiveCard,
+  createCard,
   createLane,
   deleteLane,
   moveCard,
@@ -51,6 +52,7 @@ import {
 } from "@/lib/lane-view";
 import { rankBetween } from "@/lib/rank";
 import type { BoardData, Card, Lane } from "@/lib/types";
+import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
 import { FilterBar } from "./filter-bar";
 import { LaneColumn } from "./lane-column";
@@ -121,6 +123,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [error, setError] = useState<string | null>(null);
   const [laneBusy, setLaneBusy] = useState<string | null>(null);
   const [laneDialog, setLaneDialog] = useState<LaneDialogMode>(null);
+  const [cardLane, setCardLane] = useState<Lane | null>(null);
   const [, startTransition] = useTransition();
 
   const sensors = useSensors(
@@ -383,6 +386,17 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     return null;
   }
 
+  async function addCard(input: Parameters<typeof createCard>[0]) {
+    setError(null);
+    const result = await createCard(input);
+    if (!result.ok) {
+      setError(result.error);
+      return result;
+    }
+    setCards((current) => [result.card, ...current]);
+    return result;
+  }
+
   async function changeLaneName(
     laneId: string,
     name: string,
@@ -520,6 +534,14 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         onRename={changeLaneName}
         onDelete={removeLane}
       />
+      <CardCreateDialog
+        lane={cardLane}
+        boardId={data.board.id}
+        groups={data.groups}
+        epics={data.epics}
+        onClose={() => setCardLane(null)}
+        onCreate={addCard}
+      />
       <DndContext
         id="board-dnd"
         sensors={sensors}
@@ -550,6 +572,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               projectSlug={data.project.slug}
               boardSlug={data.board.slug}
               hiddenByDefault={lane.kind === "archive" && !filters.showArchived}
+              onAddCard={() => setCardLane(lane)}
               manage={
                 lane.kind === "work"
                   ? {

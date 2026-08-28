@@ -11,6 +11,7 @@ import {
   Minus,
   MoreHorizontal,
   Pencil,
+  Plus,
   Trash2,
 } from "lucide-react";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
@@ -65,6 +66,7 @@ export function LaneColumn(props: {
   projectSlug: string;
   boardSlug: string;
   hiddenByDefault: boolean;
+  onAddCard: () => void;
   manage?: {
     disabled: boolean;
     canMoveLeft: boolean;
@@ -137,6 +139,17 @@ export function LaneColumn(props: {
           </span>
         )}
         <span className="ml-auto flex items-center gap-0.5">
+          {lane.kind !== "archive" && (
+            <button
+              type="button"
+              className={TOOL}
+              title={`Add card to ${lane.name}`}
+              aria-label={`Add card to ${lane.name}`}
+              onClick={props.onAddCard}
+            >
+              <Plus size={14} />
+            </button>
+          )}
           {props.manage && (
             <DropdownMenu>
               <DropdownMenuTrigger

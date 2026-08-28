@@ -412,6 +412,104 @@
   backdrop-filter: none;
 }
 
+/* A new issue is written on one filed sheet: content at left, filing notes in
+   the ruled margin, and highlighter marks collected along the foot. */
+.card-create-sheet[data-slot="dialog-content"] {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-lift);
+}
+.card-create-masthead {
+  gap: 0.35rem;
+  padding: 1.15rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border-divider);
+  background: var(--surface-card);
+}
+.card-create-lane-tab {
+  padding-bottom: 0.1rem;
+  border-bottom: 2px solid var(--pen-blue);
+  color: var(--color-ink);
+}
+.card-create-main {
+  min-height: 25rem;
+  background: var(--surface-card);
+}
+.card-create-writing {
+  grid-template-rows: auto auto minmax(18rem, 1fr);
+  align-content: stretch;
+}
+.card-create-description {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+.card-create-description > .issue-editor,
+.card-create-description > .issue-editor > .mdxeditor {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.card-create-description .mdxeditor-root-contenteditable {
+  flex: 1;
+}
+.card-create-sidebar {
+  border-left: 1px solid var(--border-divider);
+  background: var(--surface-panel);
+}
+.card-create-title {
+  width: 100%;
+  padding: 0.15rem 0 0.5rem;
+  border: 0;
+  border-bottom: 2px solid var(--color-ink);
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-ink-strong);
+  font-family: var(--font-heading), serif;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+.card-create-title::placeholder {
+  color: var(--color-grey-faint);
+}
+.card-create-title:focus {
+  border-bottom-color: var(--pen-blue);
+}
+.card-create-note {
+  position: relative;
+  padding: 0.65rem 0.85rem 0.35rem 1.15rem;
+  border-top: 1px solid var(--border-hairline);
+  border-bottom: 1px solid var(--border-hairline);
+  background: var(--surface-input);
+}
+.card-create-note::before {
+  position: absolute;
+  inset: 0 0 0 0.45rem;
+  width: 1px;
+  content: "";
+  background: var(--pen-red);
+  opacity: 0.55;
+}
+.card-create-tags {
+  border-top: 1px solid var(--border-divider);
+  background: var(--surface-card);
+}
+.card-create-sheet .issue-editor .mdxeditor-root-contenteditable {
+  min-height: 18rem;
+}
+
+@media (max-width: 63.999rem) {
+  .card-create-sidebar {
+    border-top: 1px solid var(--border-divider);
+    border-left: 0;
+  }
+}
+
 /*
  * Unlayered on purpose: @tailwindcss/typography sets --tw-prose-* on .prose
  * outside any layer, so an @layer components remap never wins.

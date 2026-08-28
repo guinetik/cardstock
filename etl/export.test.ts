@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { formatScalar, writeBody, writeManaged } from "./frontmatter-write";
+import {
+  createNewCardMarkdown,
+  formatScalar,
+  writeBody,
+  writeManaged,
+} from "./frontmatter-write";
 import { parseFile } from "./parse";
 import { validateFrontmatter } from "./schema";
 
@@ -96,7 +101,12 @@ describe("writeManaged", () => {
 
 describe("writeBody", () => {
   test("replaces the body and restores the tracker H1", () => {
-    const out = writeBody(FILE, "152", "Filter what to sync", "## Ask\n\nEdited.");
+    const out = writeBody(
+      FILE,
+      "152",
+      "Filter what to sync",
+      "## Ask\n\nEdited.",
+    );
     const { body } = parseFile(out);
     expect(body.trim()).toBe(
       "# #152 — Filter what to sync\n\n## Ask\n\nEdited.",
@@ -109,6 +119,33 @@ describe("writeBody", () => {
     const out = writeBody(crlf, "152", "Filter what to sync", "## Ask");
     expect(out.includes("\r\n")).toBe(true);
     expect(out.split("\r\n").join("").includes("\n")).toBe(false);
+  });
+});
+
+describe("createNewCardMarkdown", () => {
+  test("creates a valid, re-importable tracker issue", () => {
+    const out = createNewCardMarkdown({
+      externalId: "153",
+      title: "Add cards from the board",
+      status: "backlog",
+      epic: "Board",
+      area: "Workflow",
+      tags: ["kind:feature", "internal"],
+      summary: "Create an issue without leaving its lane.",
+      bodyMd: "## Ask\n\nKeep the Markdown round trip.",
+      managed: { lane: "now", rank: 1, priority: 2, effort: "M" },
+    });
+    const parsed = parseFile(out);
+    expect(() => validateFrontmatter(parsed.frontmatter)).not.toThrow();
+    expect(parsed.frontmatter.tags).toEqual([
+      "tracker-item",
+      "kind:feature",
+      "internal",
+    ]);
+    expect(parsed.frontmatter.lane).toBe("now");
+    expect(parsed.frontmatter.rank).toBe("1");
+    expect(parsed.body).toContain("# #153 — Add cards from the board");
+    expect(parsed.body).toContain("Keep the Markdown round trip.");
   });
 });
 

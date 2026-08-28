@@ -22,6 +22,18 @@ export type Managed = Partial<
   Record<ManagedKey, string | number | null | undefined>
 >;
 
+export interface NewCardMarkdown {
+  externalId: string;
+  title: string;
+  status: string;
+  epic: string;
+  area: string;
+  tags: string[];
+  summary?: string | null;
+  bodyMd?: string | null;
+  managed: Managed;
+}
+
 const KEY_LINE = /^([A-Za-z_][\w-]*):/;
 
 export function writeManaged(text: string, managed: Managed): string {
@@ -70,6 +82,27 @@ export function formatScalar(v: string | number): string {
   if (/^[\w./:@ -]*$/.test(s) && !s.startsWith("[") && !s.includes(": "))
     return s;
   return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** Build the complete tracker file for a card first created in the app. */
+export function createNewCardMarkdown(card: NewCardMarkdown): string {
+  const tags = [...new Set(["tracker-item", ...card.tags])];
+  const frontmatter = [
+    "---",
+    `id: ${formatScalar(card.externalId)}`,
+    `title: ${formatScalar(card.title)}`,
+    `status: ${formatScalar(card.status)}`,
+    `epic: ${formatScalar(card.epic || "Unassigned")}`,
+    `area: ${formatScalar(card.area || "general")}`,
+    "tags:",
+    ...tags.map((tag) => `  - ${formatScalar(tag)}`),
+    ...(card.summary ? [`summary: ${formatScalar(card.summary)}`] : []),
+    "---",
+    `# #${card.externalId} — ${card.title}`,
+    "",
+    card.bodyMd?.replace(/(\r?\n)+$/, "") ?? "",
+  ].join("\n");
+  return `${writeManaged(frontmatter, card.managed).replace(/(\r?\n)+$/, "")}\n`;
 }
 
 /**

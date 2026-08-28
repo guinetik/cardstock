@@ -8,7 +8,7 @@ import {
 import { cleanName, keyFromName } from "@/lib/keys";
 import { needsNormalize, normalized } from "@/lib/rank";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
-import type { Lane } from "@/lib/types";
+import type { Card, Lane } from "@/lib/types";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -18,6 +18,29 @@ export type LaneMutationResult =
       lanes: Lane[];
       movedCards?: { id: string; rank: number }[];
     }
+  | { ok: false; error: string };
+
+export interface CreateCardInput {
+  boardId: string;
+  laneId: string;
+  title: string;
+  summary?: string;
+  bodyMarkdown?: string;
+  status?: Card["status"];
+  epicId?: string | null;
+  epic?: string;
+  area?: string;
+  priority?: Card["priority"];
+  effort?: Card["effort"];
+  plannedStartDate?: string;
+  targetDate?: string;
+  targetLabel?: string;
+  audience?: Card["audience"];
+  tagIds?: string[];
+}
+
+export type CreateCardResult =
+  | { ok: true; card: Card }
   | { ok: false; error: string };
 
 async function ctx() {
@@ -43,6 +66,169 @@ async function laneList(
 
 function refreshBoards() {
   revalidatePath("/p/[project]/b/[board]", "page");
+}
+
+const CARD_STATUSES = new Set([
+  "backlog",
+  "blocked",
+  "wip",
+  "held",
+  "built",
+  "handed",
+  "shipped",
+  "done",
+]);
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Create an app-owned issue at the top of a lane, ready for markdown export. */
+export async function createCard(
+  input: CreateCardInput,
+): Promise<CreateCardResult> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(input.boardId) || !UUID.test(input.laneId))
+    return { ok: false, error: "Invalid board or lane." };
+
+  const title = input.title.trim();
+  if (!title || title.length > 240)
+    return { ok: false, error: "Title must be between 1 and 240 characters." };
+  const status = input.status ?? "backlog";
+  if (!CARD_STATUSES.has(status))
+    return { ok: false, error: "Invalid status." };
+  const validDate = (value?: string) => !value || ISO_DATE.test(value);
+  if (!validDate(input.plannedStartDate) || !validDate(input.targetDate))
+    return { ok: false, error: "Dates must use YYYY-MM-DD." };
+  if (input.priority != null && !([1, 2, 3] as const).includes(input.priority))
+    return { ok: false, error: "Invalid priority." };
+  if (
+    input.effort != null &&
+    !(["L", "M", "H"] as const).includes(input.effort)
+  )
+    return { ok: false, error: "Invalid effort." };
+  if (
+    input.audience &&
+    !(["all", "internal"] as const).includes(input.audience)
+  )
+    return { ok: false, error: "Invalid audience." };
+
+  const { data: lane } = await c.db
+    .from("lanes")
+    .select("id, board_id")
+    .eq("id", input.laneId)
+    .eq("board_id", input.boardId)
+    .maybeSingle();
+  if (!lane) return { ok: false, error: "Lane not found on this board." };
+
+  const tagIds = [...new Set(input.tagIds ?? [])];
+  if (tagIds.some((id) => !UUID.test(id)))
+    return { ok: false, error: "Invalid tag." };
+  if (tagIds.length) {
+    const { data: allowed } = await c.db
+      .from("tags")
+      .select("id, tag_groups!inner(board_id)")
+      .in("id", tagIds)
+      .eq("tag_groups.board_id", input.boardId);
+    if ((allowed ?? []).length !== tagIds.length)
+      return {
+        ok: false,
+        error: "One or more tags do not belong to this board.",
+      };
+  }
+
+  let selectedEpic: { id: string; source_name: string } | null = null;
+  if (input.epicId) {
+    if (!UUID.test(input.epicId)) return { ok: false, error: "Invalid epic." };
+    const { data: epic } = await c.db
+      .from("epics")
+      .select("id, source_name")
+      .eq("id", input.epicId)
+      .eq("board_id", input.boardId)
+      .maybeSingle();
+    if (!epic) return { ok: false, error: "Epic not found on this board." };
+    selectedEpic = epic;
+  }
+
+  const [{ data: existing }, { data: first }] = await Promise.all([
+    c.db.from("cards").select("external_id").eq("board_id", input.boardId),
+    c.db
+      .from("cards")
+      .select("rank")
+      .eq("lane_id", input.laneId)
+      .order("rank")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const nextId =
+    Math.max(
+      0,
+      ...(existing ?? []).map((row) =>
+        /^\d+$/.test(row.external_id) ? Number(row.external_id) : 0,
+      ),
+    ) + 1;
+  const now = new Date().toISOString();
+  const row = {
+    board_id: input.boardId,
+    lane_id: input.laneId,
+    title,
+    summary: input.summary?.trim() || null,
+    body_md: input.bodyMarkdown?.trim() ?? "",
+    status,
+    epic: selectedEpic?.source_name ?? input.epic?.trim() ?? "Unassigned",
+    epic_id: selectedEpic?.id ?? null,
+    area: input.area?.trim() || "general",
+    rank: (first?.rank ?? 1) - 1,
+    priority: input.priority ?? null,
+    effort: input.effort ?? null,
+    planned_start_date: input.plannedStartDate || null,
+    target_date: input.targetDate || null,
+    target_label: input.targetLabel?.trim() || null,
+    audience: input.audience ?? "all",
+    summary_edited_at: now,
+    body_edited_at: now,
+  };
+
+  let card: Record<string, unknown> | null = null;
+  let insertError: { code?: string; message: string } | null = null;
+  // A simultaneous create can claim the same numeric tracker id. Retry the
+  // unique insert with the next id; the board/lane checks above remain valid.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await c.db
+      .from("cards")
+      .insert({ ...row, external_id: String(nextId + attempt) })
+      .select(
+        "id, external_id, title, summary, status, epic, epic_id, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at",
+      )
+      .single();
+    card = result.data;
+    insertError = result.error;
+    if (card || insertError?.code !== "23505") break;
+  }
+  if (!card)
+    return {
+      ok: false,
+      error: insertError?.message ?? "Could not create card.",
+    };
+
+  if (tagIds.length) {
+    const { error } = await c.db
+      .from("card_tags")
+      .insert(tagIds.map((tag_id) => ({ card_id: card!.id, tag_id })));
+    if (error) {
+      await c.db.from("cards").delete().eq("id", card.id);
+      return { ok: false, error: error.message };
+    }
+  }
+  await c.db.from("card_events").insert({
+    card_id: card.id,
+    actor: c.me.email,
+    kind: "created",
+    payload: { lane_id: input.laneId },
+  });
+  refreshBoards();
+  return {
+    ok: true,
+    card: { ...card, tag_ids: tagIds, lane_entered_at: now } as unknown as Card,
+  };
 }
 
 /** Create a plain work lane. Its key is permanent once generated. */

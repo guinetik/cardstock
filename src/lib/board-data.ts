@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { BoardData, Card, Lane, TagGroup } from "@/lib/types";
+import type { BoardData, Card, Epic, Lane, TagGroup } from "@/lib/types";
 
 /** Everything the board page needs, in one round-trip set. RLS scopes it to the member's projects. */
 export async function loadBoard(
@@ -28,6 +28,7 @@ export async function loadBoard(
     { data: cards },
     { data: cardTags },
     { data: moves },
+    { data: epics },
   ] = await Promise.all([
     db
       .from("lanes")
@@ -59,6 +60,11 @@ export async function loadBoard(
       .eq("cards.board_id", board.id)
       .eq("kind", "moved")
       .order("at", { ascending: false }),
+    db
+      .from("epics")
+      .select("id, source_name, outcome")
+      .eq("board_id", board.id)
+      .order("source_name"),
   ]);
 
   const tagsByCard = new Map<string, string[]>();
@@ -79,6 +85,7 @@ export async function loadBoard(
     },
     lanes: (lanes ?? []) as Lane[],
     groups: (groups ?? []) as unknown as TagGroup[],
+    epics: (epics ?? []) as Pick<Epic, "id" | "source_name" | "outcome">[],
     cards: (cards ?? []).map((c) => ({
       ...c,
       tag_ids: tagsByCard.get(c.id) ?? [],
