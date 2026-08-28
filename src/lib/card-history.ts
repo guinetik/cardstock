@@ -208,29 +208,40 @@ function editedFacts(payload: Record<string, unknown>): string {
   return parts.join(" · ");
 }
 
-function editField(key: (typeof EDIT_ORDER)[number], value: unknown): string {
-  if (key === "priority") {
-    if (value === 1 || value === 2 || value === 3)
-      return `priority ${PRIORITY_LABEL[value]}`;
-    return "priority";
+type EditFieldKey = (typeof EDIT_ORDER)[number];
+
+/**
+ * One known `edited` field as a ledger fragment. Exhaustive on `EDIT_ORDER`
+ * so a new key cannot fall through to `"body"`.
+ */
+function editField(key: EditFieldKey, value: unknown): string {
+  switch (key) {
+    case "priority":
+      if (value === 1 || value === 2 || value === 3)
+        return `priority ${PRIORITY_LABEL[value]}`;
+      return "priority";
+    case "effort":
+      if (value === "L" || value === "M" || value === "H")
+        return `effort ${value}`;
+      return "effort";
+    case "target_date":
+      return typeof value === "string" && value ? value : "target date";
+    case "target_label":
+      return typeof value === "string" && value ? value : "target label";
+    case "audience":
+      if (value === "all" || value === "internal") return `audience ${value}`;
+      return "audience";
+    case "title":
+      return "title";
+    case "summary":
+      return "summary";
+    case "tags":
+      return "tags";
+    case "body":
+      return "body";
+    default: {
+      const _exhaustive: never = key;
+      return _exhaustive;
+    }
   }
-  if (key === "effort") {
-    if (value === "L" || value === "M" || value === "H")
-      return `effort ${value}`;
-    return "effort";
-  }
-  if (key === "target_date") {
-    return typeof value === "string" && value ? value : "target date";
-  }
-  if (key === "target_label") {
-    return typeof value === "string" && value ? value : "target label";
-  }
-  if (key === "audience") {
-    if (value === "all" || value === "internal") return `audience ${value}`;
-    return "audience";
-  }
-  if (key === "title") return "title";
-  if (key === "summary") return "summary";
-  if (key === "tags") return "tags";
-  return "body";
 }

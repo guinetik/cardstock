@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   type CardHistoryEvent,
   type CardHistoryLane,
@@ -9,8 +10,10 @@ import {
 /**
  * Card-page stamp log: clock, kind pen, actor, facts. No payload dump.
  *
- * Client so the clock uses the browser time zone. Kind/actor/facts are
- * deterministic; only `<time>` may differ between SSR and hydrate.
+ * `"use client"` does not make SSR use the browser zone. History mounts with
+ * `formatCardEvent` (no `timeZone`), then a `useEffect` re-render so the
+ * clock becomes local. Kind/actor/facts are deterministic and do not flash.
+ * `suppressHydrationWarning` stays on `<time>` per spec.
  */
 export function CardHistory({
   events,
@@ -19,6 +22,11 @@ export function CardHistory({
   events: CardHistoryEvent[];
   lanes: CardHistoryLane[];
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <section className="mt-8">
       <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -33,14 +41,14 @@ export function CardHistory({
             return (
               <li
                 key={event.id}
-                className="grid grid-cols-[7.5rem_auto_minmax(0,1fr)] items-baseline gap-x-2"
+                className="grid grid-cols-[8.5rem_auto_minmax(0,1fr)] items-baseline gap-x-2"
               >
                 <time
                   dateTime={event.at}
                   suppressHydrationWarning
-                  className="font-mono text-muted-foreground tabular-nums"
+                  className="whitespace-nowrap font-mono text-muted-foreground tabular-nums"
                 >
-                  {row.clock}
+                  {mounted ? row.clock : row.clock}
                 </time>
                 <span className={`stat ${row.stat}`}>{row.kind}</span>
                 <span>

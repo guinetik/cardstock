@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatCardEvent, type CardHistoryLane } from "./card-history";
+import { type CardHistoryLane, formatCardEvent } from "./card-history";
 
 const lanes: CardHistoryLane[] = [
   { id: "id-now", key: "now", name: "Now" },
@@ -34,7 +34,9 @@ describe("actor", () => {
     expect(
       formatCardEvent(ev({ actor: "joao@staffeto.com" }), lanes, opts).actor,
     ).toBe("joao");
-    expect(formatCardEvent(ev({ actor: "etl" }), lanes, opts).actor).toBe("etl");
+    expect(formatCardEvent(ev({ actor: "etl" }), lanes, opts).actor).toBe(
+      "etl",
+    );
     expect(formatCardEvent(ev({ actor: "  etl  " }), lanes, opts).actor).toBe(
       "etl",
     );
@@ -157,8 +159,11 @@ describe("imported", () => {
       ).facts,
     ).toBe("156.md");
     expect(
-      formatCardEvent(ev({ kind: "imported", payload: { hash: "abc" } }), lanes, opts)
-        .facts,
+      formatCardEvent(
+        ev({ kind: "imported", payload: { hash: "abc" } }),
+        lanes,
+        opts,
+      ).facts,
     ).toBe("");
   });
 });
@@ -262,12 +267,18 @@ describe("commented and unknown", () => {
       ).facts,
     ).toBe("Need a decision");
     expect(
-      formatCardEvent(ev({ kind: "frobbed", payload: { hash: "x" } }), lanes, opts)
-        .facts,
+      formatCardEvent(
+        ev({ kind: "frobbed", payload: { hash: "x" } }),
+        lanes,
+        opts,
+      ).facts,
     ).toBe("");
     expect(
-      formatCardEvent(ev({ kind: "moved", payload: ["not", "an", "object"] }), lanes, opts)
-        .facts,
+      formatCardEvent(
+        ev({ kind: "moved", payload: ["not", "an", "object"] }),
+        lanes,
+        opts,
+      ).facts,
     ).toBe("");
   });
 });
