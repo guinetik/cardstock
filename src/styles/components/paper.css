@@ -531,3 +531,5 @@
 .issue-editor .mdxeditor-popup-container {
   border-radius: var(--radius-input);
 }
+
+/* issue editor: paper tokens only, 2px radius cap */
