@@ -54,3 +54,5 @@ supabase-start.log
 .env*.local
 !.env.example
 dev.log
+
+.superpowers
