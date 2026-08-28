@@ -44,7 +44,7 @@ const EDIT_ORDER = [
 ] as const;
 
 /**
- * Turn one event into a ledger line: local clock, kind pen, actor, facts.
+ * Turn one event into a ledger line: local clock, kind pen, actor, verb clause.
  *
  * Never stringifies `payload`. Unknown kinds still return clock, kind, and actor.
  *
@@ -67,14 +67,16 @@ export function formatCardEvent(
 }
 
 /**
- * Email local-part, otherwise the trimmed actor. Blank → `someone`.
+ * Email local-part with a capital first letter, otherwise the trimmed actor.
+ * Blank → `someone`. Machine names (`etl`) have no `@` and stay as written.
  */
 function formatActor(actor: string | null | undefined): string {
   const raw = actor?.trim() ?? "";
   if (!raw) return "someone";
   if (!raw.includes("@")) return raw;
   const local = raw.slice(0, raw.indexOf("@")).trim();
-  return local || "someone";
+  if (!local) return "someone";
+  return local.charAt(0).toUpperCase() + local.slice(1);
 }
 
 /**
@@ -141,13 +143,17 @@ function formatFacts(
       return createdFacts(payload, lanes);
     case "edited":
       return editedFacts(payload);
-    case "archived":
-      return laneFact(payload.from_lane, lanes, "a-lane");
-    case "restored":
-      return laneFact(payload.to_lane, lanes, "a-lane");
+    case "archived": {
+      const from = laneFact(payload.from_lane, lanes, "a-lane");
+      return from ? `archived this from ${from}` : "archived this";
+    }
+    case "restored": {
+      const to = laneFact(payload.to_lane, lanes, "a-lane");
+      return to ? `restored this to ${to}` : "restored this";
+    }
     case "commented":
       return typeof payload.preview === "string" && payload.preview
-        ? payload.preview
+        ? `commented: ${payload.preview}`
         : "";
     default:
       return "";
@@ -160,23 +166,25 @@ function movedFacts(
 ): string {
   const from = laneFact(payload.from_lane, lanes, "a-lane");
   const to = laneFact(payload.to_lane, lanes, "a-lane");
-  if (from && to) return `${from} → ${to}`;
-  if (to) return `→ ${to}`;
-  if (from) return `${from} →`;
+  if (from && to) return `moved this from ${from} to ${to}`;
+  if (to) return `moved this to ${to}`;
+  if (from) return `moved this from ${from}`;
   return "";
 }
 
 function importedFacts(payload: Record<string, unknown>): string {
   if (typeof payload.source !== "string" || !payload.source) return "";
   const parts = payload.source.split(/[/\\]/);
-  return parts[parts.length - 1] || "";
+  const base = parts[parts.length - 1] || "";
+  return base ? `imported ${base}` : "";
 }
 
 function createdFacts(
   payload: Record<string, unknown>,
   lanes: CardHistoryLane[],
 ): string {
-  return laneFact(payload.lane, lanes, "key");
+  const lane = laneFact(payload.lane, lanes, "key");
+  return lane ? `created this in ${lane}` : "created this";
 }
 
 /**
@@ -204,41 +212,56 @@ function editedFacts(payload: Record<string, unknown>): string {
   const extra = Object.keys(payload)
     .filter((key) => !seen.has(key))
     .sort();
-  for (const key of extra) parts.push(key);
-  return parts.join(" · ");
+  for (const key of extra) parts.push(`changed ${key}`);
+  return joinPhrases(parts);
+}
+
+/**
+ * English list: `a`, `a and b`, `a, b, and c`.
+ */
+function joinPhrases(parts: string[]): string {
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
 }
 
 type EditFieldKey = (typeof EDIT_ORDER)[number];
 
 /**
- * One known `edited` field as a ledger fragment. Exhaustive on `EDIT_ORDER`
+ * One known `edited` field as a verb clause. Exhaustive on `EDIT_ORDER`
  * so a new key cannot fall through to `"body"`.
  */
 function editField(key: EditFieldKey, value: unknown): string {
   switch (key) {
     case "priority":
       if (value === 1 || value === 2 || value === 3)
-        return `priority ${PRIORITY_LABEL[value]}`;
-      return "priority";
+        return `set priority to ${PRIORITY_LABEL[value]}`;
+      return "changed priority";
     case "effort":
       if (value === "L" || value === "M" || value === "H")
-        return `effort ${value}`;
-      return "effort";
+        return `set effort to ${value}`;
+      return "changed effort";
     case "target_date":
-      return typeof value === "string" && value ? value : "target date";
+      return typeof value === "string" && value
+        ? `set the target date to ${value}`
+        : "changed the target date";
     case "target_label":
-      return typeof value === "string" && value ? value : "target label";
+      return typeof value === "string" && value
+        ? `set the target to ${value}`
+        : "changed the target label";
     case "audience":
-      if (value === "all" || value === "internal") return `audience ${value}`;
-      return "audience";
+      if (value === "internal") return "marked this internal";
+      if (value === "all") return "marked this for everyone";
+      return "changed audience";
     case "title":
-      return "title";
+      return "renamed it";
     case "summary":
-      return "summary";
+      return "rewrote the summary";
     case "tags":
-      return "tags";
+      return "changed the tags";
     case "body":
-      return "body";
+      return "edited the write-up";
     default: {
       const _exhaustive: never = key;
       return _exhaustive;

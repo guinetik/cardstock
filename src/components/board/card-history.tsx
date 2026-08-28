@@ -8,7 +8,7 @@ import {
 } from "@/lib/card-history";
 
 /**
- * Card-page stamp log: clock, kind pen, actor, facts. No payload dump.
+ * Card-page stamp log: clock, kind pen, then a sentence (who did what).
  *
  * `"use client"` does not make SSR use the browser zone. History mounts with
  * `formatCardEvent` (no `timeZone`), then a `useEffect` re-render so the
@@ -52,10 +52,8 @@ export function CardHistory({
                 </time>
                 <span className={`stat ${row.stat}`}>{row.kind}</span>
                 <span>
-                  <span className="font-mono text-muted-foreground">
-                    {row.actor}
-                  </span>
-                  {row.facts ? <> {row.facts}</> : null}
+                  {row.actor}
+                  {row.facts ? ` ${row.facts}` : ""}
                 </span>
               </li>
             );

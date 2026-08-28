@@ -37,7 +37,7 @@ Below the article. Each block is `### YYYY-MM-DD HH:mm · email` plus a blockquo
 
 Last on the page. One `.paper-card--static` already wraps the issue; do not nest a lane or a second card around the log.
 
-Each `card_events` row is three columns: local clock in IBM Plex Mono (`28 Aug 02:28`, year only when it is not this year), kind as `.stat` (moved / restored / commented → `stat--info`, created → `stat--success`, everything else → `stat--muted`), then actor (email local-part; `etl` stays `etl`) and a short fact line. Facts use lane **names**, the import basename, and edited field words. Never `JSON.stringify` the payload. Empty copy is `Nothing recorded.` Cap 50, newest first.
+Each `card_events` row is three columns: local clock in IBM Plex Mono (`28 Aug 02:28`, year only when it is not this year), kind as `.stat` (moved / restored / commented → `stat--info`, created → `stat--success`, everything else → `stat--muted`), then a sentence in Plex Sans: who, then what they did. Email local-parts are capitalised (`Joao`); `etl` stays `etl`. Facts are verbs, not field dumps — `set priority to P1`, `moved this from Now to Next`, `imported 156.md`. Never `JSON.stringify` the payload. Empty copy is `Nothing recorded.` Cap 50, newest first.
 
 The clock is Decision 3 local time. `"use client"` still SSRs in the server zone, so the list mount-gates: kind/actor/facts render immediately; `<time suppressHydrationWarning>` keeps the SSR clock until mount, then `formatCardEvent` (no `timeZone`) redraws in the browser zone.
 

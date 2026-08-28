@@ -30,10 +30,10 @@ function ev(
 }
 
 describe("actor", () => {
-  test("email local-part, etl, blank → someone", () => {
+  test("email local-part is capitalised; etl and someone stay as-is", () => {
     expect(
       formatCardEvent(ev({ actor: "joao@staffeto.com" }), lanes, opts).actor,
-    ).toBe("joao");
+    ).toBe("Joao");
     expect(formatCardEvent(ev({ actor: "etl" }), lanes, opts).actor).toBe(
       "etl",
     );
@@ -107,7 +107,7 @@ describe("moved", () => {
       lanes,
       opts,
     );
-    expect(row.facts).toBe("Now → Next");
+    expect(row.facts).toBe("moved this from Now to Next");
     expect(row.facts).not.toContain("3.5");
   });
 
@@ -118,15 +118,15 @@ describe("moved", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("a lane → Next");
+    ).toBe("moved this from a lane to Next");
     expect(
       formatCardEvent(ev({ payload: { to_lane: "id-next" } }), lanes, opts)
         .facts,
-    ).toBe("→ Next");
+    ).toBe("moved this to Next");
     expect(
       formatCardEvent(ev({ payload: { from_lane: "id-now" } }), lanes, opts)
         .facts,
-    ).toBe("Now →");
+    ).toBe("moved this from Now");
     expect(formatCardEvent(ev({ payload: {} }), lanes, opts).facts).toBe("");
   });
 });
@@ -147,7 +147,7 @@ describe("imported", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("156.md");
+    ).toBe("imported 156.md");
     expect(
       formatCardEvent(
         ev({
@@ -157,7 +157,7 @@ describe("imported", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("156.md");
+    ).toBe("imported 156.md");
     expect(
       formatCardEvent(
         ev({ kind: "imported", payload: { hash: "abc" } }),
@@ -176,17 +176,17 @@ describe("created", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("Unsorted");
+    ).toBe("created this in Unsorted");
     expect(
       formatCardEvent(
         ev({ kind: "created", payload: { lane: "gone" } }),
         lanes,
         opts,
       ).facts,
-    ).toBe("gone");
+    ).toBe("created this in gone");
     expect(
       formatCardEvent(ev({ kind: "created", payload: {} }), lanes, opts).facts,
-    ).toBe("");
+    ).toBe("created this");
   });
 });
 
@@ -208,10 +208,12 @@ describe("edited", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("priority P2 · effort M · summary · tags · body · extra_uuid");
+    ).toBe(
+      "set priority to P2, set effort to M, rewrote the summary, changed the tags, edited the write-up, and changed extra_uuid",
+    );
   });
 
-  test("bad values fall back to the field word", () => {
+  test("bad values fall back to a changed-field phrase", () => {
     expect(
       formatCardEvent(
         ev({
@@ -221,7 +223,9 @@ describe("edited", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("priority · effort · target date · audience");
+    ).toBe(
+      "changed priority, changed effort, changed the target date, and changed audience",
+    );
   });
 });
 
@@ -233,24 +237,24 @@ describe("archived and restored", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("Now");
+    ).toBe("archived this from Now");
     expect(
       formatCardEvent(
         ev({ kind: "archived", payload: { from_lane: "missing" } }),
         lanes,
         opts,
       ).facts,
-    ).toBe("a lane");
+    ).toBe("archived this from a lane");
     expect(
       formatCardEvent(ev({ kind: "archived", payload: {} }), lanes, opts).facts,
-    ).toBe("");
+    ).toBe("archived this");
     expect(
       formatCardEvent(
         ev({ kind: "restored", payload: { to_lane: "id-next" } }),
         lanes,
         opts,
       ).facts,
-    ).toBe("Next");
+    ).toBe("restored this to Next");
   });
 });
 
@@ -265,7 +269,7 @@ describe("commented and unknown", () => {
         lanes,
         opts,
       ).facts,
-    ).toBe("Need a decision");
+    ).toBe("commented: Need a decision");
     expect(
       formatCardEvent(
         ev({ kind: "frobbed", payload: { hash: "x" } }),

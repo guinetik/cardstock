@@ -15,7 +15,8 @@ History is the card’s stamp log. Today it is a debug dump. A reader cannot sca
 Replace the dump with a **date-gutter ledger**. Each event is one row:
 
 ```
-[ 28 Aug 02:28 ]  [ MOVED ]  joao    Now → Next
+[ 28 Aug 02:28 ]  [ MOVED ]  Joao moved this from Now to Next
+[ 28 Aug 02:28 ]  [ EDITED ]  Joao set priority to P1
 ```
 
 No JSON on the row. No disclosure. The sentence is the record. Unknown or unmapped events still get clock, kind, and actor — never a dump.
@@ -30,8 +31,9 @@ No behaviour change to writes, ETL, auth, or the 50-event cap. Comments stay com
 2. **Payload is gone from the UI.** The database still stores it. The page does not render it.
 3. **Clock on every row.** Local time, `d MMM HH:mm` (`28 Aug 02:28`). Year only when the event’s local calendar year is not the viewer’s current year (`28 Aug 2025 02:28`). No seconds. No day grouping. No relative time.
 4. **Lane names, not ids.** Resolve `from_lane` / `to_lane` / `lane` through the board’s lanes (id or key → `name`). Unknown → `a lane`.
-5. **Actor is the local-part.** `joao@staffeto.com` → `joao`. `etl` stays `etl`. Missing or blank → `someone`. Do not title-case or invent display names.
+5. **Actor is a name in the sentence.** `joao@staffeto.com` → `Joao`. `etl` stays `etl`. Missing or blank → `someone`. Do not invent display names or diacritics.
 6. **Existing pens only.** No new `.stat` variants, no new theme tokens, no nested card inside the page sheet.
+7. **The body is a clause, not a dump.** Kind is the scan mark; the rest must read as something that happened (`Joao set priority to P1`), never `priority P1`.
 
 ---
 
@@ -43,7 +45,7 @@ Three columns, baseline-aligned, `text-xs`. No nested `.paper-card` / `.paper-la
 |---|---|---|
 | Clock | IBM Plex Mono, muted, tabular | `<time dateTime={iso}>` with the formatted stamp. `suppressHydrationWarning` on that node so SSR and the browser zone do not fight. Invalid `at` → `—`. |
 | Kind | `.stat` + the modifier below | The verb as stored, already uppercase in `.stat`. |
-| Body | actor then facts | Actor in mono, muted. Facts in Plex Sans, ink. Facts wrap; they are not ellipsized. |
+| Body | actor then a verb clause | One sentence in Plex Sans, ink. `Joao set priority to P1`. Not muted mono. |
 
 Empty list: a muted paragraph `Nothing recorded.` Heading stays an `h2` whose accessible name is `History` (e2e keys off it). Cap stays 50, newest first, as the page already queries.
 
@@ -57,7 +59,7 @@ Empty list: a muted paragraph `Nothing recorded.` Heading stays an `h2` whose ac
 
 ### Actor
 
-- If `actor` contains `@`, take the substring before the first `@`, trimmed. Empty local-part → `someone`.
+- If `actor` contains `@`, take the substring before the first `@`, trimmed, then capitalise the first letter (`joao@staffeto.com` → `Joao`). Empty local-part → `someone`.
 - Otherwise use the trimmed string (`etl`).
 - Null, undefined, or whitespace → `someone`.
 
@@ -69,7 +71,7 @@ Empty list: a muted paragraph `Nothing recorded.` Heading stays an `h2` whose ac
 
 ## Facts
 
-The formatter never stringifies `payload`. It reads known keys and returns a short string, or `""` when there is nothing to say.
+The formatter never stringifies `payload`. It returns a **verb clause** the UI prefixes with the actor (`Joao set priority to P1`), or `""` when there is nothing to say.
 
 Treat `payload` that is not a plain object as empty.
 
@@ -77,51 +79,51 @@ Treat `payload` that is not a plain object as empty.
 
 `from_lane` and `to_lane` are lane ids.
 
-- both resolved: `Now → Next`
-- only to: `→ Next`
-- only from: `Now →`
+- both resolved: `moved this from Now to Next`
+- only to: `moved this to Next`
+- only from: `moved this from Now`
 - neither: `""`
 
 Do not show `rank`.
 
 ### `imported`
 
-- `source`: last path segment (`foo/bar/156.md` and `foo\\bar\\156.md` → `156.md`). If `source` is missing or not a string, skip it.
+- `source`: `imported` plus last path segment (`foo/bar/156.md` and `foo\\bar\\156.md` → `imported 156.md`). If `source` is missing or not a string, `""`.
 - Do not show `hash`, `status`, or `lane`.
 
 ### `created`
 
-Landing lane from `payload.lane` (ETL writes the lane **key**). Resolve key → name, else show the key if it is a non-empty string, else `""`. Do not show `hash` or `source`.
+Landing lane from `payload.lane` (ETL writes the lane **key**). Resolve key → name, else the key if it is a non-empty string. With a lane: `created this in Unsorted`. Without: `created this`. Do not show `hash` or `source`.
 
 ### `edited`
 
-Walk a fixed field order, then any other own keys alphabetically. Known fields:
+Walk a fixed field order, then any other own keys alphabetically. Each key is a clause. Join with `and` for two items, Oxford comma for three or more.
 
-| payload key | fact |
+| payload key | clause |
 |---|---|
-| `priority` | `priority P1` / `P2` / `P3` when the value is 1, 2, or 3; otherwise `priority` |
-| `effort` | `effort L` / `M` / `H` when the value is that letter; otherwise `effort` |
-| `target_date` | the stored date string when it is a non-empty string; otherwise `target date` |
-| `target_label` | the stored label when it is a non-empty string; otherwise `target label` |
-| `audience` | `audience internal` / `audience all` when the value is that string; otherwise `audience` |
-| `title` | `title` |
-| `summary` | `summary` |
-| `tags` | `tags` |
-| `body` | `body` |
+| `priority` | `set priority to P1` / `P2` / `P3` when the value is 1, 2, or 3; otherwise `changed priority` |
+| `effort` | `set effort to L` / `M` / `H` when the value is that letter; otherwise `changed effort` |
+| `target_date` | `set the target date to {value}` when it is a non-empty string; otherwise `changed the target date` |
+| `target_label` | `set the target to {value}` when it is a non-empty string; otherwise `changed the target label` |
+| `audience` | `marked this internal` / `marked this for everyone`; otherwise `changed audience` |
+| `title` | `renamed it` |
+| `summary` | `rewrote the summary` |
+| `tags` | `changed the tags` |
+| `body` | `edited the write-up` |
 
-Any other key contributes its key name only, never its value (values may be UUIDs or large text). Join facts with ` · `. Empty walk → `""`.
+Any other key: `changed {key}` (never the value). Empty walk → `""`.
 
 ### `archived`
 
-The lane it left: `from_lane` resolved to a name (or `a lane` if the id is present but unknown). No id → `""`.
+`archived this from Now` when `from_lane` resolves (or `a lane` if the id is present but unknown). No id → `archived this`.
 
 ### `restored`
 
-The lane it returned to: `to_lane`, same rule as archived.
+`restored this to Next`, same lane rule as archived. No id → `restored this`.
 
 ### `commented`
 
-`payload.preview` when it is a non-empty string (issue-page spec: first 80 characters of the comment). Do not repeat `author` or `at`. Missing preview → `""`.
+`commented: {preview}` when `payload.preview` is a non-empty string. Do not repeat `author` or `at`. Missing preview → `""`.
 
 ### Unknown `kind`
 
@@ -155,14 +157,14 @@ Invalid dates render `—`. A missing payload still shows clock, kind, and actor
 
 bun tests on the formatter, with a fixed `timeZone: 'UTC'` and a fixed `now`:
 
-- actor: email local-part, `etl`, blank → `someone`
+- actor: email local-part capitalised (`Joao`), `etl`, blank → `someone`
 - clock: `28 Aug 02:28`; year included when not this year; invalid → `—`
-- `moved` names, unknown ids → `a lane`, rank omitted
-- `imported` basename, hash omitted
-- `created` lane key → name
-- `edited` field list, `body`, `tags`, unknown keys as names only
-- `archived` / `restored` lane names
-- `commented` preview
+- `moved` clauses, unknown ids → `a lane`, rank omitted
+- `imported` `imported 156.md`, hash omitted
+- `created` `created this in Unsorted`
+- `edited` verb list, `body` → `edited the write-up`, unknown keys `changed {key}`
+- `archived` / `restored` clauses with lane names
+- `commented` `commented: {preview}`
 - unknown kind: empty facts, `stat--muted`
 - non-object payload: empty facts
 
