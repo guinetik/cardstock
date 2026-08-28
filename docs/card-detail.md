@@ -32,3 +32,11 @@ Read by default (`.prose`, wiki-links as bold). **Edit** opens MDXEditor; **Save
 ## Comments
 
 Below the article. Each block is `### YYYY-MM-DD HH:mm · email` plus a blockquote in the file. The page shows timestamp, email, and rendered markdown. Append-only: textarea + **Post**. Empty Post shows “Write a comment first.” The first comment creates the `## Comments` fence; there is no empty-fence placeholder.
+
+## History
+
+Last on the page. One `.paper-card--static` already wraps the issue; do not nest a lane or a second card around the log.
+
+Each `card_events` row is three columns: local clock in IBM Plex Mono (`28 Aug 02:28`, year only when it is not this year), kind as `.stat` (moved / restored / commented → `stat--info`, created → `stat--success`, everything else → `stat--muted`), then actor (email local-part; `etl` stays `etl`) and a short fact line. Facts use lane **names**, the import basename, and edited field words. Never `JSON.stringify` the payload. Empty copy is `Nothing recorded.` Cap 50, newest first.
+
+The formatter lives in `src/lib/card-history.ts`. The full contract is `docs/superpowers/specs/2026-08-28-card-history-design.md`.

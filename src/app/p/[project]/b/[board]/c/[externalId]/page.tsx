@@ -1,6 +1,7 @@
 import { marked } from "marked";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CardHistory } from "@/components/board/card-history";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
@@ -208,25 +209,7 @@ export default async function CardPage(
         leftover={issue.leftover}
       />
 
-      <section className="mt-8">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          History
-        </h2>
-        <ul className="space-y-1 text-xs">
-          {(events ?? []).map((e) => (
-            <li key={e.id} className="flex gap-2">
-              <span className="font-mono text-muted-foreground">
-                {new Date(e.at).toISOString().slice(0, 16).replace("T", " ")}
-              </span>
-              <span className="font-semibold">{e.kind}</span>
-              <span className="text-muted-foreground">{e.actor}</span>
-              <span className="truncate font-mono text-muted-foreground">
-                {JSON.stringify(e.payload)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <CardHistory events={events ?? []} lanes={lanes ?? []} />
     </main>
   );
 }
