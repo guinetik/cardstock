@@ -1,9 +1,11 @@
 import { marked } from "marked";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
 import { CardEditor } from "./card-editor";
+import { IssueComments } from "./issue-comments";
 
 export const dynamic = "force-dynamic";
 
@@ -67,8 +69,9 @@ export default async function CardPage(
       .limit(50),
   ]);
   const lane = (lanes ?? []).find((l) => l.id === card.lane_id);
+  const issue = splitIssueBody(card.body_md);
   const html = marked.parse(
-    card.body_md.replace(
+    issue.body.replace(
       WIKILINK,
       (_m: string, t: string, l?: string) => `**${l ?? t}**`,
     ),
@@ -190,6 +193,12 @@ export default async function CardPage(
       <article
         className="prose prose-sm mt-6 max-w-none"
         dangerouslySetInnerHTML={{ __html: html }}
+      />
+
+      <IssueComments
+        cardId={card.id}
+        comments={issue.comments}
+        leftover={issue.leftover}
       />
 
       <section className="mt-8">
