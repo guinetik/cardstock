@@ -42,6 +42,13 @@ import {
   matches,
   sortInbox,
 } from "@/lib/filters";
+import {
+  compactLaneView,
+  type LaneViewMode,
+  mergeBoardLaneViews,
+  parseLaneView,
+  type StoredBoardLaneViews,
+} from "@/lib/lane-view";
 import { rankBetween } from "@/lib/rank";
 import type { BoardData, Card, Lane } from "@/lib/types";
 import { CardItem } from "./card-item";
@@ -78,7 +85,11 @@ const SPRING_LEAVE_MS = 250;
 
 export interface Me {
   email: string;
-  prefs: { inboxSort?: InboxSort; showInternal?: boolean };
+  prefs: {
+    inboxSort?: InboxSort;
+    showInternal?: boolean;
+    laneViews?: StoredBoardLaneViews;
+  };
 }
 
 export function BoardView({ data, me }: { data: BoardData; me: Me }) {
@@ -91,8 +102,15 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [inboxSort, setInboxSort] = useState<InboxSort>(
     me.prefs.inboxSort ?? "newest",
   );
-  const [laneView, setLaneView] = useState<Record<string, "max" | "min" | "">>(
-    {},
+  const [laneView, setLaneView] = useState<Record<string, LaneViewMode>>(() =>
+    parseLaneView(me.prefs.laneViews?.[data.board.id]),
+  );
+  const laneViewsAllRef = useRef<StoredBoardLaneViews>(
+    mergeBoardLaneViews(
+      me.prefs.laneViews,
+      data.board.id,
+      parseLaneView(me.prefs.laneViews?.[data.board.id]),
+    ),
   );
   const [active, setActive] = useState<Card | null>(null);
   // The lane the card was picked up from, and the one currently sprung open.
@@ -163,7 +181,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
    * came from stays open and every other lane becomes a divider edge, so no
    * drop target is off-screen. A lane the card dwells over springs open.
    */
-  const viewFor = (laneId: string): "max" | "min" | "" => {
+  const viewFor = (laneId: string): LaneViewMode => {
     const chosen = laneView[laneId] ?? "";
     if (!COLLAPSE_LANES_ON_DRAG || !active) return chosen;
     if (laneId === dragFrom || laneId === sprung)
@@ -315,6 +333,33 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     });
   }
 
+  /**
+   * Write this board's lane widths into member prefs without clobbering
+   * other boards. Default (`""`) views are omitted so a restore clears storage.
+   */
+  function persistLaneView(next: Record<string, LaneViewMode>) {
+    const all = mergeBoardLaneViews(
+      laneViewsAllRef.current,
+      data.board.id,
+      compactLaneView(next),
+    );
+    laneViewsAllRef.current = all;
+    startTransition(() => {
+      void savePrefs({ laneViews: all });
+    });
+  }
+
+  /**
+   * Collapse, maximize, or restore a lane and remember the choice across reloads.
+   */
+  function changeLaneView(laneId: string, view: LaneViewMode) {
+    setLaneView((current) => {
+      const next = { ...current, [laneId]: view };
+      persistLaneView(next);
+      return next;
+    });
+  }
+
   function changeInboxSort(s: InboxSort) {
     setInboxSort(s);
     startTransition(() => {
@@ -391,6 +436,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     setLaneView((current) => {
       const next = { ...current };
       delete next[laneId];
+      persistLaneView(next);
       return next;
     });
     return null;
@@ -498,7 +544,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               visible={visible}
               groups={data.groups}
               view={viewFor(lane.id)}
-              onView={(v) => setLaneView((s) => ({ ...s, [lane.id]: v }))}
+              onView={(v) => changeLaneView(lane.id, v)}
               onPatch={patch}
               onArchive={archive}
               projectSlug={data.project.slug}

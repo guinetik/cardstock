@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { BoardView } from "@/components/board/board-view";
 import { loadBoard } from "@/lib/board-data";
+import type { InboxSort } from "@/lib/filters";
+import type { StoredBoardLaneViews } from "@/lib/lane-view";
 import { currentMember } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +15,9 @@ export default async function BoardPage(
   if (!me) redirect("/login?error=member");
   const data = await loadBoard(project, board);
   const prefs = (me.prefs ?? {}) as {
-    inboxSort?: import("@/lib/filters").InboxSort;
+    inboxSort?: InboxSort;
     showInternal?: boolean;
+    laneViews?: StoredBoardLaneViews;
   };
   return <BoardView data={data} me={{ email: me.email, prefs }} />;
 }
