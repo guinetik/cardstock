@@ -146,6 +146,11 @@ test("card title and hover pill open the card page with the full body", async ({
   await expect(page.getByRole("heading", { level: 1 })).toContainText(`#${id}`);
   await expect(page.getByRole("heading", { name: /^Ask$/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /^History$/i })).toBeVisible();
+  const history = page.locator("section", {
+    has: page.getByRole("heading", { name: /^History$/i }),
+  });
+  await expect(history).not.toContainText('"from_lane"');
+  await expect(history).not.toContainText('"hash"');
 });
 
 test("CSV export downloads the board", async ({ page }) => {
