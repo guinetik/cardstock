@@ -87,7 +87,7 @@ function LaneDialogForm(
     mode.type === "add"
       ? "Add lane"
       : mode.type === "rename"
-        ? `Rename ${mode.lane.name}`
+        ? `Edit ${mode.lane.name}`
         : `Remove ${mode.lane.name}`;
 
   return (
@@ -99,25 +99,43 @@ function LaneDialogForm(
             {mode.type === "add" &&
               "The lane key is generated from this name and remains stable for markdown exports."}
             {mode.type === "rename" &&
-              `The markdown key “${mode.lane.key}” will not change.`}
+              "The name is what the board shows. The key is what markdown stores, and it does not change."}
             {mode.type === "delete" &&
               `${props.cardCount} card${props.cardCount === 1 ? "" : "s"} will be moved before the lane is removed.`}
           </DialogDescription>
         </DialogHeader>
 
         {mode.type !== "delete" ? (
-          <label className="grid gap-1.5" htmlFor="lane-name">
-            <span className="text-xs font-medium">Lane name</span>
-            <Input
-              id="lane-name"
-              autoFocus
-              required
-              maxLength={80}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              disabled={busy}
-            />
-          </label>
+          <div className="grid gap-3">
+            <label className="grid gap-1.5" htmlFor="lane-name">
+              <span className="text-xs font-medium">Lane name</span>
+              <Input
+                id="lane-name"
+                autoFocus
+                required
+                maxLength={80}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                disabled={busy}
+              />
+            </label>
+            {mode.type === "rename" && (
+              // Worth showing, not hiding in prose: this is the value that
+              // ends up in every card's `lane:`, so it is what you match on
+              // when a file and the board seem to disagree — and it can read
+              // nothing like the name above it.
+              <label className="grid gap-1.5" htmlFor="lane-key">
+                <span className="text-xs font-medium">Markdown key</span>
+                <Input
+                  id="lane-key"
+                  readOnly
+                  value={mode.lane.key}
+                  onFocus={(event) => event.target.select()}
+                  className="font-mono text-muted-foreground"
+                />
+              </label>
+            )}
+          </div>
         ) : (
           <label className="grid gap-1.5" htmlFor="lane-destination">
             <span className="text-xs font-medium">Move cards to</span>

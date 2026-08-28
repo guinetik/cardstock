@@ -153,7 +153,7 @@ export function LaneColumn(props: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuItem onClick={props.manage.onRename}>
-                  <Pencil /> Rename
+                  <Pencil /> Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={!props.manage.canMoveLeft}

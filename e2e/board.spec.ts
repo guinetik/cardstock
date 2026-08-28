@@ -179,10 +179,20 @@ test("work lanes can be created, renamed, reordered and removed", async ({
   await lane
     .getByRole("button", { name: `Manage ${initialName} lane` })
     .click();
-  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  // The key is the value markdown stores, and it can read nothing like the
+  // name — a lane called "Gate 1" whose key is still `built`, say. The dialog
+  // has to show it, or the only way to find it is to open a card file.
+  await expect(page.getByLabel("Markdown key")).toHaveValue(key);
   await page.getByLabel("Lane name").fill(renamed);
   await page.getByRole("button", { name: "Save name" }).click();
   await expect(page.locator(`[data-lane="${key}"] h2`)).toHaveText(renamed);
+
+  // Renaming must not touch the key: every card file names the lane by it.
+  await lane.getByRole("button", { name: `Manage ${renamed} lane` }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await expect(page.getByLabel("Markdown key")).toHaveValue(key);
+  await page.getByRole("button", { name: "Cancel" }).click();
 
   const card = page.locator('[data-lane="done"] [data-id]').first();
   const cardId = await card.getAttribute("data-id");
