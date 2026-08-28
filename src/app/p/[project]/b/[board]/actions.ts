@@ -1,5 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import {
+  formatCommentAt,
+  joinIssueBody,
+  splitIssueBody,
+} from "@/lib/issue-body";
 import { cleanName, keyFromName } from "@/lib/keys";
 import { needsNormalize, normalized } from "@/lib/rank";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
@@ -225,6 +230,87 @@ export async function updateCard(
     actor: c.me.email,
     kind: "edited",
     payload: clean,
+  });
+  return { ok: true };
+}
+
+/**
+ * Replace the issue body, keeping the comments suffix currently in the database.
+ *
+ * @param cardId - Card uuid.
+ * @param bodyMarkdown - New issue markdown from the WYSIWYG (no comments fence).
+ */
+export async function updateCardBody(
+  cardId: string,
+  bodyMarkdown: string,
+): Promise<Result> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
+  const { data: card } = await c.db
+    .from("cards")
+    .select("body_md")
+    .eq("id", cardId)
+    .single();
+  if (!card) return { ok: false, error: "Card not found." };
+  const { comments, leftover } = splitIssueBody(card.body_md ?? "");
+  const body_md = joinIssueBody(bodyMarkdown, comments, leftover);
+  const { error } = await c.db
+    .from("cards")
+    .update({ body_md, body_edited_at: new Date().toISOString() })
+    .eq("id", cardId);
+  if (error) return { ok: false, error: error.message };
+  await c.db.from("card_events").insert({
+    card_id: cardId,
+    actor: c.me.email,
+    kind: "edited",
+    payload: { body: true },
+  });
+  return { ok: true };
+}
+
+/**
+ * Append one comment block to `body_md`.
+ *
+ * @param cardId - Card uuid.
+ * @param text - Composer value; whitespace-only is rejected.
+ */
+export async function addCardComment(
+  cardId: string,
+  text: string,
+): Promise<Result> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
+  const trimmed = text.trim();
+  if (!trimmed) return { ok: false, error: "Write a comment first." };
+  const { data: card } = await c.db
+    .from("cards")
+    .select("body_md")
+    .eq("id", cardId)
+    .single();
+  if (!card) return { ok: false, error: "Card not found." };
+  const { body, comments, leftover } = splitIssueBody(card.body_md ?? "");
+  const comment = {
+    at: formatCommentAt(),
+    author: c.me.email,
+    text: trimmed,
+  };
+  const body_md = joinIssueBody(body, [...comments, comment], leftover);
+  const { error } = await c.db
+    .from("cards")
+    .update({ body_md, body_edited_at: new Date().toISOString() })
+    .eq("id", cardId);
+  if (error) return { ok: false, error: error.message };
+  await c.db.from("card_events").insert({
+    card_id: cardId,
+    actor: c.me.email,
+    kind: "commented",
+    payload: {
+      author: comment.author,
+      at: comment.at,
+      preview: comment.text.slice(0, 80),
+    },
   });
   return { ok: true };
 }
