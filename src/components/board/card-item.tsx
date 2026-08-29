@@ -1,6 +1,7 @@
 "use client";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
 import { daysInLane } from "@/lib/filters";
@@ -81,10 +82,14 @@ export function CardItem(props: {
   flat?: boolean;
   onPatch?: (id: string, p: CardPatch) => void;
   onArchive?: (id: string, on: boolean) => void;
+  /** Left open on the desk: the peek stays out after the pointer leaves. */
+  pinned?: boolean;
+  onPin?: (id: string, on: boolean) => void;
   projectSlug?: string;
   boardSlug?: string;
 }) {
   const { card, lane } = props;
+  const pinned = !!props.pinned;
   const days = lane?.kind === "waiting" ? daysInLane(card) : null;
   const overSla =
     days != null && lane?.sla_days != null && days > lane.sla_days;
@@ -105,16 +110,51 @@ export function CardItem(props: {
   return (
     <article
       className={`group relative paper-card p-2.5 ${props.overlay ? "paper-card--overlay" : ""} ${props.flat && !props.overlay ? "paper-card--flat" : ""} ${card.archived_at ? "opacity-60" : ""}`}
+      data-pinned={pinned ? "true" : undefined}
     >
-      <div className="flex items-baseline gap-2">
+      {/* The rail sits opposite the card number: pin, then maximize. */}
+      {!props.overlay && (props.onPin || props.projectSlug) && (
+        <div className="card-rail" onPointerDown={(e) => e.stopPropagation()}>
+          {props.onPin && (
+            <button
+              type="button"
+              aria-label={pinned ? "Unpin card" : "Pin card"}
+              title={pinned ? "Unpin" : "Keep open"}
+              data-on={pinned ? "true" : undefined}
+              onClick={(e) => {
+                props.onPin?.(card.id, !pinned);
+                // A mouse click should not leave focus on the button, or
+                // :focus-within holds the card open after an unpin. Keyboard
+                // users keep their place.
+                if (e.detail > 0) e.currentTarget.blur();
+              }}
+            >
+              {pinned ? <PinOff size={13} /> : <Pin size={13} />}
+            </button>
+          )}
+          {props.projectSlug && (
+            <Link
+              href={detail}
+              aria-label="Open in place"
+              title="Open over the board"
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <Maximize2 size={13} />
+            </Link>
+          )}
+        </div>
+      )}
+      <div className="flex items-baseline gap-2 pr-6">
         <span className="shrink-0 font-mono text-[11.5px] text-[var(--color-grey-faint)]">
           #{card.external_id}
         </span>
         <p className="min-w-0 text-[18px] font-medium leading-snug">
           {props.projectSlug ? (
-            <Link href={detail} className="hover:underline">
+            // A plain anchor: the issue *page*. Only the rail's maximize is
+            // meant to be intercepted into the in-place dialog.
+            <a href={detail} className="hover:underline">
               {card.title}
-            </Link>
+            </a>
           ) : (
             card.title
           )}
@@ -186,14 +226,14 @@ export function CardItem(props: {
               </span>
             )}
             {props.projectSlug && !props.overlay && (
-              <Link
+              <a
                 href={detail}
                 className="paper-link ml-auto text-[11.5px]"
                 onPointerDown={(e) => e.stopPropagation()}
                 data-testid="open-issue"
               >
                 Open issue
-              </Link>
+              </a>
             )}
             {props.onArchive && (
               <button

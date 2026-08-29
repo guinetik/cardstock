@@ -18,6 +18,13 @@ The peek is `.card-form`: a label column in the margin and values in the body, l
 
 The two date fields were the confusing part of the old layout: they sat side by side with no labels, and nothing said one was a committed day and the other a phrase. They are now one **Target** row, stacked, and the second reads `or a rough date — end of Q3`.
 
+## The rail
+
+Opposite the card number, two icons stack in the corner and show with the peek: **pin** and **maximize**.
+
+- **Pin** leaves the card open after the pointer moves on (`data-pinned="true"` on the article). The peek stays out, the summary stays aside, and the card keeps the lifted shadow and edge; it does not rise or swell — that is the pointer's cue, and it returns on hover. The pin swaps to a slashed pin and stays visible so the way back is always in reach. Pins are per tab and not saved; any number of cards can be pinned. A mouse click on the pin blurs the button so `:focus-within` does not hold the card open after an unpin.
+- **Maximize** opens the issue page *over* the board. It is a `Link` to `/c/<id>` that the `@modal/(.)c/[externalId]` intercepting route turns into a dialog holding the same `CardSheet` the page renders. Esc, the backdrop, or the X step back in history; a reload of the same URL gives the full page. The title and "Open issue" are plain anchors on purpose — they go to the page, not the dialog.
+
 Cards in the drawer (an `inbox` lane) get `.paper-card--flat`: flush, hairline-separated slips with no lift at rest. An in-tray is emptied, not read.
 
 Do not put empty tactician fields in the resting chrome. E2E that clicks ratings or dates must `hover()` the card first.

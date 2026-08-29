@@ -142,7 +142,7 @@ describe("paper components", () => {
 
 describe("card detail page chrome", () => {
   const page = readFileSync(
-    join(here, "../../app/p/[project]/b/[board]/c/[externalId]/page.tsx"),
+    join(here, "../../app/p/[project]/b/[board]/c/[externalId]/card-sheet.tsx"),
     "utf8",
   );
 

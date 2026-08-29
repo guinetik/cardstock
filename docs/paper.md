@@ -68,8 +68,9 @@ Three families, each with a job, loaded through `next/font/google` in
 
 ## Edges, lift, motion
 
-2px is the whole radius scale. Elevation is three heights — flat in the well,
-`--shadow-card` resting, `--shadow-lift` in hand or under a dialog — all of them
+2px is the whole radius scale. Elevation is four heights — flat in the well,
+`--shadow-card` resting, `--shadow-lift` pointed at, pinned, or under a dialog,
+and `--shadow-hand` for the card being dragged, clear of the board — all of them
 contact shadows, never a glow. The dragged card (`.paper-card--overlay`) is the
 only thing in the product allowed to rotate.
 

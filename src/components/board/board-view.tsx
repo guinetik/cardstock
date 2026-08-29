@@ -126,6 +126,16 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [laneBusy, setLaneBusy] = useState<string | null>(null);
   const [laneDialog, setLaneDialog] = useState<LaneDialogMode>(null);
   const [cardLane, setCardLane] = useState<Lane | null>(null);
+  // Cards left open on the desk. Per tab, on purpose: a pin is a reading aid.
+  const [pinned, setPinned] = useState<ReadonlySet<string>>(() => new Set());
+  const pin = useCallback((id: string, on: boolean) => {
+    setPinned((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
   const [pending, startTransition] = useTransition();
 
   useBoardRealtime({
@@ -581,6 +591,8 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               onView={(v) => changeLaneView(lane.id, v)}
               onPatch={patch}
               onArchive={archive}
+              pinned={pinned}
+              onPin={pin}
               projectSlug={data.project.slug}
               boardSlug={data.board.slug}
               hiddenByDefault={lane.kind === "archive" && !filters.showArchived}

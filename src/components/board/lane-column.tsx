@@ -63,6 +63,8 @@ export function LaneColumn(props: {
   onView: (v: "max" | "min" | "") => void;
   onPatch: (id: string, p: CardPatch) => void;
   onArchive: (id: string, on: boolean) => void;
+  pinned: ReadonlySet<string>;
+  onPin: (id: string, on: boolean) => void;
   projectSlug: string;
   boardSlug: string;
   hiddenByDefault: boolean;
@@ -233,6 +235,8 @@ export function LaneColumn(props: {
                 flat={drawer}
                 onPatch={props.onPatch}
                 onArchive={props.onArchive}
+                pinned={props.pinned.has(c.id)}
+                onPin={props.onPin}
                 projectSlug={props.projectSlug}
                 boardSlug={props.boardSlug}
               />
