@@ -99,6 +99,28 @@ somewhere to grow. Without it a hovered card outgrows the lane's scroll
 container and the lane scrolls sideways — and the container cannot simply clip,
 because clipping would cut the lift shadow off at the sides.
 
+## The folder
+
+A project is drawn as a dossier (the GoldenEye mission-briefing folder is the
+reference). On the projects page each one is a `.folder` taking a full row:
+manila stock (`--surface-well`) whose single `.folder-tab` is the project's
+name, and the way in. Inside the folder the boards are `.binder`s laid side by
+side — a riveted spine of the folder's stock, the board's name on the cover,
+its card count, and *Take stock*, which is the epic cockpit. The margin of
+the folder holds a `.folder-stamp` with the card count, in pen red, the one
+tilted thing on the page besides a dragged card. Nothing is written twice:
+the tab names the project, the binders name the boards.
+
+The project page is the same folder laid open (`.folder--open`): the tab is
+the title, and inside it each board is a wide `.binder` carrying the tally of
+its lanes as `.stat`s in the lane kind's pen, with *Take stock* (the cockpit)
+and *Export CSV* on its foot. Below it the board's tag groups are drawn as a
+**concept graph** (`.graph`): each group is a `.graph-node` wearing its
+highlighter on its spine, and the tags branch from it along a ruled trunk as
+`.mark`s — a concept contains its tags, so the edges are lines, not arrows.
+The page ends with the two big asks, same shape and opposite pens: `.cta` to
+take the project home as markdown, `.danger` to delete it.
+
 ## Lanes
 
 The header is the divider tab, and the rule under the name says what kind of

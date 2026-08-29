@@ -717,3 +717,617 @@
 }
 
 /* issue editor: paper tokens only, 2px radius cap */
+
+/*
+ * ------------------------------------------------------------- the folder
+ * A project is a dossier: a manila folder whose tab is its name. Inside it
+ * the boards are binders, laid side by side — spine, cover, count — and the
+ * cockpit is where you take stock of one. Pointing at the tab lifts the whole
+ * folder.
+ */
+@layer components {
+  .folders {
+    display: grid;
+    gap: 1.6rem;
+  }
+  .folder {
+    position: relative;
+    transition: translate var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  .folder-tab {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    max-width: calc(100% - 2rem);
+    margin-left: 1.1rem;
+    margin-bottom: -1px;
+    padding: 0.5rem 1.1rem 0.45rem;
+    background: var(--surface-well);
+    border: 1px solid var(--border-strong);
+    border-bottom: 0;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    color: var(--color-ink-strong);
+    font-family: var(--font-heading);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: padding var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  .folder-tab > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .folder-tab > code {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--color-grey);
+  }
+  /* Pointed at, the tab is pulled a little further out of the folder. */
+  .folder-tab:is(:hover, :focus-visible) {
+    padding-top: 0.7rem;
+  }
+  .folder-tab:focus-visible {
+    outline: 2px solid var(--pen-blue);
+    outline-offset: 2px;
+  }
+  .folder:has(.folder-tab:is(:hover, :focus-visible)) {
+    translate: 0 var(--motion-rise);
+  }
+  .folder:has(.folder-tab:is(:hover, :focus-visible)) .folder-body {
+    box-shadow: var(--shadow-lift);
+  }
+  .folder:has(.folder-tab:active) {
+    translate: 0 var(--motion-press-y);
+  }
+  .folder-body {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem 1.5rem;
+    align-items: start;
+    padding: 1rem 1.1rem 1.1rem;
+    background: var(--surface-well);
+    border: 1px solid var(--border-strong);
+    border-radius: 0 var(--radius-card) var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  .folder-blurb {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    max-width: 46rem;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--color-ink2);
+  }
+  /* The margin of the folder: the stamp, and the way in. */
+  .folder-aside {
+    display: flex;
+    grid-row: 1 / 3;
+    grid-column: 2;
+    min-width: 9rem;
+    height: 100%;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.15rem;
+  }
+  .folder-stamp {
+    display: inline-block;
+    padding: 0.3rem 0.6rem 0.25rem;
+    border: 2px solid var(--pen-red);
+    border-radius: var(--radius-card);
+    color: var(--pen-red);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    line-height: 1.2;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0.72;
+    mix-blend-mode: var(--mark-blend);
+    rotate: -4deg;
+  }
+  .folder-stamp--faint {
+    border-color: var(--color-grey-faint);
+    color: var(--color-grey-faint);
+  }
+  .folder-go {
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .folder--empty .folder-body {
+    border-style: dashed;
+    box-shadow: none;
+  }
+
+  /* Binders in the folder: one per board, spine to the left. */
+  .binders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    grid-column: 1;
+  }
+  .binder {
+    position: relative;
+    display: flex;
+    width: 14rem;
+    max-width: 100%;
+    min-height: 7.25rem;
+    flex-direction: column;
+    padding: 0.8rem 0.85rem 0.7rem calc(0.7rem + 0.85rem);
+    background: var(--surface-card);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    transition:
+      box-shadow var(--motion-duration-hover) var(--motion-ease-out),
+      border-color var(--motion-duration-hover) var(--motion-ease-out),
+      translate var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  /* The spine: a strip of the folder's own stock, riveted twice. */
+  .binder::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0.7rem;
+    /* Darker than the folder it sits in, so the spine reads as a spine. */
+    background: var(--border-strong);
+    border-right: 1px solid var(--border-strong);
+  }
+  /* Three rings, in ink. The middle one is painted on the strip itself. */
+  .binder-rivets {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0.7rem;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--color-ink), var(--color-ink)) center / 3px 9px
+      no-repeat;
+  }
+  .binder-rivets::before,
+  .binder-rivets::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 3px;
+    height: 9px;
+    translate: -50% -50%;
+    background: var(--color-ink);
+    border-radius: 1px;
+  }
+  .binder-rivets::before {
+    top: 18%;
+  }
+  .binder-rivets::after {
+    top: 82%;
+  }
+  .binder-name {
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--color-ink-strong);
+  }
+  .binder-open {
+    color: inherit;
+    text-decoration: none;
+  }
+  .binder-open::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .binder-open:focus-visible {
+    outline: none;
+  }
+  .binder:has(.binder-open:focus-visible) {
+    outline: 2px solid var(--pen-blue);
+    outline-offset: 2px;
+  }
+  .binder:has(.binder-open:is(:hover, :focus-visible)) {
+    box-shadow: var(--shadow-lift);
+    border-color: var(--border-strong);
+    translate: 0 var(--motion-rise);
+  }
+  .binder:has(.binder-open:active) {
+    translate: 0 var(--motion-press-y);
+  }
+  .binder-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 0.6rem;
+  }
+  .binder-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-grey);
+  }
+  /* Take stock: the cockpit, a link of its own above the cover link. */
+  .binder-cockpit {
+    position: relative;
+    z-index: 1;
+    font-size: 12px;
+  }
+  .binders-empty {
+    grid-column: 1;
+    font-size: 13px;
+    color: var(--color-grey);
+  }
+
+  /*
+   * ------------------------------------------------- the folder, opened
+   * The project page is the same folder laid open: the tab is the title, the
+   * boards are wide binders carrying the tally of their lanes.
+   */
+  .folder--open .folder-tab {
+    font-size: 22px;
+    padding: 0.55rem 1.25rem 0.5rem;
+    cursor: default;
+  }
+  .folder--open .folder-tab > h1 {
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+  }
+  .folder--open .folder-body {
+    padding: 1.1rem 1.25rem 1.25rem;
+  }
+  .binder--wide {
+    width: 100%;
+    min-height: 0;
+    padding: 0.85rem 1rem 0.75rem calc(0.7rem + 1rem);
+  }
+  .binder--wide .binder-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    font-size: 19px;
+  }
+  .binder-tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+    margin-top: 0.6rem;
+  }
+  .binder-links {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 0.9rem;
+  }
+  .binder--wide .binder-foot {
+    padding-top: 0.75rem;
+  }
+  .stat--ink {
+    color: var(--color-ink);
+  }
+  .stat--faint {
+    color: var(--color-grey-faint);
+  }
+
+  /*
+   * ------------------------------------------------------ the concept graph
+   * A board thinks in concepts. Each one is a node at the left; the tags a
+   * card can carry branch from it along a trunk, as highlighter marks. The
+   * edges are ruled lines, not arrows: a concept does not point at its tags,
+   * it contains them.
+   */
+  .graph {
+    background: var(--surface-card);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+  .graph-caption {
+    padding: 0.7rem 1.1rem;
+    border-bottom: 1px solid var(--border-hairline);
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--color-grey);
+  }
+  .graph-rows {
+    padding: 0.5rem 1.1rem 0.9rem;
+  }
+  .graph-row {
+    display: grid;
+    grid-template-columns: 14.5rem 2.25rem minmax(0, 1fr);
+    align-items: start;
+    padding: 0.7rem 0;
+  }
+  .graph-row + .graph-row {
+    border-top: 1px dashed var(--border-hairline);
+  }
+  .graph-node {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem 0.5rem;
+    padding: 0.55rem 0.75rem 0.55rem 0.9rem;
+    background: var(--surface-panel);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+  }
+  /* The concept wears its highlighter on the spine. */
+  .graph-node::before {
+    content: "";
+    position: absolute;
+    inset: -1px auto -1px -1px;
+    width: 5px;
+    background: var(--node-mark, var(--mark-2));
+    mix-blend-mode: var(--mark-blend);
+    border-radius: var(--radius-card) 0 0 var(--radius-card);
+  }
+  .graph-node--1 {
+    --node-mark: var(--mark-1);
+  }
+  .graph-node--2 {
+    --node-mark: var(--mark-2);
+  }
+  .graph-node--3 {
+    --node-mark: var(--mark-3);
+  }
+  .graph-node--4 {
+    --node-mark: var(--mark-4);
+  }
+  .graph-node--5 {
+    --node-mark: var(--mark-5);
+  }
+  .graph-node-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .graph-key {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-grey-faint);
+  }
+  .graph-tools {
+    display: inline-flex;
+    flex: none;
+    gap: 0.35rem;
+    margin-left: auto;
+    color: var(--color-grey-faint);
+  }
+  .graph-tools > button,
+  .graph-tools form > button {
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: var(--radius-btn);
+  }
+  .graph-tools button:hover {
+    color: var(--color-ink);
+    background: var(--fill-subtle);
+  }
+  .graph-tools button[data-danger]:hover {
+    color: var(--pen-red);
+  }
+  /* The edge from the node into the trunk. */
+  .graph-edge {
+    display: block;
+    height: 1.35rem;
+    margin-top: 0.6rem;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  /* The trunk, and one branch per leaf. */
+  .graph-leaves {
+    position: relative;
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.15rem 0 0.15rem 1.35rem;
+    border-left: 1px solid var(--border-strong);
+  }
+  /* The trunk ends at the last branch, not at the bottom of the box. */
+  .graph-leaves::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: -1px;
+    width: 1px;
+    height: 0.9rem;
+    background: var(--surface-card);
+  }
+  .graph-leaf {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 1.75rem;
+  }
+  .graph-leaf::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -1.35rem;
+    width: 1rem;
+    border-top: 1px solid var(--border-strong);
+  }
+  .graph-leaf .graph-tools {
+    margin-left: 0;
+    opacity: 0;
+    transition: opacity var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  .graph-leaf:is(:hover, :focus-within) .graph-tools {
+    opacity: 1;
+  }
+  .graph-leaf--new::before {
+    border-top-style: dashed;
+  }
+  .graph-row--new {
+    display: block;
+  }
+  .graph-node--new {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    background: transparent;
+    border-style: dashed;
+  }
+  .graph-node--new::before {
+    display: none;
+  }
+
+  /*
+   * ------------------------------------------------------ the two big asks
+   * One to take the folder home, one to burn it. Same shape, opposite pens.
+   */
+  .cta,
+  .danger {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 2rem;
+    align-items: center;
+    padding: 1.35rem 1.5rem;
+    border-radius: var(--radius-card);
+  }
+  .cta {
+    background: var(--surface-card);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-card);
+  }
+  .danger {
+    background: transparent;
+    border: 1px dashed var(--pen-red);
+  }
+  .cta-title {
+    font-size: 22px;
+    line-height: 1.15;
+  }
+  .danger .cta-title {
+    color: var(--pen-red);
+  }
+  .cta-body {
+    max-width: 40rem;
+    margin-top: 0.35rem;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--color-ink2);
+  }
+  .cta-button {
+    grid-row: 1;
+    grid-column: 2;
+    padding: 0.7rem 1.5rem;
+    background: var(--color-ink);
+    border: 1px solid var(--color-ink);
+    border-radius: var(--radius-btn);
+    color: var(--surface-card);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .cta-button--danger {
+    background: transparent;
+    border-color: var(--pen-red);
+    color: var(--pen-red);
+  }
+  .cta-button[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .cta-note {
+    grid-column: 2;
+    justify-self: end;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-grey-faint);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--color-grey-faint);
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  .section-head > h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .section-head > .count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-grey);
+  }
+}
+
+@media (max-width: 48rem) {
+  .graph-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .graph-edge {
+    display: none;
+  }
+  .graph-leaves {
+    margin: 0.5rem 0 0 1rem;
+  }
+  .cta,
+  .danger {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cta-button,
+  .cta-note {
+    grid-row: auto;
+    grid-column: 1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 40rem) {
+  .folder-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .folder-aside {
+    grid-row: auto;
+    grid-column: 1;
+    height: auto;
+    flex-direction: row-reverse;
+    align-items: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder,
+  .folder-body,
+  .folder-tab,
+  .binder {
+    transition: none;
+    translate: none;
+  }
+}

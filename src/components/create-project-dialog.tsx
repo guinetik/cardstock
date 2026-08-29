@@ -13,10 +13,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { keyFromName } from "@/lib/keys";
 
+/**
+ * A new binder. The name is what goes on the cover; the key it produces is
+ * the spine label and the URL, and it is shown as you type because, unlike
+ * the name, it does not change afterwards.
+ */
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
   const [state, action, pending] = useActionState(createProject, null);
+  const slug = keyFromName(name);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm">New project</Button>} />
@@ -24,7 +32,8 @@ export function CreateProjectDialog() {
         <DialogHeader>
           <DialogTitle>Create a project</DialogTitle>
           <DialogDescription>
-            A project groups boards and the people who can work in them.
+            A project is a binder: boards are its tabs, cards are its sheets.
+            People are added to it from the Users page.
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="space-y-4">
@@ -36,8 +45,25 @@ export function CreateProjectDialog() {
               required
               maxLength={80}
               autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="What the team calls it"
             />
           </label>
+          <p
+            className="flex items-baseline gap-2 border-l-2 border-[var(--border-strong)] pl-3 font-mono text-[11px] text-[var(--color-grey)]"
+            aria-live="polite"
+          >
+            <span className="uppercase tracking-[0.11em] text-[var(--color-grey-faint)]">
+              filed as
+            </span>
+            <span className="text-[var(--color-ink)]">
+              /p/
+              {slug || (
+                <span className="text-[var(--color-grey-faint)]">…</span>
+              )}
+            </span>
+          </p>
           <label
             htmlFor="project-description"
             className="block space-y-1.5 text-sm"
@@ -48,6 +74,7 @@ export function CreateProjectDialog() {
               name="description"
               maxLength={500}
               rows={3}
+              placeholder="One line on the cover: what this project is for."
             />
           </label>
           {state?.error && (
