@@ -113,6 +113,18 @@ describe("planImport", () => {
       body_edited_at: null,
     });
   });
+  test("archived_by alone is a change; the archived timestamp is untouched", () => {
+    const plan = planImport(
+      [sheet(1, "archived: 2026-01-01 12:00:00\narchived_by: bob")],
+      state([{ archived_at: "2026-01-01T12:00:00Z", archived_by: "ana" }]),
+    );
+    const row = plan.rows[0];
+    if (row.verdict !== "changed") throw new Error(row.verdict);
+    expect(row.changes).toEqual([
+      { key: "archived_by", from: "ana", to: "bob" },
+    ]);
+    expect(row.patch.columns.archived_by).toBe("bob");
+  });
   test("unknown lanes, groups and tags are listed to create; bare unknown tags are not applied", () => {
     const plan = planImport(
       [

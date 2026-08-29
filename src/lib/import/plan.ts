@@ -110,12 +110,14 @@ function columnsFor(
       target_label: sheet.target && !iso ? sheet.target : null,
     };
   });
-  set("archived", () => ({
-    archived_at: sheet.archived
-      ? new Date(`${sheet.archived.replace(" ", "T")}Z`).toISOString()
-      : null,
-    archived_by: sheet.archived ? sheet.archivedBy : null,
-  }));
+  if (isNew || keys.has("archived") || keys.has("archived_by")) {
+    Object.assign(cols, {
+      archived_at: sheet.archived
+        ? new Date(`${sheet.archived.replace(" ", "T")}Z`).toISOString()
+        : null,
+      archived_by: sheet.archived ? sheet.archivedBy : null,
+    });
+  }
   set("color", () => ({ color: sheet.color }));
   set("body", () => ({ body_md: sheet.bodyMd, body_edited_at: null }));
   if (isNew) cols.audience = audience;
@@ -199,13 +201,8 @@ export function planImport(
           fm.lane && !laneKeys.has(fm.lane)
             ? fm.lane
             : laneForNewCard(fm.lane, laneKeys, inboxKey);
-        const changes = diffSheets(
-          sheet,
-          { ...sheet, bodyMd: "" },
-          present,
-        ).filter((c) => c.key === "body");
         const patch: CardPatch = {
-          columns: { ...shared, ...columnsFor(sheet, changes, true, audience) },
+          columns: { ...shared, ...columnsFor(sheet, [], true, audience) },
           laneKey,
           rank:
             fm.rank != null && fm.lane === laneKey
