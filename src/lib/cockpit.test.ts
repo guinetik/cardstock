@@ -10,6 +10,7 @@ const lane = (kind: Lane["kind"], id = kind): Lane => ({
   position: 0,
   sla_days: null,
   wip_limit: null,
+  color: null,
 });
 const card = (patch: Partial<Card> = {}): Card => ({
   id: "c1",

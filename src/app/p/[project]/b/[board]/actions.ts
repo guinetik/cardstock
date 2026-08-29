@@ -23,6 +23,13 @@ export type LaneMutationResult =
     }
   | { ok: false; error: string };
 
+export type LaneCardMutationResult =
+  | {
+      ok: true;
+      cards: { id: string; rank: number }[];
+    }
+  | { ok: false; error: string };
+
 export interface CreateCardInput {
   boardId: string;
   laneId: string;
@@ -63,13 +70,14 @@ async function laneList(
 ): Promise<Lane[]> {
   const { data } = await db
     .from("lanes")
-    .select("id, key, name, position, kind, sla_days, wip_limit")
+    .select("id, key, name, position, kind, sla_days, wip_limit, color")
     .eq("board_id", boardId)
     .order("position");
   return (data ?? []) as Lane[];
 }
 
 function refreshBoards() {
+  revalidatePath("/p/[project]", "page");
   revalidatePath("/p/[project]/b/[board]", "page");
 }
 
@@ -88,8 +96,7 @@ export async function createCard(
   if (!title || title.length > 240)
     return { ok: false, error: "Title must be between 1 and 240 characters." };
   const status = input.status ?? "backlog";
-  if (!isCardStatus(status))
-    return { ok: false, error: "Invalid status." };
+  if (!isCardStatus(status)) return { ok: false, error: "Invalid status." };
   const validDate = (value?: string) => !value || ISO_DATE.test(value);
   if (!validDate(input.plannedStartDate) || !validDate(input.targetDate))
     return { ok: false, error: "Dates must use YYYY-MM-DD." };
@@ -234,6 +241,7 @@ export async function createCard(
 export async function createLane(
   boardId: string,
   name: string,
+  color: CardColor | null = null,
 ): Promise<LaneMutationResult> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Not signed in." };
@@ -247,43 +255,57 @@ export async function createLane(
   const key = keyFromName(clean);
   if (!key)
     return { ok: false, error: "Lane name must contain a letter or number." };
+  if (color !== null && !isCardColor(color))
+    return { ok: false, error: "Invalid color." };
 
   const { error } = await c.db.rpc("create_work_lane", {
     p_board_id: boardId,
     p_key: key,
     p_name: clean,
+    p_color: color,
   });
   if (error) return { ok: false, error: error.message };
   refreshBoards();
   return { ok: true, lanes: await laneList(c.db, boardId) };
 }
 
-/** Rename only the display name; the markdown-facing key is immutable. */
-export async function renameLane(
+export interface LanePatch {
+  name?: string;
+  color?: CardColor | null;
+}
+
+/** Edit a lane tint and, for work lanes, its display name. */
+export async function updateLane(
   laneId: string,
-  name: string,
+  patch: LanePatch,
 ): Promise<LaneMutationResult> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Not signed in." };
   if (!UUID.test(laneId)) return { ok: false, error: "Invalid lane." };
-  const clean = cleanName(name);
-  if (!clean)
+  const hasName = Object.hasOwn(patch, "name");
+  const hasColor = Object.hasOwn(patch, "color");
+  if (!hasName && !hasColor)
+    return { ok: false, error: "No lane changes supplied." };
+  const clean = hasName ? cleanName(patch.name ?? "") : null;
+  if (hasName && !clean)
     return {
       ok: false,
       error: "Lane name must be between 1 and 80 characters.",
     };
+  if (hasColor && patch.color != null && !isCardColor(patch.color))
+    return { ok: false, error: "Invalid color." };
   const { data: lane } = await c.db
     .from("lanes")
     .select("board_id, kind")
     .eq("id", laneId)
     .maybeSingle();
   if (!lane) return { ok: false, error: "Lane not found." };
-  if (lane.kind !== "work")
+  if (hasName && lane.kind !== "work")
     return { ok: false, error: "Only work lanes can be renamed." };
-  const { error } = await c.db
-    .from("lanes")
-    .update({ name: clean })
-    .eq("id", laneId);
+  const changes: { name?: string; color?: CardColor | null } = {};
+  if (hasName) changes.name = clean!;
+  if (hasColor) changes.color = patch.color ?? null;
+  const { error } = await c.db.from("lanes").update(changes).eq("id", laneId);
   if (error) return { ok: false, error: error.message };
   refreshBoards();
   return { ok: true, lanes: await laneList(c.db, lane.board_id) };
@@ -340,6 +362,48 @@ export async function deleteLane(
     lanes: await laneList(c.db, lane.board_id),
     movedCards: payload?.moved_cards ?? [],
   };
+}
+
+/** Atomically append every source-lane card to another lane. */
+export async function moveAllLaneCards(
+  sourceLaneId: string,
+  destinationLaneId: string,
+): Promise<LaneCardMutationResult> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(sourceLaneId) || !UUID.test(destinationLaneId))
+    return { ok: false, error: "Invalid lane." };
+  const { data, error } = await c.db.rpc("move_all_lane_cards", {
+    p_source_lane_id: sourceLaneId,
+    p_destination_lane_id: destinationLaneId,
+  });
+  if (error) return { ok: false, error: error.message };
+  const payload = data as {
+    moved_cards?: { id: string; rank: number }[];
+  } | null;
+  refreshBoards();
+  return { ok: true, cards: payload?.moved_cards ?? [] };
+}
+
+/** Persist ascending or descending card-number order for one manual lane. */
+export async function sortLaneCards(
+  laneId: string,
+  direction: "asc" | "desc",
+): Promise<LaneCardMutationResult> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(laneId) || !["asc", "desc"].includes(direction))
+    return { ok: false, error: "Invalid lane order." };
+  const { data, error } = await c.db.rpc("sort_lane_cards", {
+    p_lane_id: laneId,
+    p_direction: direction,
+  });
+  if (error) return { ok: false, error: error.message };
+  const payload = data as {
+    ranked_cards?: { id: string; rank: number }[];
+  } | null;
+  refreshBoards();
+  return { ok: true, cards: payload?.ranked_cards ?? [] };
 }
 
 /** Move a card to a lane at a rank; renormalises the lane when ranks get too close. */

@@ -187,6 +187,33 @@
     border-color: var(--pen-blue);
     box-shadow: inset 0 0 0 1px var(--pen-blue);
   }
+  .paper-lane.lane-color--rose {
+    background: var(--surface-card-rose);
+  }
+  .paper-lane.lane-color--orange {
+    background: var(--surface-card-orange);
+  }
+  .paper-lane.lane-color--amber {
+    background: var(--surface-card-amber);
+  }
+  .paper-lane.lane-color--green {
+    background: var(--surface-card-green);
+  }
+  .paper-lane.lane-color--cyan {
+    background: var(--surface-card-cyan);
+  }
+  .paper-lane.lane-color--blue {
+    background: var(--surface-card-blue);
+  }
+  .paper-lane.lane-color--indigo {
+    background: var(--surface-card-indigo);
+  }
+  .paper-lane.lane-color--violet {
+    background: var(--surface-card-violet);
+  }
+  .paper-lane.lane-color--pink {
+    background: var(--surface-card-pink);
+  }
 
   .paper-topbar {
     background: var(--surface-topbar);
@@ -1195,6 +1222,33 @@
   .lane-map-col[data-kind="archive"] {
     background: var(--surface-well);
     box-shadow: var(--shadow-well);
+  }
+  .lane-map-col[data-kind].lane-color--rose {
+    background: var(--surface-card-rose);
+  }
+  .lane-map-col[data-kind].lane-color--orange {
+    background: var(--surface-card-orange);
+  }
+  .lane-map-col[data-kind].lane-color--amber {
+    background: var(--surface-card-amber);
+  }
+  .lane-map-col[data-kind].lane-color--green {
+    background: var(--surface-card-green);
+  }
+  .lane-map-col[data-kind].lane-color--cyan {
+    background: var(--surface-card-cyan);
+  }
+  .lane-map-col[data-kind].lane-color--blue {
+    background: var(--surface-card-blue);
+  }
+  .lane-map-col[data-kind].lane-color--indigo {
+    background: var(--surface-card-indigo);
+  }
+  .lane-map-col[data-kind].lane-color--violet {
+    background: var(--surface-card-violet);
+  }
+  .lane-map-col[data-kind].lane-color--pink {
+    background: var(--surface-card-pink);
   }
   .lane-map-pack {
     display: grid;

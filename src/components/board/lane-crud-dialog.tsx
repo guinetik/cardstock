@@ -11,7 +11,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { type CardColor, parseCardColor } from "@/lib/card-color";
 import type { Lane } from "@/lib/types";
+import { CardColorPicker } from "./card-color-picker";
 
 export type LaneDialogMode =
   | { type: "add" }
@@ -24,8 +26,12 @@ export function LaneCrudDialog(props: {
   lanes: Lane[];
   cardCount: number;
   onClose: () => void;
-  onCreate: (name: string) => Promise<string | null>;
-  onRename: (laneId: string, name: string) => Promise<string | null>;
+  onCreate: (name: string, color: CardColor | null) => Promise<string | null>;
+  onRename: (
+    laneId: string,
+    name: string,
+    color: CardColor | null,
+  ) => Promise<string | null>;
   onDelete: (
     laneId: string,
     destinationLaneId: string,
@@ -65,6 +71,9 @@ function LaneDialogForm(
   const [name, setName] = useState(
     mode.type === "rename" ? mode.lane.name : "",
   );
+  const [color, setColor] = useState<CardColor | null>(
+    mode.type === "rename" ? parseCardColor(mode.lane.color) : null,
+  );
   const [destination, setDestination] = useState(destinations[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,9 +83,9 @@ function LaneDialogForm(
     setBusy(true);
     setError(null);
     let nextError: string | null;
-    if (mode.type === "add") nextError = await props.onCreate(name);
+    if (mode.type === "add") nextError = await props.onCreate(name, color);
     else if (mode.type === "rename")
-      nextError = await props.onRename(mode.lane.id, name);
+      nextError = await props.onRename(mode.lane.id, name, color);
     else nextError = await props.onDelete(mode.lane.id, destination);
     setBusy(false);
     if (nextError) setError(nextError);
@@ -99,7 +108,11 @@ function LaneDialogForm(
             {mode.type === "add" &&
               "We’ll make an ID from this name. The ID never changes, so it’s safe to use in your markdown."}
             {mode.type === "rename" &&
-              "The ID is what you write in a card’s frontmatter. You can change the display name here — the ID stays the same."}
+              mode.lane.kind === "work" &&
+              "The ID is what you write in a card’s frontmatter. You can change the display name or color here — the ID stays the same."}
+            {mode.type === "rename" &&
+              mode.lane.kind !== "work" &&
+              "Built-in lane names and IDs stay fixed, but their color can be changed."}
             {mode.type === "delete" &&
               `${props.cardCount} card${props.cardCount === 1 ? "" : "s"} will be moved before the lane is removed.`}
           </DialogDescription>
@@ -117,6 +130,7 @@ function LaneDialogForm(
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 disabled={busy}
+                readOnly={mode.type === "rename" && mode.lane.kind !== "work"}
               />
             </label>
             {mode.type === "rename" && (
@@ -135,6 +149,15 @@ function LaneDialogForm(
                 />
               </label>
             )}
+            <div className="grid gap-1.5">
+              <span className="text-xs font-medium">Lane color</span>
+              <CardColorPicker
+                value={color}
+                onChange={setColor}
+                disabled={busy}
+                label={`${mode.type === "add" ? "New lane" : mode.lane.name} color`}
+              />
+            </div>
           </div>
         ) : (
           <label className="grid gap-1.5" htmlFor="lane-destination">
@@ -173,7 +196,9 @@ function LaneDialogForm(
               : mode.type === "add"
                 ? "Add lane"
                 : mode.type === "rename"
-                  ? "Save name"
+                  ? mode.lane.kind === "work"
+                    ? "Save name"
+                    : "Save color"
                   : "Move cards and remove"}
           </Button>
           <Button

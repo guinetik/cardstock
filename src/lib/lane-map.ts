@@ -1,5 +1,5 @@
-import { parseCardColor, type CardColor } from "./card-color";
-import { taskSignal, type TaskSignal } from "./cockpit";
+import { type CardColor, parseCardColor } from "./card-color";
+import { type TaskSignal, taskSignal } from "./cockpit";
 
 /** Lane kinds the board already uses; archive is only appended as a filed-away column. */
 export type LaneKind =
@@ -16,6 +16,7 @@ export type LaneMicrocosmInput = {
   name: string;
   kind: LaneKind;
   position: number;
+  color: string | null;
 };
 
 /** Occupancy wraps this many cards to a row inside each lane column. */
@@ -43,6 +44,7 @@ export type LaneMicrocosmRow = {
   id: string;
   name: string;
   kind: LaneKind;
+  color: CardColor | null;
   count: number;
   vacant: boolean;
   slips: LaneMicrocosmSlip[];
@@ -98,6 +100,7 @@ export function laneMicrocosm(
         id: lane.id,
         name: lane.name,
         kind: lane.kind,
+        color: parseCardColor(lane.color),
         count: occupants.length,
         vacant: occupants.length === 0,
         slips: occupants.map(slipOf),
@@ -108,6 +111,7 @@ export function laneMicrocosm(
       id: "archived",
       name: "archived",
       kind: "archive",
+      color: null,
       count: archived.length,
       vacant: false,
       slips: archived.map(slipOf),

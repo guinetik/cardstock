@@ -16,6 +16,8 @@ export interface Lane {
   kind: LaneKind;
   sla_days: number | null;
   wip_limit: number | null;
+  /** Optional tint shared with board cards; null keeps the neutral lane stock. */
+  color: CardColor | null;
 }
 
 export interface Tag {

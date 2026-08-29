@@ -62,6 +62,7 @@ const work: Lane = {
   position: 0,
   sla_days: null,
   wip_limit: null,
+  color: null,
 };
 
 const task = (patch: Partial<Card> = {}): Card => ({

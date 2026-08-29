@@ -17,6 +17,7 @@ interface LaneRow {
   name: string;
   kind: "inbox" | "work" | "waiting" | "built" | "done" | "archive";
   position: number;
+  color: string | null;
 }
 interface CardRow {
   lane_id: string | null;
@@ -65,7 +66,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
   const { data } = await db
     .from("projects")
     .select(
-      "id, slug, name, description, boards(id, slug, name, lanes(id, name, kind, position), cards(lane_id, archived_at, source_path, color, rank, status, needs, target_date))",
+      "id, slug, name, description, boards(id, slug, name, lanes(id, name, kind, position, color), cards(lane_id, archived_at, source_path, color, rank, status, needs, target_date))",
     )
     .eq("slug", slug)
     .maybeSingle();

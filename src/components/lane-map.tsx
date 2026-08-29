@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cardColorModifier } from "@/lib/card-color";
+import { cardColorModifier, laneColorModifier } from "@/lib/card-color";
 import { LANE_MAP_SIGNAL, type LaneMicrocosmRow } from "@/lib/lane-map";
 
 /**
@@ -20,7 +20,11 @@ export function LaneMap({
   return (
     <Link href={href} className="lane-map" aria-label={summary} tabIndex={-1}>
       {rows.map((row) => (
-        <span key={row.id} className="lane-map-col" data-kind={row.kind}>
+        <span
+          key={row.id}
+          className={`lane-map-col ${laneColorModifier(row.color) ?? ""}`}
+          data-kind={row.kind}
+        >
           <span className="lane-map-tip" aria-hidden="true">
             {row.name} · {row.count}
           </span>
@@ -29,9 +33,7 @@ export function LaneMap({
               <i className="lane-map-cell lane-map-cell--vacant" />
             ) : (
               row.slips.map((slip, i) => {
-                const tint = slip.color
-                  ? cardColorModifier(slip.color)
-                  : null;
+                const tint = slip.color ? cardColorModifier(slip.color) : null;
                 return (
                   <i
                     // biome-ignore lint/suspicious/noArrayIndexKey: occupancy ticks have no identity

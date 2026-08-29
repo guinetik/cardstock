@@ -29,13 +29,16 @@ import {
   createCard,
   createLane,
   deleteLane,
+  moveAllLaneCards,
   moveCard,
   moveLane,
   refreshBoard,
-  renameLane,
   savePrefs,
+  sortLaneCards,
   updateCard,
+  updateLane,
 } from "@/app/p/[project]/b/[board]/actions";
+import type { CardColor } from "@/lib/card-color";
 import {
   boardStatuses,
   emptyFilters,
@@ -57,6 +60,7 @@ import type { BoardData, Card, Lane } from "@/lib/types";
 import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
 import { FilterBar } from "./filter-bar";
+import { LaneActionDialog, type LaneActionMode } from "./lane-action-dialog";
 import { LaneColumn } from "./lane-column";
 import { LaneCrudDialog, type LaneDialogMode } from "./lane-crud-dialog";
 import { useBoardRealtime } from "./use-board-realtime";
@@ -126,6 +130,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [error, setError] = useState<string | null>(null);
   const [laneBusy, setLaneBusy] = useState<string | null>(null);
   const [laneDialog, setLaneDialog] = useState<LaneDialogMode>(null);
+  const [laneAction, setLaneAction] = useState<LaneActionMode>(null);
   const [cardLane, setCardLane] = useState<Lane | null>(null);
   // Cards left open on the desk. Per tab, on purpose: a pin is a reading aid.
   const [pinned, setPinned] = useState<ReadonlySet<string>>(() => new Set());
@@ -399,10 +404,13 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     });
   }
 
-  async function addLane(name: string): Promise<string | null> {
+  async function addLane(
+    name: string,
+    color: CardColor | null,
+  ): Promise<string | null> {
     setLaneBusy("create");
     setError(null);
-    const result = await createLane(data.board.id, name);
+    const result = await createLane(data.board.id, name, color);
     setLaneBusy(null);
     if (!result.ok) return result.error;
     setLanes(result.lanes);
@@ -423,10 +431,19 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   async function changeLaneName(
     laneId: string,
     name: string,
+    color: CardColor | null,
   ): Promise<string | null> {
     setLaneBusy(laneId);
     setError(null);
-    const result = await renameLane(laneId, name);
+    const lane = lanes.find((candidate) => candidate.id === laneId);
+    if (!lane) {
+      setLaneBusy(null);
+      return "Lane not found.";
+    }
+    const result = await updateLane(laneId, {
+      ...(lane.kind === "work" ? { name } : {}),
+      color,
+    });
     setLaneBusy(null);
     if (!result.ok) return result.error;
     setLanes(result.lanes);
@@ -476,6 +493,44 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       persistLaneView(next);
       return next;
     });
+    return null;
+  }
+
+  async function confirmLaneAction(
+    mode: Exclude<LaneActionMode, null>,
+  ): Promise<string | null> {
+    setLaneBusy(mode.lane.id);
+    setError(null);
+    if (mode.type === "move-cards") {
+      const result = await moveAllLaneCards(mode.lane.id, mode.destination.id);
+      setLaneBusy(null);
+      if (!result.ok) return result.error;
+      const ranks = new Map(result.cards.map((card) => [card.id, card.rank]));
+      const enteredAt = new Date().toISOString();
+      setCards((current) =>
+        current.map((card) =>
+          ranks.has(card.id)
+            ? {
+                ...card,
+                lane_id: mode.destination.id,
+                rank: ranks.get(card.id)!,
+                lane_entered_at: enteredAt,
+              }
+            : card,
+        ),
+      );
+      return null;
+    }
+
+    const result = await sortLaneCards(mode.lane.id, mode.direction);
+    setLaneBusy(null);
+    if (!result.ok) return result.error;
+    const ranks = new Map(result.cards.map((card) => [card.id, card.rank]));
+    setCards((current) =>
+      current.map((card) =>
+        ranks.has(card.id) ? { ...card, rank: ranks.get(card.id)! } : card,
+      ),
+    );
     return null;
   }
 
@@ -558,6 +613,16 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         onRename={changeLaneName}
         onDelete={removeLane}
       />
+      <LaneActionDialog
+        key={
+          laneAction
+            ? `${laneAction.type}-${laneAction.lane.id}-${"direction" in laneAction ? laneAction.direction : laneAction.destination.id}`
+            : "closed"
+        }
+        mode={laneAction}
+        onClose={() => setLaneAction(null)}
+        onConfirm={confirmLaneAction}
+      />
       <CardCreateDialog
         lane={cardLane}
         boardId={data.board.id}
@@ -600,17 +665,45 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               hiddenByDefault={lane.kind === "archive" && !filters.showArchived}
               onAddCard={() => setCardLane(lane)}
               manage={
-                lane.kind === "work"
+                lane.kind !== "archive"
                   ? {
                       disabled: laneBusy !== null,
-                      canMoveLeft:
+                      canEditName: lane.kind === "work",
+                      canMoveLaneLeft:
+                        lane.kind === "work" &&
                         laneIndex > 0 &&
                         lanes[laneIndex - 1]?.kind !== "archive",
-                      canMoveRight:
+                      canMoveLaneRight:
+                        lane.kind === "work" &&
                         laneIndex < lanes.length - 1 &&
                         lanes[laneIndex + 1]?.kind !== "archive",
+                      canMoveCardsLeft:
+                        laneIndex > 0 &&
+                        lanes[laneIndex - 1]?.kind !== "archive",
+                      canMoveCardsRight:
+                        laneIndex < lanes.length - 1 &&
+                        lanes[laneIndex + 1]?.kind !== "archive",
+                      canSortCards: lane.kind !== "inbox",
                       onRename: () => setLaneDialog({ type: "rename", lane }),
-                      onMove: (delta) => void shiftLane(lane.id, delta),
+                      onMoveLane: (delta) => void shiftLane(lane.id, delta),
+                      onMoveCards: (delta) => {
+                        const destination = lanes[laneIndex + delta];
+                        if (!destination || destination.kind === "archive")
+                          return;
+                        setLaneAction({
+                          type: "move-cards",
+                          lane,
+                          destination,
+                          cardCount: byLane.get(lane.id)?.length ?? 0,
+                        });
+                      },
+                      onSortCards: (direction) =>
+                        setLaneAction({
+                          type: "sort-cards",
+                          lane,
+                          direction,
+                          cardCount: byLane.get(lane.id)?.length ?? 0,
+                        }),
                       onDelete: () => setLaneDialog({ type: "delete", lane }),
                     }
                   : undefined

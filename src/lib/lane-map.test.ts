@@ -2,11 +2,29 @@ import { describe, expect, test } from "bun:test";
 import { LANE_MAP_SPAN, laneMicrocosm } from "./lane-map";
 
 const lanes = [
-  { id: "a", name: "Archive", kind: "archive" as const, position: 99 },
-  { id: "u", name: "Unsorted", kind: "inbox" as const, position: 0 },
-  { id: "n", name: "Now", kind: "work" as const, position: 1 },
-  { id: "w", name: "Needs Hap", kind: "waiting" as const, position: 2 },
-  { id: "d", name: "Done", kind: "done" as const, position: 3 },
+  {
+    id: "a",
+    name: "Archive",
+    kind: "archive" as const,
+    position: 99,
+    color: null,
+  },
+  {
+    id: "u",
+    name: "Unsorted",
+    kind: "inbox" as const,
+    position: 0,
+    color: null,
+  },
+  { id: "n", name: "Now", kind: "work" as const, position: 1, color: "blue" },
+  {
+    id: "w",
+    name: "Needs Hap",
+    kind: "waiting" as const,
+    position: 2,
+    color: null,
+  },
+  { id: "d", name: "Done", kind: "done" as const, position: 3, color: null },
 ];
 
 describe("laneMicrocosm", () => {
@@ -37,6 +55,7 @@ describe("laneMicrocosm", () => {
     expect(rows.map((r) => r.count)).toEqual([7, 4, 0, 0]);
     expect(rows[2]?.vacant).toBe(true);
     expect(rows[0]?.vacant).toBe(false);
+    expect(rows.find((r) => r.id === "n")?.color).toBe("blue");
   });
 
   test("untinted slips follow cockpit signals; a card tint is kept in board order", () => {

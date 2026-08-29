@@ -44,6 +44,13 @@ export function cardColorModifier(
   return color ? `card-color--${color}` : null;
 }
 
+/** Return the CSS modifier for a lane tint, or no modifier for a neutral lane. */
+export function laneColorModifier(
+  color: CardColor | null | undefined,
+): `lane-color--${CardColor}` | null {
+  return color ? `lane-color--${color}` : null;
+}
+
 /** Return the CSS custom-property name used by a color swatch. */
 export function cardColorSurfaceToken(
   color: CardColor,

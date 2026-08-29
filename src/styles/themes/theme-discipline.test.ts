@@ -261,6 +261,8 @@ describe("paper components", () => {
     expect(css).toContain(".lane-map-cell--queued");
     expect(css).toContain(".lane-map-cell--blocked");
     expect(css).toContain(".lane-map-col .lane-map-cell.card-color--rose");
+    expect(css).toContain(".paper-lane.lane-color--rose");
+    expect(css).toContain(".lane-map-col[data-kind].lane-color--rose");
     expect(css).not.toContain('[data-kind="work"] .lane-map-cell');
     expect(css).not.toContain("overflow-x: auto");
     expect(css).not.toContain(".lane-map-col--work");

@@ -32,7 +32,7 @@ export async function loadBoard(
   ] = await Promise.all([
     db
       .from("lanes")
-      .select("id, key, name, position, kind, sla_days, wip_limit")
+      .select("id, key, name, position, kind, sla_days, wip_limit, color")
       .eq("board_id", board.id)
       .order("position"),
     db

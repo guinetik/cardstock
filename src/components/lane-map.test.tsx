@@ -6,11 +6,11 @@ import { LaneMap } from "./lane-map";
 test("tinted slips use the card colour; untinted slips use the cockpit signal", () => {
   const rows = laneMicrocosm(
     [
-      { id: "a", name: "Archive", kind: "archive", position: 99 },
-      { id: "u", name: "Unsorted", kind: "inbox", position: 0 },
-      { id: "n", name: "Now", kind: "work", position: 1 },
-      { id: "w", name: "Needs Hap", kind: "waiting", position: 2 },
-      { id: "d", name: "Done", kind: "done", position: 3 },
+      { id: "a", name: "Archive", kind: "archive", position: 99, color: null },
+      { id: "u", name: "Unsorted", kind: "inbox", position: 0, color: null },
+      { id: "n", name: "Now", kind: "work", position: 1, color: "blue" },
+      { id: "w", name: "Needs Hap", kind: "waiting", position: 2, color: null },
+      { id: "d", name: "Done", kind: "done", position: 3, color: null },
     ],
     [
       ...Array.from({ length: 7 }, (_, rank) => ({
@@ -43,6 +43,7 @@ test("tinted slips use the card colour; untinted slips use the cockpit signal", 
   expect(html).toContain("lane-map-cell--delivered");
   expect(html).toContain("card-color--rose");
   expect(html).toContain("card-color--green");
+  expect(html).toContain("lane-color--blue");
   expect(html).not.toContain("lane-map-col--work");
   expect(html).not.toContain('class="stat');
 });

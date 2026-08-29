@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { laneColorModifier } from "@/lib/card-color";
 import type { Card, Lane, TagGroup } from "@/lib/types";
 import { CardItem, SortableCard } from "./card-item";
 
@@ -71,10 +72,16 @@ export function LaneColumn(props: {
   onAddCard: () => void;
   manage?: {
     disabled: boolean;
-    canMoveLeft: boolean;
-    canMoveRight: boolean;
+    canEditName: boolean;
+    canMoveLaneLeft: boolean;
+    canMoveLaneRight: boolean;
+    canMoveCardsLeft: boolean;
+    canMoveCardsRight: boolean;
+    canSortCards: boolean;
     onRename: () => void;
-    onMove: (delta: -1 | 1) => void;
+    onMoveLane: (delta: -1 | 1) => void;
+    onMoveCards: (delta: -1 | 1) => void;
+    onSortCards: (direction: "asc" | "desc") => void;
     onDelete: () => void;
   };
 }) {
@@ -87,6 +94,7 @@ export function LaneColumn(props: {
       : `${shown.length}/${cards.length}`;
   if (props.hiddenByDefault) return null;
   const drawer = lane.kind === "inbox";
+  const colorClass = laneColorModifier(lane.color) ?? "";
 
   // Collapsed, a lane is its own tab edge — and still a drop target. Both
   // states are the same <section> so the width can animate between them:
@@ -103,7 +111,7 @@ export function LaneColumn(props: {
       <section
         data-lane={lane.key}
         ref={setNodeRef}
-        className={`paper-lane lane-spine flex h-full shrink-0 flex-col items-center gap-2 self-stretch py-2 ${width} ${isOver ? "paper-lane--over" : ""}`}
+        className={`paper-lane lane-spine flex h-full shrink-0 flex-col items-center gap-2 self-stretch py-2 ${width} ${colorClass} ${isOver ? "paper-lane--over" : ""}`}
       >
         <h2 className={`lane-name ${KIND_INK[lane.kind]}`}>{lane.name}</h2>
         <span
@@ -125,7 +133,7 @@ export function LaneColumn(props: {
   return (
     <section
       data-lane={lane.key}
-      className={`paper-lane flex h-full shrink-0 flex-col gap-2 self-stretch p-2 ${width} ${drawer ? "paper-lane--drawer" : ""} ${isOver ? "paper-lane--over" : ""}`}
+      className={`paper-lane flex h-full shrink-0 flex-col gap-2 self-stretch p-2 ${width} ${colorClass} ${drawer ? "paper-lane--drawer" : ""} ${isOver ? "paper-lane--over" : ""}`}
     >
       <div className={`lane-head ${KIND_RULE[lane.kind]}`}>
         <h2 className={`lane-name ${KIND_INK[lane.kind]}`}>{lane.name}</h2>
@@ -166,29 +174,69 @@ export function LaneColumn(props: {
               >
                 <MoreHorizontal size={13} />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={props.manage.onRename}>
-                  <Pencil /> Edit
+                  <Pencil /> {props.manage.canEditName ? "Edit" : "Edit color"}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!props.manage.canMoveLeft}
-                  onClick={() => props.manage?.onMove(-1)}
-                >
-                  <ArrowLeft /> Move left
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!props.manage.canMoveRight}
-                  onClick={() => props.manage?.onMove(1)}
-                >
-                  <ArrowRight /> Move right
-                </DropdownMenuItem>
+                {props.manage.canEditName && (
+                  <>
+                    <DropdownMenuItem
+                      disabled={!props.manage.canMoveLaneLeft}
+                      onClick={() => props.manage?.onMoveLane(-1)}
+                    >
+                      <ArrowLeft /> Move lane left
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={!props.manage.canMoveLaneRight}
+                      onClick={() => props.manage?.onMoveLane(1)}
+                    >
+                      <ArrowRight /> Move lane right
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  variant="destructive"
-                  onClick={props.manage.onDelete}
+                  disabled={
+                    !props.manage.canMoveCardsLeft || cards.length === 0
+                  }
+                  onClick={() => props.manage?.onMoveCards(-1)}
                 >
-                  <Trash2 /> Remove
+                  <ArrowLeft /> Move all cards left
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={
+                    !props.manage.canMoveCardsRight || cards.length === 0
+                  }
+                  onClick={() => props.manage?.onMoveCards(1)}
+                >
+                  <ArrowRight /> Move all cards right
+                </DropdownMenuItem>
+                {props.manage.canSortCards && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={cards.length < 2}
+                      onClick={() => props.manage?.onSortCards("asc")}
+                    >
+                      # Order ascending
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={cards.length < 2}
+                      onClick={() => props.manage?.onSortCards("desc")}
+                    >
+                      # Order descending
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {props.manage.canEditName && <DropdownMenuSeparator />}
+                {props.manage.canEditName && (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={props.manage.onDelete}
+                  >
+                    <Trash2 /> Remove
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}

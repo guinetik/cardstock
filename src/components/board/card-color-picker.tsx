@@ -19,7 +19,7 @@ export interface CardColorPickerProps {
   label?: string;
 }
 
-/** Select or clear a standardized board-card tint. */
+/** Select or clear a standardized card or lane tint. */
 export function CardColorPicker({
   value,
   onChange,

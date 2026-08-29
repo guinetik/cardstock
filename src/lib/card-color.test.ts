@@ -4,6 +4,7 @@ import {
   cardColorModifier,
   cardColorSurfaceToken,
   isCardColor,
+  laneColorModifier,
   parseCardColor,
 } from "./card-color";
 
@@ -34,5 +35,7 @@ describe("card color contract", () => {
     expect(cardColorModifier("blue")).toBe("card-color--blue");
     expect(cardColorModifier(null)).toBeNull();
     expect(cardColorSurfaceToken("blue")).toBe("--surface-card-blue");
+    expect(laneColorModifier("blue")).toBe("lane-color--blue");
+    expect(laneColorModifier(null)).toBeNull();
   });
 });
