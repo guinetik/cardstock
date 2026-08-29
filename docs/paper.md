@@ -90,8 +90,9 @@ time and reads as a jump however long you make it.
 
 A card waits `--motion-dwell` (180ms) before opening, so brushing past a lane
 does not set off a row of expansions; leaving closes it immediately, with no
-delay. `.card-rest` hides on the same delay via `transition: display 0s
-allow-discrete`, otherwise the card sits blank while the peek waits.
+delay. `.card-rest` collapses on the same delay and the same duration (a
+`grid-template-rows` transition, like the peek), so the card sits neither blank
+while the peek waits nor shorter while it grows.
 
 Board cards sit in a 3px horizontal gutter (`SortableCard`) so the swell has
 somewhere to grow. Without it a hovered card outgrows the lane's scroll

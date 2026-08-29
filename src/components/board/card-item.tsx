@@ -161,37 +161,41 @@ export function CardItem(props: {
         </p>
       </div>
 
-      <div className="card-rest mt-1 flex items-center gap-2">
-        {card.epic && (
-          <p className="truncate text-[11px] text-[var(--color-grey)]">
-            {card.epic}
-          </p>
-        )}
-        {card.status !== "backlog" && (
-          <span className={STATUS_CHIP[card.status] ?? "stat stat--muted"}>
-            {card.status}
-          </span>
-        )}
-        {(card.priority || card.effort) && (
-          <span className="ml-auto flex shrink-0 gap-1">
-            {card.priority && (
-              <span
-                className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
-                title={`Priority ${card.priority}`}
-              >
-                P{card.priority}
+      <div className="card-rest">
+        <div className="card-rest-inner">
+          <div className="mt-1 flex items-center gap-2">
+            {card.epic && (
+              <p className="truncate text-[11px] text-[var(--color-grey)]">
+                {card.epic}
+              </p>
+            )}
+            {card.status !== "backlog" && (
+              <span className={STATUS_CHIP[card.status] ?? "stat stat--muted"}>
+                {card.status}
               </span>
             )}
-            {card.effort && (
-              <span
-                className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
-                title="Effort"
-              >
-                {card.effort}
+            {(card.priority || card.effort) && (
+              <span className="ml-auto flex shrink-0 gap-1">
+                {card.priority && (
+                  <span
+                    className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
+                    title={`Priority ${card.priority}`}
+                  >
+                    P{card.priority}
+                  </span>
+                )}
+                {card.effort && (
+                  <span
+                    className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
+                    title="Effort"
+                  >
+                    {card.effort}
+                  </span>
+                )}
               </span>
             )}
-          </span>
-        )}
+          </div>
+        </div>
       </div>
 
       <div className="card-peek">
@@ -251,7 +255,10 @@ export function CardItem(props: {
           <section
             className="card-form mt-2.5 border-t border-[var(--border-hairline)] pt-2.5"
             aria-label="Card fields"
-            onPointerDown={(e) => e.stopPropagation()}
+            // The form is most of an open card, so it is a handle too. Only
+            // the text fields keep the pointer to themselves: a press-and-move
+            // there is selecting text, not picking the card up. Buttons need
+            // nothing — the sensor's distance threshold keeps a click a click.
             onKeyDown={(e) => e.stopPropagation()}
           >
             {card.tag_ids.length > 0 && (
@@ -280,6 +287,7 @@ export function CardItem(props: {
                 <div className="flex flex-col gap-1">
                   <input
                     type="date"
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="paper-field h-6 w-full font-mono text-[11.5px]"
                     value={card.target_date ?? ""}
                     onChange={(e) =>
@@ -292,6 +300,7 @@ export function CardItem(props: {
                   />
                   <input
                     type="text"
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="paper-field h-6 w-full text-[11.5px] italic placeholder:not-italic"
                     placeholder="or a rough date — end of Q3"
                     value={card.target_label ?? ""}
