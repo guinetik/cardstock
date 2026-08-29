@@ -21,7 +21,8 @@
     "etl:schema": "bun run etl/emit-schema.ts",
     "etl:export": "bun run etl/export.ts",
     "db:apply": "bun run etl/apply-sql.ts",
-    "db:dev-password": "bun run etl/dev-password.ts"
+    "db:dev-password": "bun run etl/dev-password.ts",
+    "db:pull-prod": "bun run etl/pull-prod.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

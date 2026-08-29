@@ -56,3 +56,6 @@ supabase-start.log
 dev.log
 
 .superpowers
+
+# db:pull-prod dumps of the hosted database
+backups/

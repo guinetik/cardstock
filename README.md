@@ -52,6 +52,7 @@ Resetting a forgotten password is not built yet — it needs mail. Until then, c
 | `bun run etl:import-board-state --project <p> --board <b> --file <export.json>` | Apply a `designer-board/1` export (lane, rank, target, effort, value→priority) on top of imported cards. |
 | `bun run etl:schema` | Emit `docs/frontmatter.schema.json` from the zod schema. |
 | `bun run db:seed-members --project <slug>` | `OWNER_EMAIL` → owner, `MEMBER_EMAILS` → admins, both into `members` + `project_members`. |
+| `bun run db:pull-prod` | Copy production into the local stack: dumps the hosted database (`PROD_DB_URL`) to `backups/`, resets local without the seed, replays public rows and auth users. `--restore <stamp>` replays a saved backup; `--dump-only` just writes it. Refuses to write anywhere but a local Supabase. |
 | `bun run db:test` | Access-control checks against the local database (owner, allowlist, RLS). |
 
 Scheme tags map 1:1 onto a board's tag groups; per-project overrides go in a JSON passed with `--mapping` (default `etl/mappings/default.json`). Keep a real project's seed SQL and mapping next to its tracker, outside this repo.
