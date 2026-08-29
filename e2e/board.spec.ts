@@ -182,6 +182,19 @@ test("card title and hover pill open the card page with the full body", async ({
   await expect(history).not.toContainText('"hash"');
 });
 
+test("card page status select persists", async ({ page }) => {
+  await page.goto(`${BOARD}/c/1`);
+  const select = page.getByLabel("Status");
+  await expect(select).toHaveValue("backlog");
+  await select.selectOption("wip");
+  await expect(page.locator("output")).toHaveText("Saved");
+  await page.reload();
+  await expect(page.getByLabel("Status")).toHaveValue("wip");
+  await expect(page.locator("h1 + div .stat").first()).toHaveText("wip");
+  await page.getByLabel("Status").selectOption("backlog");
+  await expect(page.locator("output")).toHaveText("Saved");
+});
+
 test("CSV export downloads the board", async ({ page }) => {
   const res = await page.request.get(`${BOARD}/export?internal=1`);
   expect(res.status()).toBe(200);

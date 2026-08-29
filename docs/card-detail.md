@@ -4,7 +4,7 @@ The card page is one `.paper-card--static`. Do not nest a `.paper-lane` inside i
 
 ## Fields
 
-Summary, ratings, dates, audience, and color sit in a labeled grid (`sm: 2 cols`, `lg: 3`) with the color picker on its own row beneath. Labels are 10px uppercase grey. Controls use `--surface-input` and `--color-ink` so native selects stay readable in both themes. Color uses the shared picker (`fieldset` of native buttons with `aria-pressed`); saves through `updateCard` while `pending` disables the swatches.
+Summary, ratings, dates, audience, Status, and color sit in a labeled grid (`sm: 2 cols`, `lg: 3`) with the color picker on its own row beneath. Status is a native select of the tracker vocabulary (raw words: backlog, wip, …), first cell in the grid, saved through `updateCard`. Labels are 10px uppercase grey. Controls use `--surface-input` and `--color-ink` so native selects stay readable in both themes. Color uses the shared picker (`fieldset` of native buttons with `aria-pressed`); saves through `updateCard` while `pending` disables the swatches.
 
 Epic / Area / Raised / Related is a hairline-ruled definition list with micro-caps labels, not a third nested card.
 
