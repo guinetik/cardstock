@@ -47,5 +47,5 @@ Seeding only fills the allowlist. Each person sets their own password the first 
 ## 4. Day to day
 
 - New tracker items: run `etl:import` from your machine (it is a local tool by design), the board updates on the next page load.
-- Adding a person: **owner only**. Project page → *Add member*, or `insert into public.members (email, role) values ('…', 'admin');`, or `MEMBER_EMAILS` + `db:seed-members`.
+- Adding a person: **owner only**. Open `/users`, enter their email, and choose a project and role. No email is sent; share the app URL so they can set a password on first use. `MEMBER_EMAILS` + `db:seed-members` remains available for bootstrap and automation.
 - Schema changes: add a migration under `supabase/migrations/`, `bunx supabase db push`.

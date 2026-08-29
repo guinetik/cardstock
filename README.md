@@ -27,7 +27,7 @@ bun run dev                               # http://localhost:3000
 
 cardstock is **invite-only**: `members` is the allowlist, and an email that is not on it never gets a session — onboarding is refused before any account is created, sign-in signs the user straight back out, and row-level security shows them nothing.
 
-The **Owner** is whoever deploys the app and owns its infrastructure. `OWNER_EMAIL` bootstraps that row on a fresh database; from then on `members.role = 'owner'` is the source of truth, and only an owner may add people (by SQL today, by UI later). There is no owner UI yet — this is the setup it will sit on.
+The **Owner** is whoever deploys the app and owns its infrastructure. `OWNER_EMAIL` bootstraps that row on a fresh database; from then on `members.role = 'owner'` is the source of truth. Owners create projects from the projects page and manage the allowlist and project access at `/users`. Inviting records the address but sends no email; share the app URL and the person chooses a password on their first visit. Project members can create as many boards as the project needs.
 
 Sign in with an email and a password. Someone who has just been invited picks their password on the login screen the first time — that is the whole onboarding, and no mail is involved. `signUp` cannot replace a password that already exists, so the form can create a first one but never take over an account.
 

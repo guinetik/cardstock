@@ -80,6 +80,56 @@ begin
   end if;
 end $$;
 
+-- Project creation is atomic: the owner is attached, and every new board has
+-- the minimal workflow needed to receive markdown cards.
+do $$
+declare
+  v_project uuid;
+  v_board uuid;
+  v_owner uuid;
+  v_count int;
+begin
+  set local role authenticated;
+  set local request.jwt.claims = '{"email":"t-owner@example.test","role":"authenticated"}';
+  select public.create_project('t-created-project', 'Created project', null)
+    into v_project;
+  select id into v_owner from public.members where email = 't-owner@example.test';
+  if not exists (
+    select 1 from public.project_members
+    where project_id = v_project and member_id = v_owner and role = 'admin'
+  ) then raise exception 'project creator was not attached as admin'; end if;
+
+  select public.create_board(v_project, 'roadmap', 'Roadmap') into v_board;
+  select count(*) into v_count from public.lanes where board_id = v_board;
+  if v_count <> 5 then raise exception 'new board has % lanes, expected 5', v_count; end if;
+
+  perform public.invite_project_member(
+    v_project, 't-project-user@example.test', 'Project User', 'member'
+  );
+  if not exists (
+    select 1 from public.project_members pm
+    join public.members m on m.id = pm.member_id
+    where pm.project_id = v_project
+      and m.email = 't-project-user@example.test'
+      and pm.role = 'member'
+  ) then raise exception 'invited user was not attached to project'; end if;
+  set local role postgres;
+end $$;
+
+-- A non-owner cannot manufacture a project through the atomic function.
+do $$
+begin
+  set local role authenticated;
+  set local request.jwt.claims = '{"email":"t-member@example.test","role":"authenticated"}';
+  begin
+    perform public.create_project('t-sneak-project', 'Sneak project', null);
+    raise exception 'a non-owner must not create projects';
+  exception when insufficient_privilege then
+    null; -- expected
+  end;
+  set local role postgres;
+end $$;
+
 -- A stranger with a perfectly valid session sees nothing at all.
 do $$
 declare v_count int;

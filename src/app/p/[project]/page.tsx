@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
-import { AddMemberForm } from "./add-member-form";
+import { CreateBoardDialog } from "./create-board-dialog";
 import { TaxonomyEditor, type TaxonomyGroup } from "./taxonomy-editor";
 
 export default async function ProjectPage(props: PageProps<"/p/[project]">) {
@@ -15,26 +15,17 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
     .eq("slug", slug)
     .maybeSingle();
   if (!project) notFound();
-  const { data: members } = await db
-    .from("project_members")
-    .select("role, members(email, display_name)")
-    .eq("project_id", project.id);
-  // Tag groups belong to a board. A project holds one today, so the editor
-  // below edits that one; a project with several would need a picker.
-  const board = (project.boards ?? [])[0] as
-    | { id: string; slug: string; name: string }
-    | undefined;
-  const { data: groups } = board
+  const boards = [...(project.boards ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  const boardIds = boards.map((board) => board.id);
+  const { data: groups } = boardIds.length
     ? await db
         .from("tag_groups")
-        .select("id, key, name, position, tags(id, key, name)")
-        .eq("board_id", board.id)
+        .select("id, board_id, key, name, position, tags(id, key, name)")
+        .in("board_id", boardIds)
         .order("position")
     : { data: null };
-  const taxonomy = ((groups ?? []) as TaxonomyGroup[]).map((g) => ({
-    ...g,
-    tags: [...(g.tags ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
-  }));
   return (
     <main className="mx-auto w-full max-w-4xl p-6 space-y-8">
       <header>
@@ -50,11 +41,17 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
         )}
       </header>
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Boards
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Boards
+          </h2>
+          <CreateBoardDialog
+            projectId={project.id}
+            projectSlug={project.slug}
+          />
+        </div>
         <ul className="grid gap-3 sm:grid-cols-2">
-          {(project.boards ?? []).map((b) => (
+          {boards.map((b) => (
             <li key={b.slug} className="paper-card p-4">
               <Link
                 href={`/p/${project.slug}/b/${b.slug}`}
@@ -65,50 +62,36 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
             </li>
           ))}
         </ul>
+        {!boards.length && (
+          <p className="paper-lane p-4 text-sm text-muted-foreground">
+            This project has no boards yet.
+          </p>
+        )}
       </section>
-      <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Members
-        </h2>
-        <div className="paper-lane p-4">
-          <ul className="mb-4 space-y-1 text-sm">
-            {(members ?? []).map((m) => {
-              const mm = m.members as unknown as {
-                email: string;
-                display_name: string | null;
-              } | null;
-              return (
-                <li
-                  key={
-                    (m.members as unknown as { email: string } | null)?.email ??
-                    m.role
-                  }
-                >
-                  <span className="font-medium">
-                    {mm?.display_name ?? mm?.email}
-                  </span>{" "}
-                  <span className="text-muted-foreground">
-                    {mm?.email} · {m.role}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <AddMemberForm projectId={project.id} />
-        </div>
-      </section>
-      {board && (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Tags
-          </h2>
-          <TaxonomyEditor
-            boardId={board.id}
-            boardName={board.name}
-            groups={taxonomy}
-          />
-        </section>
-      )}
+      {boards.map((board) => {
+        const taxonomy = (
+          (groups ?? []) as Array<TaxonomyGroup & { board_id: string }>
+        )
+          .filter((group) => group.board_id === board.id)
+          .map(({ board_id: _boardId, ...group }) => ({
+            ...group,
+            tags: [...(group.tags ?? [])].sort((a, b) =>
+              a.name.localeCompare(b.name),
+            ),
+          }));
+        return (
+          <section key={board.id}>
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {board.name} tags
+            </h2>
+            <TaxonomyEditor
+              boardId={board.id}
+              boardName={board.name}
+              groups={taxonomy}
+            />
+          </section>
+        );
+      })}
     </main>
   );
 }
