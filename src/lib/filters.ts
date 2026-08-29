@@ -5,7 +5,8 @@ export interface Filters {
   tags: Set<string>; // tag ids; OR within a group, AND across groups
   priority: Set<1 | 2 | 3>;
   effort: Set<"L" | "M" | "H">;
-  status: Set<string>;
+  /** One tracker status, or null for every status. */
+  status: string | null;
   showInternal: boolean;
   showArchived: boolean;
 }
@@ -17,7 +18,7 @@ export function emptyFilters(showInternal = true): Filters {
     tags: new Set(),
     priority: new Set(),
     effort: new Set(),
-    status: new Set(),
+    status: null,
     showInternal,
     showArchived: false,
   };
@@ -30,14 +31,14 @@ export function isFiltering(f: Filters): boolean {
     f.tags.size > 0 ||
     f.priority.size > 0 ||
     f.effort.size > 0 ||
-    f.status.size > 0 ||
+    f.status != null ||
     f.showArchived
   );
 }
 
 /**
  * Distinct tracker statuses present on this board, for the filter bar.
- * Blanks are dropped; order is sorted so the row is stable across reloads.
+ * Blanks are dropped; order is sorted so the menu is stable across reloads.
  */
 export function boardStatuses(
   cards: ReadonlyArray<{ status?: string | null }>,
@@ -92,7 +93,7 @@ export function matches(
     return false;
   if (f.effort.size && !(card.effort && f.effort.has(card.effort)))
     return false;
-  if (f.status.size && !f.status.has(card.status)) return false;
+  if (f.status && card.status !== f.status) return false;
   for (const [, wanted] of selectedByGroup(f, groups))
     if (!card.tag_ids.some((id) => wanted.has(id))) return false;
   return true;

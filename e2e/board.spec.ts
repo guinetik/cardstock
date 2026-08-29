@@ -122,12 +122,11 @@ test("filters: search narrows, P1 chip filters, clear restores", async ({
   expect(p1).toBeLessThan(total);
 });
 
-test("filters: status chip narrows, clear restores", async ({ page }) => {
+test("filters: status menu narrows, clear restores", async ({ page }) => {
   const total = await page.locator("article:visible").count();
-  await page
-    .locator("#filters")
-    .getByRole("button", { name: "wip", exact: true })
-    .click();
+  const status = page.locator("#filters").getByRole("group", { name: "Status" });
+  await status.locator("summary").click();
+  await status.getByRole("button", { name: "wip", exact: true }).click();
   const wip = await page.locator("article:visible").count();
   expect(wip).toBeGreaterThan(0);
   expect(wip).toBeLessThan(total);

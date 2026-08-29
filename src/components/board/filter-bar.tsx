@@ -29,7 +29,7 @@ function Caret() {
  * Board filters, laid out as a printed form: every cluster is a fieldset with
  * a legend, so P1–P3, L/M/H, and tracker statuses never appear as bare abbreviations.
  * Only the search field stands on its own, because a search box explains itself.
- * Status chips appear only when `statuses` is non-empty; Clear empties `status`
+ * Status is a single-select menu of this board's values; Clear sets it to null
  * without resetting Internal.
  */
 export function FilterBar(props: {
@@ -51,23 +51,23 @@ export function FilterBar(props: {
   const check =
     "flex cursor-pointer items-center gap-1.5 text-[12.5px] text-[var(--color-ink2)]";
 
-  // <details> has no click-away of its own: a tag list left open would sit
-  // over the board until you clicked its own name again. Listen only while
-  // one is open, and on `click` rather than `pointerdown` — a pointerdown
-  // listener that lives all the time swallows other menus' own open gesture.
-  const tagsRef = useRef<HTMLFieldSetElement>(null);
-  const [tagsOpen, setTagsOpen] = useState(false);
+  // <details> has no click-away of its own. Listen only while one is open,
+  // and on `click` rather than `pointerdown` — a pointerdown listener that
+  // lives all the time swallows other menus' own open gesture.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
-    if (!tagsOpen) return;
+    if (!menuOpen) return;
     const closeAll = () => {
-      const open = tagsRef.current?.querySelectorAll("details[open]");
-      open?.forEach((d) => {
+      barRef.current?.querySelectorAll("details[open]").forEach((d) => {
         d.removeAttribute("open");
       });
-      setTagsOpen(false);
+      setMenuOpen(false);
     };
     const onClick = (e: MouseEvent) => {
-      if (!tagsRef.current?.contains(e.target as Node)) closeAll();
+      const open = barRef.current?.querySelectorAll("details[open]");
+      if ([...(open ?? [])].some((d) => d.contains(e.target as Node))) return;
+      closeAll();
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeAll();
@@ -78,11 +78,18 @@ export function FilterBar(props: {
       document.removeEventListener("click", onClick);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [tagsOpen]);
+  }, [menuOpen]);
+
+  /** Close the wrapping <details> after a menu pick. */
+  const closeMenu = (el: HTMLElement) => {
+    el.closest("details")?.removeAttribute("open");
+    setMenuOpen(false);
+  };
 
   return (
     <div
       id="filters"
+      ref={barRef}
       className="paper-topbar sticky top-0 z-10 flex flex-wrap items-stretch gap-x-3 gap-y-3 border-t border-[var(--border-hairline)] px-4 py-3 sm:px-6"
     >
       <input
@@ -96,7 +103,7 @@ export function FilterBar(props: {
       />
 
       {props.groups.length > 0 && (
-        <fieldset className="fieldset relative" ref={tagsRef}>
+        <fieldset className="fieldset relative">
           <legend>Tags</legend>
           {props.groups.map((g, i) => {
             const hue = markHue(i);
@@ -104,10 +111,10 @@ export function FilterBar(props: {
             return (
               <details
                 key={g.id}
-                name="filter-tags"
+                name="filter-menu"
                 data-key={g.key}
                 onToggle={(e) => {
-                  if (e.currentTarget.open) setTagsOpen(true);
+                  if (e.currentTarget.open) setMenuOpen(true);
                 }}
               >
                 <summary
@@ -187,24 +194,57 @@ export function FilterBar(props: {
       </fieldset>
 
       {props.statuses.length > 0 && (
-        <fieldset className="fieldset">
+        <fieldset className="fieldset relative">
           <legend>Status</legend>
-          {props.statuses.map((status) => {
-            const on = f.status.has(status);
-            return (
+          <details
+            name="filter-menu"
+            data-key="status"
+            onToggle={(e) => {
+              if (e.currentTarget.open) setMenuOpen(true);
+            }}
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 pb-0.5 text-[13px]">
+              {f.status ? (
+                <span className={statusChipClass(f.status)}>{f.status}</span>
+              ) : (
+                <span className="stat stat--muted">any</span>
+              )}
+              <Caret />
+            </summary>
+            <div className="absolute left-0 top-full z-20 mt-2 flex min-w-[7.5rem] flex-col gap-1.5 rounded-[var(--radius-card)] border border-[var(--border-strong)] bg-[var(--surface-raised)] p-3 shadow-[var(--shadow-lift)]">
               <button
-                key={status}
                 type="button"
-                aria-pressed={on}
-                className={on ? statusChipClass(status) : "stat stat--muted"}
-                onClick={() =>
-                  onChange({ ...f, status: toggle(f.status, status) })
-                }
+                aria-pressed={f.status === null}
+                className="stat stat--muted text-left"
+                onClick={(e) => {
+                  onChange({ ...f, status: null });
+                  closeMenu(e.currentTarget);
+                }}
               >
-                {status}
+                any
               </button>
-            );
-          })}
+              {props.statuses.map((status) => {
+                const on = f.status === status;
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    aria-pressed={on}
+                    className={`${statusChipClass(status)} text-left`}
+                    onClick={(e) => {
+                      onChange({
+                        ...f,
+                        status: on ? null : status,
+                      });
+                      closeMenu(e.currentTarget);
+                    }}
+                  >
+                    {status}
+                  </button>
+                );
+              })}
+            </div>
+          </details>
         </fieldset>
       )}
 
@@ -256,7 +296,7 @@ export function FilterBar(props: {
               tags: new Set(),
               priority: new Set(),
               effort: new Set(),
-              status: new Set(),
+              status: null,
               showArchived: false,
             })
           }

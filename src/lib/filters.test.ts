@@ -115,43 +115,38 @@ describe("status filter", () => {
   const lanes = [work];
   const groups: TagGroup[] = [];
 
-  test("emptyFilters is not filtering and has an empty status set", () => {
+  test("emptyFilters is not filtering and has no status", () => {
     const f = emptyFilters();
-    expect(f.status.size).toBe(0);
+    expect(f.status).toBeNull();
     expect(isFiltering(f)).toBe(false);
   });
 
   test("a selected status counts as filtering", () => {
     const f = emptyFilters();
-    f.status.add("wip");
+    f.status = "wip";
     expect(isFiltering(f)).toBe(true);
   });
 
-  test("empty set keeps every status", () => {
+  test("null keeps every status", () => {
     const f = emptyFilters();
     expect(matches(task({ status: "wip" }), f, groups, lanes)).toBe(true);
     expect(matches(task({ status: "backlog" }), f, groups, lanes)).toBe(true);
   });
 
   test("one status keeps only that value", () => {
-    const f = emptyFilters();
-    f.status.add("wip");
+    const f = { ...emptyFilters(), status: "wip" };
     expect(matches(task({ status: "wip" }), f, groups, lanes)).toBe(true);
     expect(matches(task({ status: "blocked" }), f, groups, lanes)).toBe(false);
   });
 
-  test("two statuses OR", () => {
-    const f = emptyFilters();
-    f.status.add("wip");
-    f.status.add("blocked");
-    expect(matches(task({ status: "wip" }), f, groups, lanes)).toBe(true);
+  test("picking a second status replaces the first", () => {
+    const f = { ...emptyFilters(), status: "blocked" };
+    expect(matches(task({ status: "wip" }), f, groups, lanes)).toBe(false);
     expect(matches(task({ status: "blocked" }), f, groups, lanes)).toBe(true);
-    expect(matches(task({ status: "done" }), f, groups, lanes)).toBe(false);
   });
 
   test("status still combines with priority", () => {
-    const f = emptyFilters();
-    f.status.add("wip");
+    const f = { ...emptyFilters(), status: "wip" };
     f.priority.add(1);
     expect(
       matches(task({ status: "wip", priority: 1 }), f, groups, lanes),
