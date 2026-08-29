@@ -3,7 +3,7 @@
 import { Inbox } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   applyProjectImport,
   type ImportApplyResult,
@@ -38,6 +38,13 @@ export function ImportProjectDialog({
   const [planned, setPlanned] = useState<ImportPlanResult | null>(null);
   const [done, setDone] = useState<ImportApplyResult | null>(null);
   const [pending, start] = useTransition();
+  /** Which plan request is the current one; an older answer is dropped. */
+  const request = useRef(0);
+  // A zip that never reaches the server throws out of the transition; the
+  // dialog says so instead of sitting on "Reading the sheets…" forever.
+  const TRANSPORT = {
+    error: "The upload did not reach the server. Try a smaller zip.",
+  };
 
   const form = (f: File) => {
     const fd = new FormData();
@@ -47,6 +54,7 @@ export function ImportProjectDialog({
     return fd;
   };
   const reset = () => {
+    request.current++;
     setFile(null);
     setPlanned(null);
     setDone(null);
@@ -54,12 +62,27 @@ export function ImportProjectDialog({
   const choose = (f: File | null) => {
     if (!f) return;
     setFile(f);
-    start(async () => setPlanned(await planProjectImport(form(f))));
+    // Two drops in a row: only the latest plan is allowed to land.
+    const id = ++request.current;
+    start(async () => {
+      let r: ImportPlanResult;
+      try {
+        r = await planProjectImport(form(f));
+      } catch {
+        r = TRANSPORT;
+      }
+      if (id === request.current) setPlanned(r);
+    });
   };
   const create = () => {
     if (!file) return;
     start(async () => {
-      const r = await applyProjectImport(form(file));
+      let r: ImportApplyResult;
+      try {
+        r = await applyProjectImport(form(file));
+      } catch {
+        r = TRANSPORT;
+      }
       setDone(r);
       if ("ok" in r) router.push(r.href);
     });
@@ -87,7 +110,8 @@ export function ImportProjectDialog({
           <DialogTitle>Import a project</DialogTitle>
           <DialogDescription>
             A folder of sheets becomes a binder: its lanes and tag groups come
-            from what the sheets say.
+            from what the sheets say. If filing stops partway, what was filed
+            stays — nothing is ever deleted.
           </DialogDescription>
         </DialogHeader>
         {plan ? (

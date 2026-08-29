@@ -1,7 +1,7 @@
 "use client";
 
 import { Inbox, Upload } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   applyBoardImport,
   type ImportApplyResult,
@@ -42,8 +42,11 @@ export function BoardImportDialog({
   const [planned, setPlanned] = useState<ImportPlanResult | null>(null);
   const [done, setDone] = useState<ImportApplyResult | null>(null);
   const [pending, start] = useTransition();
+  /** Which plan request is the current one; an older answer is dropped. */
+  const request = useRef(0);
 
   const reset = () => {
+    request.current++;
     setFile(null);
     setPlanned(null);
     setDone(null);
@@ -54,14 +57,36 @@ export function BoardImportDialog({
     fd.set("file", f);
     return fd;
   };
+  // A zip that never reaches the server throws out of the transition; the
+  // dialog says so instead of sitting on "Reading the sheets…" forever.
+  const TRANSPORT = {
+    error: "The upload did not reach the server. Try a smaller zip.",
+  };
   const choose = (f: File | null) => {
     if (!f) return;
     setFile(f);
     setDone(null);
-    start(async () => setPlanned(await planBoardImport(form(f))));
+    // Two drops in a row: only the latest plan is allowed to land.
+    const id = ++request.current;
+    start(async () => {
+      let r: ImportPlanResult;
+      try {
+        r = await planBoardImport(form(f));
+      } catch {
+        r = TRANSPORT;
+      }
+      if (id === request.current) setPlanned(r);
+    });
   };
   const apply = () => {
-    if (file) start(async () => setDone(await applyBoardImport(form(file))));
+    if (!file) return;
+    start(async () => {
+      try {
+        setDone(await applyBoardImport(form(file)));
+      } catch {
+        setDone(TRANSPORT);
+      }
+    });
   };
   const plan = planned && "plan" in planned ? planned.plan : null;
   const toImport = plan ? plan.counts.new + plan.counts.changed : 0;
@@ -91,7 +116,8 @@ export function BoardImportDialog({
           <DialogTitle>Importing into {boardName}</DialogTitle>
           <DialogDescription>
             The sheet wins: whatever a file states replaces what the board has.
-            Nothing is deleted. You see the plan before anything is filed.
+            If filing stops partway, what was filed stays — nothing is ever
+            deleted. You see the plan before anything is filed.
           </DialogDescription>
         </DialogHeader>
         {done && "ok" in done ? (

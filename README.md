@@ -57,7 +57,7 @@ Resetting a forgotten password is not built yet — it needs mail. Until then, c
 
 ### Importing a project from the command line
 
-The projects page can do this from a zip. The command line is for trackers over 4 MB or for scripted seeds:
+The projects page can do this from a zip. The command line is for trackers over 3 MB or for scripted seeds:
 
 1. Write a seed next to the tracker — project, board, lanes in order with kinds, tag groups — and apply it: `bun run db:apply --file path/to/seed.sql`.
 2. `bun run etl:import --project <slug> --board <slug> --source path/to/tracker`.

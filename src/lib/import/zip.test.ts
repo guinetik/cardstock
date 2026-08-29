@@ -27,7 +27,18 @@ describe("filesFromZip", () => {
   });
   test("rejects an oversized upload before unzipping", () => {
     expect(() => filesFromZip(new Uint8Array(MAX_UPLOAD_BYTES + 1))).toThrow(
-      /over 4 MB/,
+      /over 3 MB/,
     );
+  });
+  test("skips an entry too big to be a sheet", () => {
+    const zip = zipSync({
+      "2.md": enc("---\nid: 2\n---\n"),
+      "3.md": enc(`---\nid: 3\n---\n${"x".repeat(1 << 20)}`),
+    });
+    expect(filesFromZip(zip).map((f) => f.name)).toEqual(["2.md"]);
+  });
+  test("accepts a path a Windows zip wrote with backslashes", () => {
+    const zip = zipSync({ "tracker\\2.md": enc("---\nid: 2\n---\n") });
+    expect(filesFromZip(zip).map((f) => f.name)).toEqual(["2.md"]);
   });
 });

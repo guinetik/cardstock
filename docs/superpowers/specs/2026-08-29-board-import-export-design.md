@@ -36,7 +36,7 @@ The CLI (`etl:import`, `etl:export`) keeps working and is rebuilt on the same mo
 8. **Export rebases.** After a download, `source_text` becomes the exported text and `lane_from_source` the lane. Export → import → export is a fixed point.
 9. **The zod schema is the contract.** `frontmatterSchema` moves to `src/lib/frontmatter/schema.ts`. It validates imports, decides the key order of new files, generates the dialog's instructions and `docs/frontmatter.schema.json`, and types the plan's diff. A drift test fails if the JSON file is stale.
 10. **`tracker-item` is no longer required.** It was the Staffeto wiki's own validator rule; inside cardstock it meant nothing. It is an ordinary tag now. Fixtures and tests that carried it only to pass are updated.
-11. **Zip parsed on the server with `fflate`.** No native dependencies, no client bundle cost. Uploads over 4 MB are refused with a message; a markdown tracker is well under.
+11. **Zip parsed on the server with `fflate`.** No native dependencies, no client bundle cost. Uploads over 3 MB are refused with a message, and only `<n>.md` entries under 1 MB are decompressed; a markdown tracker is well under.
 12. **A lane the board lacks is created as `work`**, named from its key, inserted before the first built/done/archive lane. A `group:tag` the board lacks creates the group (next position, next hue) and the tag. A bare tag no group declares is reported as not applied — the product does not guess concepts. Same rule as the CLI.
 13. **No compensating delete on project import.** If applying cards fails after the project and board exist, the empty project stays and the dialog says so. Deleting a project is the owner's decision, never a side effect.
 
