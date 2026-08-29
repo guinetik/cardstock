@@ -5,29 +5,49 @@ export interface Filters {
   tags: Set<string>; // tag ids; OR within a group, AND across groups
   priority: Set<1 | 2 | 3>;
   effort: Set<"L" | "M" | "H">;
+  status: Set<string>;
   showInternal: boolean;
   showArchived: boolean;
 }
 
+/** Default filter state with nothing selected. */
 export function emptyFilters(showInternal = true): Filters {
   return {
     query: "",
     tags: new Set(),
     priority: new Set(),
     effort: new Set(),
+    status: new Set(),
     showInternal,
     showArchived: false,
   };
 }
 
+/** True when any filter criterion is active. */
 export function isFiltering(f: Filters): boolean {
   return (
     !!f.query.trim() ||
     f.tags.size > 0 ||
     f.priority.size > 0 ||
     f.effort.size > 0 ||
+    f.status.size > 0 ||
     f.showArchived
   );
+}
+
+/**
+ * Distinct tracker statuses present on this board, for the filter bar.
+ * Blanks are dropped; order is sorted so the row is stable across reloads.
+ */
+export function boardStatuses(
+  cards: ReadonlyArray<{ status?: string | null }>,
+): string[] {
+  const seen = new Set<string>();
+  for (const card of cards) {
+    const status = card.status?.trim();
+    if (status) seen.add(status);
+  }
+  return [...seen].sort();
 }
 
 /** Group the selected tag ids by their group so we can OR within and AND across. */
@@ -46,6 +66,7 @@ function selectedByGroup(
   return out;
 }
 
+/** True when a card satisfies every active filter criterion. */
 export function matches(
   card: Card,
   f: Filters,
@@ -71,6 +92,7 @@ export function matches(
     return false;
   if (f.effort.size && !(card.effort && f.effort.has(card.effort)))
     return false;
+  if (f.status.size && !f.status.has(card.status)) return false;
   for (const [, wanted] of selectedByGroup(f, groups))
     if (!card.tag_ids.some((id) => wanted.has(id))) return false;
   return true;

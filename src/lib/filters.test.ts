@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { sortInbox } from "./filters";
-import type { Card } from "./types";
+import {
+  boardStatuses,
+  emptyFilters,
+  isFiltering,
+  matches,
+  sortInbox,
+} from "./filters";
+import type { Card, Lane, TagGroup } from "./types";
 
 /** Only the fields sortInbox reads. */
 const card = (external_id: string, raised_on: string | null) =>
@@ -45,5 +51,116 @@ describe("sortInbox", () => {
     const original = [...cards];
     sortInbox(cards, "id-desc");
     expect(cards).toEqual(original);
+  });
+});
+
+const work: Lane = {
+  id: "work",
+  key: "work",
+  name: "Now",
+  kind: "work",
+  position: 0,
+  sla_days: null,
+  wip_limit: null,
+};
+
+const task = (patch: Partial<Card> = {}): Card => ({
+  id: "c1",
+  external_id: "1",
+  title: "Task",
+  summary: null,
+  status: "backlog",
+  epic: null,
+  epic_id: null,
+  area: null,
+  raised_by: null,
+  raised_on: null,
+  shipped_on: null,
+  needs: null,
+  lane_id: "work",
+  rank: 1,
+  priority: null,
+  effort: null,
+  planned_start_date: null,
+  target_date: null,
+  target_label: null,
+  audience: "all",
+  archived_at: null,
+  archived_by: null,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  tag_ids: [],
+  lane_entered_at: null,
+  color: null,
+  ...patch,
+});
+
+describe("boardStatuses", () => {
+  test("unique, sorted, blanks dropped, order independent of input", () => {
+    expect(
+      boardStatuses([
+        { status: "wip" },
+        { status: "  " },
+        { status: "backlog" },
+        { status: "wip" },
+        { status: null },
+        { status: " blocked " },
+        {},
+      ]),
+    ).toEqual(["backlog", "blocked", "wip"]);
+  });
+});
+
+describe("status filter", () => {
+  const lanes = [work];
+  const groups: TagGroup[] = [];
+
+  test("emptyFilters is not filtering and has an empty status set", () => {
+    const f = emptyFilters();
+    expect(f.status.size).toBe(0);
+    expect(isFiltering(f)).toBe(false);
+  });
+
+  test("a selected status counts as filtering", () => {
+    const f = emptyFilters();
+    f.status.add("wip");
+    expect(isFiltering(f)).toBe(true);
+  });
+
+  test("empty set keeps every status", () => {
+    const f = emptyFilters();
+    expect(matches(task({ status: "wip" }), f, groups, lanes)).toBe(true);
+    expect(matches(task({ status: "backlog" }), f, groups, lanes)).toBe(true);
+  });
+
+  test("one status keeps only that value", () => {
+    const f = emptyFilters();
+    f.status.add("wip");
+    expect(matches(task({ status: "wip" }), f, groups, lanes)).toBe(true);
+    expect(matches(task({ status: "blocked" }), f, groups, lanes)).toBe(false);
+  });
+
+  test("two statuses OR", () => {
+    const f = emptyFilters();
+    f.status.add("wip");
+    f.status.add("blocked");
+    expect(matches(task({ status: "wip" }), f, groups, lanes)).toBe(true);
+    expect(matches(task({ status: "blocked" }), f, groups, lanes)).toBe(true);
+    expect(matches(task({ status: "done" }), f, groups, lanes)).toBe(false);
+  });
+
+  test("status still combines with priority", () => {
+    const f = emptyFilters();
+    f.status.add("wip");
+    f.priority.add(1);
+    expect(
+      matches(task({ status: "wip", priority: 1 }), f, groups, lanes),
+    ).toBe(true);
+    expect(
+      matches(task({ status: "wip", priority: 2 }), f, groups, lanes),
+    ).toBe(false);
+    expect(
+      matches(task({ status: "backlog", priority: 1 }), f, groups, lanes),
+    ).toBe(false);
   });
 });
