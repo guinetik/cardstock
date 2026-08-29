@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { planImport } from "./plan";
+import { laneNameFromKey, planImport } from "./plan";
 import type { BoardState, ExistingCard } from "./types";
 
 const sheet = (id: number, fm: string, body = "## Ask\n\nHi.") => ({
@@ -160,5 +160,13 @@ describe("planImport", () => {
       verdict: "error",
       message: expect.stringMatching(/filename/),
     });
+  });
+});
+
+describe("laneNameFromKey", () => {
+  test("sentence-cases the joined words, not each one", () => {
+    expect(laneNameFromKey("gate-1")).toBe("Gate 1");
+    expect(laneNameFromKey("needs-input")).toBe("Needs input");
+    expect(laneNameFromKey("step")).toBe("Step");
   });
 });

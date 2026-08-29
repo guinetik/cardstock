@@ -30,7 +30,7 @@ test("an owner imports a zip as a new project", async ({ page }) => {
       .getByRole("button", { name: "Create project and import 13 cards" })
       .click();
     await page.waitForURL(`/p/${SLUG}/b/backlog`);
-    await expect(page.getByText("Needs Input", { exact: true })).toBeVisible();
+    await expect(page.getByText("Needs input", { exact: true })).toBeVisible();
   } finally {
     await admin.from("projects").delete().eq("slug", SLUG);
   }

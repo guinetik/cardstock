@@ -32,13 +32,10 @@ export const DEFAULT_MAPPING: Mapping = {
   audience_internal_when: { tags: ["internal"] },
 };
 
-/** `gate-1` → `Gate 1`. */
+/** `gate-1` → `Gate 1`, `needs-input` → `Needs input`: sentence case, not title case. */
 export function laneNameFromKey(key: string): string {
-  return key
-    .split(/[-_]+/)
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(" ");
+  const joined = key.split(/[-_]+/).filter(Boolean).join(" ");
+  return joined ? joined[0].toUpperCase() + joined.slice(1) : joined;
 }
 
 /** The board's view of a card, in file form, for the diff. */
