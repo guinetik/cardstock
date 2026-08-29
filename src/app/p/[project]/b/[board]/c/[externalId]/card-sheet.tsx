@@ -2,6 +2,7 @@ import { marked } from "marked";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CardHistory } from "@/components/board/card-history";
+import { parseCardColor } from "@/lib/card-color";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
@@ -144,6 +145,7 @@ export async function CardSheet({
           audience: card.audience,
           archived_at: card.archived_at,
           external_id: card.external_id,
+          color: parseCardColor(card.color),
         }}
         groups={
           (groups ?? []) as unknown as {

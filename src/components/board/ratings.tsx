@@ -19,10 +19,10 @@ export function Ratings({
   onPatch: (id: string, p: CardPatch) => void;
 }) {
   return (
-    <>
+    <div className="card-ratings">
       <span className="field-label">Effort</span>
       <div
-        className="flex items-center gap-1"
+        className="card-ratings-sqs"
         role="radiogroup"
         aria-label={`Effort for #${card.external_id}`}
       >
@@ -45,7 +45,7 @@ export function Ratings({
       </div>
       <span className="field-label">Priority</span>
       <div
-        className="flex items-center gap-1"
+        className="card-ratings-sqs"
         role="radiogroup"
         aria-label={`Priority for #${card.external_id}`}
       >
@@ -66,6 +66,6 @@ export function Ratings({
           );
         })}
       </div>
-    </>
+    </div>
   );
 }

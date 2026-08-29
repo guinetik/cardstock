@@ -1,3 +1,5 @@
+import type { CardColor } from "./card-color";
+
 export type LaneKind =
   | "inbox"
   | "work"
@@ -60,6 +62,8 @@ export interface Card {
   created_at: string;
   tag_ids: string[];
   lane_entered_at: string | null;
+  /** Frontmatter-owned pastel tint, or null for the neutral paper surface. */
+  color: CardColor | null;
 }
 
 export type EpicConfidence = "confident" | "concerned" | "unknown";

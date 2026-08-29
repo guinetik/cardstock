@@ -62,6 +62,22 @@ test("priority, difficulty and target persist", async ({ page }) => {
   await expect(page.locator(`a[href$="/c/${id}"]`)).toBeVisible();
 });
 
+test("sets, persists, and clears a card color", async ({ page }) => {
+  const card = page.locator('[data-lane="unsorted"] [data-id]').first();
+  const id = await card.getAttribute("data-id");
+  await card.hover();
+  await card.getByRole("button", { name: "Blue" }).click();
+  await expect(card.locator("article")).toHaveClass(/card-color--blue/);
+
+  await page.reload();
+  const persisted = page.locator(`[data-id="${id}"]`);
+  await expect(persisted.locator("article")).toHaveClass(/card-color--blue/);
+
+  await persisted.hover();
+  await persisted.getByRole("button", { name: "No color" }).click();
+  await expect(persisted.locator("article")).not.toHaveClass(/card-color--/);
+});
+
 test("drag a card from Unsorted to Next and it survives reload", async ({
   page,
 }) => {

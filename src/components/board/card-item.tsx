@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
+import { cardColorModifier, parseCardColor } from "@/lib/card-color";
 import { daysInLane } from "@/lib/filters";
 import {
   type Card,
@@ -13,6 +14,7 @@ import {
   PRIORITY_PEN,
   type TagGroup,
 } from "@/lib/types";
+import { CardColorPicker } from "./card-color-picker";
 import { Ratings } from "./ratings";
 
 const STATUS_CHIP: Record<string, string> = {
@@ -89,6 +91,8 @@ export function CardItem(props: {
   boardSlug?: string;
 }) {
   const { card, lane } = props;
+  const color = parseCardColor(card.color);
+  const colorClass = cardColorModifier(color) ?? "";
   const pinned = !!props.pinned;
   const days = lane?.kind === "waiting" ? daysInLane(card) : null;
   const overSla =
@@ -109,7 +113,7 @@ export function CardItem(props: {
 
   return (
     <article
-      className={`group relative paper-card p-2.5 ${props.overlay ? "paper-card--overlay" : ""} ${props.flat && !props.overlay ? "paper-card--flat" : ""} ${card.archived_at ? "opacity-60" : ""}`}
+      className={`group relative paper-card p-2.5 ${props.overlay ? "paper-card--overlay" : ""} ${props.flat && !props.overlay ? "paper-card--flat" : ""} ${card.archived_at ? "opacity-60" : ""} ${colorClass}`}
       data-pinned={pinned ? "true" : undefined}
     >
       {/* The rail sits opposite the card number: pin, then maximize. */}
@@ -315,6 +319,13 @@ export function CardItem(props: {
                 </div>
 
                 <Ratings card={card} onPatch={props.onPatch} />
+
+                <span className="field-label">Color</span>
+                <CardColorPicker
+                  value={color}
+                  onChange={(next) => props.onPatch?.(card.id, { color: next })}
+                  label={`Color for card #${card.external_id}`}
+                />
               </>
             )}
 

@@ -1,6 +1,6 @@
 # Board card density
 
-Board cards rest as **`#id`, title, epic, and the decisions already made** — the two pen squares for priority and effort, plus a status word when it is not `backlog`. That is the bird's-eye scan. Unrated cards show nothing rather than empty slots.
+Board cards rest as **`#id`, title, epic, and the decisions already made** — the two pen squares for priority and effort, plus a status word when it is not `backlog`. That is the bird's-eye scan. Unrated cards show nothing rather than empty slots. A selected `color` adds `card-color--{name}` on the `<article>` only (parsed with `parseCardColor`), tinting the paper; the drag overlay keeps the tint and omits the picker.
 
 Hover (or keyboard focus-within) lifts the card out of the lane and opens `.card-peek`. The resting summary (`.card-rest`) collapses at the same moment and on the same clock, so nothing is on screen twice and the card never gets shorter mid-opening (an instant `display: none` used to drop the bottom edge ~25px for a few frames, which threw a pointer near the edge off the card and left hover flickering). The drag overlay stays compact so the ghost does not balloon.
 
@@ -12,8 +12,8 @@ The peek is `.card-form`: a label column in the margin and values in the body, l
 |---|---|
 | Tags | Highlighter marks in their group's colour |
 | Target | Two stacked fields — a real day, **or** a rough date in words when no day is agreed |
-| Effort | L / M / H — how hard |
-| Priority | P1–P3 — how soon |
+| Effort / Priority | One row, four columns matching the form gutter: Effort · L/M/H · Priority · P1–P3. The L square starts on the same value column as Tags and Target. |
+| Color | No color plus nine named pastel swatches; paints the card background |
 | Note | The card summary, clamped to three lines |
 
 The two date fields were the confusing part of the old layout: they sat side by side with no labels, and nothing said one was a committed day and the other a phrase. They are now one **Target** row, stacked, and the second reads `or a rough date — end of Q3`.

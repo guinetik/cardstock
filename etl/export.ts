@@ -41,7 +41,7 @@ const laneKey = new Map(ctx.lanes.map((l) => [l.id, l.key]));
 const { data: cards, error } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, lane_from_source, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, body_md, body_edited_at, title, summary, status, epic, area, audience, source_path",
+    "id, external_id, lane_id, lane_from_source, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, body_md, body_edited_at, title, summary, status, epic, area, audience, source_path, color",
   )
   .eq("board_id", ctx.board.id)
   .order("rank");
@@ -93,6 +93,7 @@ for (const c of cards ?? []) {
       ? c.archived_at.slice(0, 19).replace("T", " ")
       : null,
     archived_by: c.archived_at ? (c.archived_by ?? null) : null,
+    color: c.color ?? null,
   };
   // Only an app-created card has no source path. A missing imported file is
   // still a warning: creating a replacement in the wrong --source directory

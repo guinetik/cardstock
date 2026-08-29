@@ -41,6 +41,7 @@ const EDIT_ORDER = [
   "summary",
   "tags",
   "body",
+  "color",
 ] as const;
 
 /**
@@ -262,6 +263,8 @@ function editField(key: EditFieldKey, value: unknown): string {
       return "changed the tags";
     case "body":
       return "edited the write-up";
+    case "color":
+      return "changed the color";
     default: {
       const _exhaustive: never = key;
       return _exhaustive;

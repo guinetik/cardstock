@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
+  bodyOnImport,
   buildVocabulary,
+  cardColorOnImport,
   laneForNewCard,
   laneMoveFromSource,
   type Mapping,
   mapAudience,
   mapTags,
   resolveTags,
-  bodyOnImport,
   summaryOnImport,
   valueToPriority,
 } from "./mapping";
@@ -348,6 +349,32 @@ describe("summaryOnImport", () => {
   });
 });
 
+describe("card color frontmatter", () => {
+  test("accepts an allowed color", () => {
+    const result = validateFrontmatter({
+      ...parseFile(FILE).frontmatter,
+      color: "blue",
+    });
+    expect(result.data.color).toBe("blue");
+    expect(cardColorOnImport(result.data.color)).toBe("blue");
+  });
+
+  test("accepts omission and maps it to a cleared mirror", () => {
+    const result = validateFrontmatter(parseFile(FILE).frontmatter);
+    expect(result.data.color).toBeUndefined();
+    expect(cardColorOnImport(result.data.color)).toBeNull();
+  });
+
+  test("rejects an unknown color with the source filename", () => {
+    expect(() =>
+      validateFrontmatter(
+        { ...parseFile(FILE).frontmatter, color: "chartreuse" },
+        "bad.md",
+      ),
+    ).toThrow(/bad\.md.*color/);
+  });
+});
+
 describe("bodyOnImport", () => {
   const edited = {
     body_md: "## Ask\n\napp",
@@ -366,6 +393,8 @@ describe("bodyOnImport", () => {
   });
 
   test("new card takes the file body", () => {
-    expect(bodyOnImport(null, "## Ask\n\nfrom file")).toBe("## Ask\n\nfrom file");
+    expect(bodyOnImport(null, "## Ask\n\nfrom file")).toBe(
+      "## Ask\n\nfrom file",
+    );
   });
 });

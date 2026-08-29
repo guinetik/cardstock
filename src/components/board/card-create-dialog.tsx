@@ -16,8 +16,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import type { CardColor } from "@/lib/card-color";
 import type { Epic, Lane, TagGroup } from "@/lib/types";
 import { markHue } from "@/lib/types";
+import { CardColorPicker } from "./card-color-picker";
 
 const IssueBodyEditor = dynamic(
   () => import("@/app/p/[project]/b/[board]/c/[externalId]/issue-body-editor"),
@@ -69,6 +71,7 @@ function CardCreateForm(
   const [targetDate, setTargetDate] = useState("");
   const [targetLabel, setTargetLabel] = useState("");
   const [tagIds, setTagIds] = useState<Set<string>>(() => new Set());
+  const [color, setColor] = useState<CardColor | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +103,7 @@ function CardCreateForm(
       targetDate,
       targetLabel,
       tagIds: [...tagIds],
+      color,
     });
     setBusy(false);
     if (!result.ok) setError(result.error);
@@ -288,6 +292,15 @@ function CardCreateForm(
                 disabled={busy || !!targetDate}
               />
             </label>
+            <div>
+              <span className={label}>Color</span>
+              <CardColorPicker
+                value={color}
+                onChange={setColor}
+                disabled={busy}
+                label="New card color"
+              />
+            </div>
           </aside>
         </div>
 

@@ -15,14 +15,15 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { arg, flag, loadBoard, serviceClient } from "./db";
 import {
+  bodyOnImport,
   buildVocabulary,
+  cardColorOnImport,
   laneForNewCard,
   laneMoveFromSource,
   type Mapping,
   mapAudience,
   mapTags,
   resolveTags,
-  bodyOnImport,
   summaryOnImport,
   valueToPriority,
 } from "./mapping";
@@ -56,7 +57,7 @@ if (!files.length) throw new Error(`no <id>.md files in ${source}`);
 const { data: existingRows } = await db
   .from("cards")
   .select(
-    "id, external_id, lane_id, lane_from_source, epic_id, planned_start_date, rank, priority, effort, source_hash, summary, summary_edited_at, audience, body_md, body_edited_at",
+    "id, external_id, lane_id, lane_from_source, epic_id, planned_start_date, rank, priority, effort, source_hash, summary, summary_edited_at, audience, body_md, body_edited_at, color",
   )
   .eq("board_id", ctx.board.id);
 const existing = new Map((existingRows ?? []).map((c) => [c.external_id, c]));
@@ -154,6 +155,7 @@ for (const file of files) {
     raised_on: isoOrNull(fm.raised),
     shipped_on: isoOrNull(fm.shipped),
     needs: fm.needs ?? null,
+    color: cardColorOnImport(fm.color),
     source_path: full,
     source_hash: parsed.hash,
     frontmatter_extra: extra,

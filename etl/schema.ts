@@ -6,6 +6,7 @@
  * `cards.frontmatter_extra` and round-trips on export.
  */
 import { z } from "zod";
+import { CARD_COLORS } from "../src/lib/card-color";
 
 export const STATUSES = [
   "backlog",
@@ -78,6 +79,7 @@ export const frontmatterSchema = z.looseObject({
   lane: z.string().nullable().optional(),
   rank: z.coerce.number().nullable().optional(),
   priority: z.coerce.number().int().min(1).max(3).nullable().optional(),
+  color: z.enum(CARD_COLORS).nullable().optional(),
 });
 
 export type Frontmatter = z.infer<typeof frontmatterSchema>;

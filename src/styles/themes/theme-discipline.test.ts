@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
+const PAPER = readFileSync(join(here, "paper.css"), "utf8");
+const PAPER_NIGHT = readFileSync(join(here, "paper-night.css"), "utf8");
+const COMPONENTS = readFileSync(join(here, "../components/paper.css"), "utf8");
+
 function contractTokens(src: string): Set<string> {
   return new Set(
     [...src.matchAll(/^\s*\*\s*(--[a-z0-9-]+)\s*$/gm)].map((m) => m[1]!),
@@ -27,10 +31,8 @@ describe("theme parity", () => {
   const contract = contractTokens(
     readFileSync(join(here, "tokens.css"), "utf8"),
   );
-  const day = declaredTokens(readFileSync(join(here, "paper.css"), "utf8"));
-  const night = declaredTokens(
-    readFileSync(join(here, "paper-night.css"), "utf8"),
-  );
+  const day = declaredTokens(PAPER);
+  const night = declaredTokens(PAPER_NIGHT);
 
   test("tokens.css lists at least one required token", () => {
     expect(contract.size).toBeGreaterThan(20);
@@ -50,11 +52,91 @@ describe("theme parity", () => {
     expect([...day].sort()).toEqual([...night].sort());
   });
 
-  test("no theme reintroduces glass: no blur, no translucent stock", () => {
-    for (const src of [
-      readFileSync(join(here, "paper.css"), "utf8"),
-      readFileSync(join(here, "paper-night.css"), "utf8"),
+  test("defines every card-color surface in both themes", () => {
+    for (const color of [
+      "rose",
+      "orange",
+      "amber",
+      "green",
+      "cyan",
+      "blue",
+      "indigo",
+      "violet",
+      "pink",
     ]) {
+      const token = `--surface-card-${color}`;
+      expect(PAPER).toContain(token);
+      expect(PAPER_NIGHT).toContain(token);
+      expect(COMPONENTS).toContain(`.paper-card.card-color--${color}`);
+      expect(COMPONENTS).toContain(`var(${token})`);
+    }
+  });
+
+  test("uses the differentiated light and dark card-color palette", () => {
+    const light: Record<string, string> = {
+      rose: "#f2c6d0",
+      orange: "#f2cfad",
+      amber: "#eedb91",
+      green: "#c5dfbd",
+      cyan: "#bce0df",
+      blue: "#c4d8ee",
+      indigo: "#ced0ed",
+      violet: "#ddc7eb",
+      pink: "#edc7df",
+    };
+    const dark: Record<string, string> = {
+      rose: "#6b3945",
+      orange: "#6a4530",
+      amber: "#625424",
+      green: "#315a36",
+      cyan: "#2c5960",
+      blue: "#345575",
+      indigo: "#44496f",
+      violet: "#573d6b",
+      pink: "#683b5a",
+    };
+    for (const [name, hex] of Object.entries(light)) {
+      expect(PAPER).toContain(`--surface-card-${name}: ${hex};`);
+    }
+    for (const [name, hex] of Object.entries(dark)) {
+      expect(PAPER_NIGHT).toContain(`--surface-card-${name}: ${hex};`);
+    }
+  });
+
+  test("every color choice has a thick white rim and drop shadow", () => {
+    const choiceBlock =
+      COMPONENTS.match(/\.card-color-choice\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(choiceBlock).toContain("border: 2px solid white");
+    expect(choiceBlock).toContain("box-shadow: 0 1px 4px rgb(0 0 0 / 0.32)");
+    expect(choiceBlock).not.toContain("border: 1px solid var(--border-input)");
+    expect(choiceBlock).not.toContain(
+      "box-shadow: inset 0 0 0 1px var(--border-hairline)",
+    );
+  });
+
+  test("the none swatch is a 1.5rem circle with a clipped solid-red slash", () => {
+    const noneBlock =
+      COMPONENTS.match(/\.card-color-choice--none\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(noneBlock).toContain("width: 1.5rem");
+    expect(noneBlock).toContain("height: 1.5rem");
+    expect(noneBlock).toContain("position: relative");
+    expect(noneBlock).toContain("overflow: hidden");
+    expect(noneBlock).not.toContain("width: auto");
+    expect(noneBlock).not.toContain("min-width");
+    expect(noneBlock).not.toContain("padding-inline");
+    expect(noneBlock).not.toContain("font-size");
+    expect(COMPONENTS).toContain(".card-color-choice--none::after");
+    const slashBlock =
+      COMPONENTS.match(/\.card-color-choice--none::after\s*\{[^}]*\}/)?.[0] ??
+      "";
+    expect(slashBlock).toContain("height: 0.125rem");
+    expect(slashBlock).toContain("border-radius: 999px");
+    expect(slashBlock).toContain("background: var(--pen-red)");
+    expect(slashBlock).not.toContain("color-mix");
+  });
+
+  test("no theme reintroduces glass: no blur, no translucent stock", () => {
+    for (const src of [PAPER, PAPER_NIGHT]) {
       expect(src).not.toContain("backdrop-filter");
       expect(src).not.toContain("blur(");
       expect(src).toMatch(/--surface-card:\s*#[0-9a-f]{6};/);
@@ -63,10 +145,7 @@ describe("theme parity", () => {
   });
 
   test("paper is cut, not moulded", () => {
-    for (const src of [
-      readFileSync(join(here, "paper.css"), "utf8"),
-      readFileSync(join(here, "paper-night.css"), "utf8"),
-    ]) {
+    for (const src of [PAPER, PAPER_NIGHT]) {
       expect(src).toContain("--radius-card: 2px");
       expect(src).toContain("--radius-btn: 2px");
       expect(src).toContain("--radius-input: 2px");
@@ -75,7 +154,7 @@ describe("theme parity", () => {
 });
 
 describe("paper components", () => {
-  const css = readFileSync(join(here, "../components/paper.css"), "utf8");
+  const css = COMPONENTS;
 
   test("defines the semantic surfaces", () => {
     expect(css).toContain(".paper-card");
@@ -101,7 +180,10 @@ describe("paper components", () => {
     expect(css).toContain(".stat--wip");
     expect(css).toContain(".stat--blocked");
     expect(css).toContain("var(--pen-amber)");
-    expect(css).not.toContain("border-radius: 999px");
+    const statBlocks = css.match(/\.stat[^{]*\{[^}]*\}/g) ?? [];
+    for (const block of statBlocks) {
+      expect(block).not.toContain("border-radius: 999px");
+    }
   });
 
   test("tags are highlighter marks, with an unmarked rest state", () => {

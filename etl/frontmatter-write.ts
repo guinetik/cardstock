@@ -16,6 +16,7 @@ export const MANAGED_KEYS = [
   "target",
   "archived",
   "archived_by",
+  "color",
 ] as const;
 export type ManagedKey = (typeof MANAGED_KEYS)[number];
 export type Managed = Partial<

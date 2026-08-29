@@ -97,6 +97,21 @@ describe("writeManaged", () => {
     });
     expect(parseFile(out).frontmatter.lane).toBe("design-review-next");
   });
+  test("writes a managed card color without disturbing custom frontmatter", () => {
+    const result = writeManaged(
+      "---\nid: 7\ncustom_key: keep\ncolor: rose\n---\n# Card\n",
+      { color: "blue" },
+    );
+    expect(result).toContain("color: blue");
+    expect(result).toContain("custom_key: keep");
+    expect(result).not.toContain("color: rose");
+  });
+  test("removes a managed card color when cleared", () => {
+    const result = writeManaged("---\nid: 7\ncolor: rose\n---\n# Card\n", {
+      color: null,
+    });
+    expect(result).not.toContain("color:");
+  });
 });
 
 describe("writeBody", () => {
@@ -146,6 +161,26 @@ describe("createNewCardMarkdown", () => {
     expect(parsed.frontmatter.rank).toBe("1");
     expect(parsed.body).toContain("# #153 — Add cards from the board");
     expect(parsed.body).toContain("Keep the Markdown round trip.");
+  });
+  test("includes color in newly created Markdown", () => {
+    const result = createNewCardMarkdown({
+      externalId: "153",
+      title: "Add cards from the board",
+      status: "backlog",
+      epic: "Board",
+      area: "Workflow",
+      tags: ["kind:feature", "internal"],
+      summary: "Create an issue without leaving its lane.",
+      bodyMd: "## Ask\n\nKeep the Markdown round trip.",
+      managed: {
+        lane: "now",
+        rank: 1,
+        priority: 2,
+        effort: "M",
+        color: "green",
+      },
+    });
+    expect(result).toContain("color: green");
   });
 });
 

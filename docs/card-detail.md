@@ -4,7 +4,7 @@ The card page is one `.paper-card--static`. Do not nest a `.paper-lane` inside i
 
 ## Fields
 
-Summary, ratings, dates, and audience sit in a labeled grid (`sm: 2 cols`, `lg: 3`). Labels are 10px uppercase grey. Controls use `--surface-input` and `--color-ink` so native selects stay readable in both themes.
+Summary, ratings, dates, audience, and color sit in a labeled grid (`sm: 2 cols`, `lg: 3`) with the color picker on its own row beneath. Labels are 10px uppercase grey. Controls use `--surface-input` and `--color-ink` so native selects stay readable in both themes. Color uses the shared picker (`fieldset` of native buttons with `aria-pressed`); saves through `updateCard` while `pending` disables the swatches.
 
 Epic / Area / Raised / Related is a hairline-ruled definition list with micro-caps labels, not a third nested card.
 
@@ -37,7 +37,7 @@ Below the article. Each block is `### YYYY-MM-DD HH:mm · email` plus a blockquo
 
 Last on the page. One `.paper-card--static` already wraps the issue; do not nest a lane or a second card around the log.
 
-Each `card_events` row is three columns: local clock in IBM Plex Mono (`28 Aug 02:28`, year only when it is not this year), kind as `.stat` (moved / restored / commented → `stat--info`, created → `stat--success`, everything else → `stat--muted`), then a sentence in Plex Sans: who, then what they did. Email local-parts are capitalised (`Joao`); `etl` stays `etl`. Facts are verbs, not field dumps — `set priority to P1`, `moved this from Now to Next`, `imported 156.md`. Never `JSON.stringify` the payload. Empty copy is `Nothing recorded.` Cap 50, newest first.
+Each `card_events` row is three columns: local clock in IBM Plex Mono (`28 Aug 02:28`, year only when it is not this year), kind as `.stat` (moved / restored / commented → `stat--info`, created → `stat--success`, everything else → `stat--muted`), then a sentence in Plex Sans: who, then what they did. Email local-parts are capitalised (`Joao`); `etl` stays `etl`. Facts are verbs, not field dumps — `set priority to P1`, `moved this from Now to Next`, `imported 156.md`, `changed the color`. Color edits never include the raw name (`blue`). Never `JSON.stringify` the payload. Empty copy is `Nothing recorded.` Cap 50, newest first.
 
 The clock is Decision 3 local time. `"use client"` still SSRs in the server zone, so the list mount-gates: kind/actor/facts render immediately; `<time suppressHydrationWarning>` keeps the SSR clock until mount, then `formatCardEvent` (no `timeZone`) redraws in the browser zone.
 

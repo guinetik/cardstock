@@ -227,6 +227,16 @@ describe("edited", () => {
       "changed priority, changed effort, changed the target date, and changed audience",
     );
   });
+
+  test("describes a color edit without exposing the raw color", () => {
+    const line = formatCardEvent(
+      ev({ kind: "edited", payload: { color: "blue" } }),
+      lanes,
+      opts,
+    );
+    expect(line.facts).toBe("changed the color");
+    expect(line.facts).not.toContain("blue");
+  });
 });
 
 describe("archived and restored", () => {

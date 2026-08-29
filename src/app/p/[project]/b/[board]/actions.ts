@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { loadBoard } from "@/lib/board-data";
+import { type CardColor, isCardColor } from "@/lib/card-color";
 import {
   formatCommentAt,
   joinIssueBody,
@@ -38,6 +39,8 @@ export interface CreateCardInput {
   targetLabel?: string;
   audience?: Card["audience"];
   tagIds?: string[];
+  /** Optional pastel tint; omit or null for the neutral paper surface. */
+  color?: CardColor | null;
 }
 
 export type CreateCardResult =
@@ -111,6 +114,9 @@ export async function createCard(
     !(["all", "internal"] as const).includes(input.audience)
   )
     return { ok: false, error: "Invalid audience." };
+  if (input.color != null && !isCardColor(input.color)) {
+    return { ok: false, error: "Invalid color." };
+  }
 
   const { data: lane } = await c.db
     .from("lanes")
@@ -184,6 +190,7 @@ export async function createCard(
     target_date: input.targetDate || null,
     target_label: input.targetLabel?.trim() || null,
     audience: input.audience ?? "all",
+    color: input.color ?? null,
     summary_edited_at: now,
     body_edited_at: now,
   };
@@ -197,7 +204,7 @@ export async function createCard(
       .from("cards")
       .insert({ ...row, external_id: String(nextId + attempt) })
       .select(
-        "id, external_id, title, summary, status, epic, epic_id, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at",
+        "id, external_id, title, summary, status, epic, epic_id, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at, color",
       )
       .single();
     card = result.data;
@@ -396,6 +403,8 @@ export interface CardPatch {
   target_label?: string | null;
   audience?: "all" | "internal";
   title?: string;
+  /** Pastel tint to persist, or null to clear back to neutral. */
+  color?: CardColor | null;
 }
 
 export async function updateCard(
@@ -408,6 +417,13 @@ export async function updateCard(
   for (const [k, v] of Object.entries(patch))
     if (v !== undefined) clean[k] = v === "" ? null : v;
   if (!Object.keys(clean).length) return { ok: true };
+  if (
+    Object.hasOwn(clean, "color") &&
+    clean.color != null &&
+    !isCardColor(clean.color)
+  ) {
+    return { ok: false, error: "Invalid color." };
+  }
   // Hand ownership of the summary to the app: the next import must not replace
   // these words with the frontmatter's. The exporter writes it back out.
   if ("summary" in clean) clean.summary_edited_at = new Date().toISOString();

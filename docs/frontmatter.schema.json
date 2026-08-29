@@ -249,6 +249,27 @@
           "type": "null"
         }
       ]
+    },
+    "color": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "rose",
+            "orange",
+            "amber",
+            "green",
+            "cyan",
+            "blue",
+            "indigo",
+            "violet",
+            "pink"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": ["id", "title", "status", "epic", "area", "tags"],

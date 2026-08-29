@@ -6,7 +6,9 @@ import {
   setCardTags,
   updateCard,
 } from "@/app/p/[project]/b/[board]/actions";
+import { CardColorPicker } from "@/components/board/card-color-picker";
 import { Button } from "@/components/ui/button";
+import { type CardColor, parseCardColor } from "@/lib/card-color";
 import { markHue } from "@/lib/types";
 
 interface CardLite {
@@ -20,6 +22,8 @@ interface CardLite {
   target_label: string | null;
   audience: string;
   archived_at: string | null;
+  /** Pastel tint, or null for the neutral paper surface. */
+  color: CardColor | null;
 }
 
 const field =
@@ -28,7 +32,7 @@ const fieldLabel =
   "mb-1 block text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]";
 
 /**
- * Inline editor for summary, ratings, dates, audience, and tags.
+ * Inline editor for summary, ratings, dates, audience, color, and tags.
  * Saves on blur/change; lives on the card page as part of the one sheet.
  * Tag groups rest as marked tags only; Edit tags opens the catalog.
  *
@@ -181,6 +185,15 @@ export function CardEditor({
             }
           />
         </label>
+      </div>
+      <div>
+        <span className={fieldLabel}>Color</span>
+        <CardColorPicker
+          value={parseCardColor(card.color)}
+          onChange={(next) => save({ color: next })}
+          disabled={pending}
+          label={`Color for card #${card.external_id}`}
+        />
       </div>
       <div className="space-y-2">
         {groups.map((g, i) => {

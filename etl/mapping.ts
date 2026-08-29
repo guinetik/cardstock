@@ -1,3 +1,4 @@
+import type { CardColor } from "../src/lib/card-color";
 import type { Frontmatter } from "./schema";
 
 export interface Mapping {
@@ -231,4 +232,11 @@ export function bodyOnImport(
   if (!prev) return fileBody;
   if (prev.body_edited_at) return undefined;
   return fileBody;
+}
+
+/** Map canonical frontmatter color to its nullable database mirror. */
+export function cardColorOnImport(
+  color: CardColor | null | undefined,
+): CardColor | null {
+  return color ?? null;
 }

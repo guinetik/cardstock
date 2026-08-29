@@ -58,15 +58,15 @@ The theme token contract gains nine semantic card-color tokens. Both `paper` and
 
 | Name | Light | Dark |
 |---|---|---|
-| rose | `#f6dfe3` | `#432b31` |
-| orange | `#f7e1ce` | `#443126` |
-| amber | `#f4e8bd` | `#413821` |
-| green | `#dcebd7` | `#293b2a` |
-| cyan | `#d7ebea` | `#263b3c` |
-| blue | `#dce7f4` | `#293747` |
-| indigo | `#e1e2f3` | `#303247` |
-| violet | `#e9dff1` | `#392d43` |
-| pink | `#f3deeb` | `#422d3b` |
+| rose | `#f2c6d0` | `#6b3945` |
+| orange | `#f2cfad` | `#6a4530` |
+| amber | `#eedb91` | `#625424` |
+| green | `#c5dfbd` | `#315a36` |
+| cyan | `#bce0df` | `#2c5960` |
+| blue | `#c4d8ee` | `#345575` |
+| indigo | `#ced0ed` | `#44496f` |
+| violet | `#ddc7eb` | `#573d6b` |
+| pink | `#edc7df` | `#683b5a` |
 
 These are opaque paper tints, not gradients or translucent glass. Existing ink tokens continue to provide text contrast in each theme.
 
@@ -74,7 +74,7 @@ These are opaque paper tints, not gradients or translucent glass. Existing ink t
 
 ## Editing experience
 
-Create a reusable color picker that displays “No color” plus nine compact named swatches. It is keyboard accessible, exposes selection through native button semantics, and does not rely on color alone: every swatch has a visible or accessible name and selected state.
+Create a reusable color picker that displays a circular “No color” swatch plus nine compact named swatches. Every circle uses a thick white rim and a soft drop shadow. Neutral is the same 1.5rem circle as every tint, filled with paper stock and crossed by a solid `--pen-red` diagonal slash. It is keyboard accessible, exposes selection through native `button` + `aria-pressed` semantics in a semantic `fieldset`, and does not rely on color alone: the accessible name remains exactly `No color`, and every tint swatch has an accessible name and selected state.
 
 The picker is used in:
 
