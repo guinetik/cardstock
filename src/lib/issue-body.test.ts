@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   formatCommentAt,
+  type IssueComment,
   joinIssueBody,
   splitIssueBody,
-  type IssueComment,
 } from "./issue-body";
 
 const ONE: IssueComment = {
