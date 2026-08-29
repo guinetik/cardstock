@@ -141,7 +141,12 @@ export function writeSheet(
         const wanted = new Set((want as string[]) ?? []);
         const kept = lines.slice(at.start + 1, at.end).filter((_ln, i) => {
           const t = fileTags[i];
-          return t != null && wanted.has(tagRef(t) ?? t);
+          if (t == null) return false;
+          // A tag the resolver has no opinion on (no board tag claims it)
+          // is not ours to remove — only a tag we recognise, and that this
+          // card no longer wants, drops out.
+          const ref = tagRef(t);
+          return ref == null ? true : wanted.has(ref);
         });
         const keptRefs = new Set(
           fileTags.map((t) => tagRef(t) ?? t).filter((r) => wanted.has(r)),

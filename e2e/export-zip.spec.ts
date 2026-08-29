@@ -1,0 +1,17 @@
+import { readFileSync } from "node:fs";
+import { expect, test } from "@playwright/test";
+import { unzipSync } from "fflate";
+import { signIn } from "./support/sign-in";
+
+test("the export zip gives back the sheets that were imported, byte for byte", async ({
+  page,
+}) => {
+  await signIn(page);
+  const res = await page.request.get("/p/demo/b/backlog/export.zip");
+  expect(res.ok()).toBe(true);
+  expect(res.headers()["content-type"]).toContain("application/zip");
+  const files = unzipSync(new Uint8Array(await res.body()));
+  const five = new TextDecoder().decode(files["5.md"]);
+  expect(five).toBe(readFileSync("examples/tracker/5.md", "utf8"));
+  expect(Object.keys(files).length).toBeGreaterThanOrEqual(13);
+});
