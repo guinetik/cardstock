@@ -158,6 +158,7 @@ for (const file of files) {
     color: cardColorOnImport(fm.color),
     source_path: full,
     source_hash: parsed.hash,
+    source_text: text,
     frontmatter_extra: extra,
   };
   const mapped = mapTags(fm, mapping, vocab);
