@@ -73,7 +73,11 @@ export function splitIssueBody(md: string): {
     i = skipBlanks(suffix, i);
   }
 
-  const leftover = suffix.slice(i).join("\n").replace(/^\s+/, "").replace(/\s+$/, "");
+  const leftover = suffix
+    .slice(i)
+    .join("\n")
+    .replace(/^\s+/, "")
+    .replace(/\s+$/, "");
   return { body, comments, leftover };
 }
 

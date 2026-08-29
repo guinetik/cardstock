@@ -124,7 +124,9 @@ test("filters: search narrows, P1 chip filters, clear restores", async ({
 
 test("filters: status menu narrows, clear restores", async ({ page }) => {
   const total = await page.locator("article:visible").count();
-  const status = page.locator("#filters").getByRole("group", { name: "Status" });
+  const status = page
+    .locator("#filters")
+    .getByRole("group", { name: "Status" });
   await status.locator("summary").click();
   await status.getByRole("button", { name: "wip", exact: true }).click();
   const wip = await page.locator("article:visible").count();

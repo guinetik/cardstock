@@ -201,9 +201,7 @@ export function CardItem(props: {
                 {card.epic}
               </span>
             )}
-            <span className={statusChipClass(card.status)}>
-              {card.status}
-            </span>
+            <span className={statusChipClass(card.status)}>{card.status}</span>
             {card.needs && (
               <span
                 className="stat stat--attention"
