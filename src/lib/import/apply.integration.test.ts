@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { createClient } from "@supabase/supabase-js";
+import { beforeAll, describe, expect, test } from "bun:test";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { applyPlan } from "./apply";
 import { loadBoardState } from "./board-state";
 import { planImport } from "./plan";
@@ -9,7 +9,12 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const local = !!url && !!key && /127\.0\.0\.1|localhost/.test(url);
 
 describe.skipIf(!local)("applyPlan against the local database", () => {
-  const db = createClient(url!, key!, { auth: { persistSession: false } });
+  // Built in `beforeAll`, not at collection time: a bare `bun test` without
+  // `.env.local` must skip this file, not throw before a test has run.
+  let db: SupabaseClient;
+  beforeAll(() => {
+    db = createClient(url!, key!, { auth: { persistSession: false } });
+  });
   const sheet = (id: number, fm: string, body = "## Ask\n\nHi.") => ({
     name: `${id}.md`,
     text: `---\nid: ${id}\ntitle: Card ${id}\nstatus: backlog\nepic: Apply\narea: A\n${fm}\n---\n# #${id} — Card ${id}\n\n${body}\n`,
@@ -43,7 +48,7 @@ describe.skipIf(!local)("applyPlan against the local database", () => {
     let plan = planImport(files, state);
     expect(plan.ok).toBe(true);
     const r = await applyPlan(db, state, plan, "test@example.test");
-    expect(r).toEqual({ created: 2, updated: 0 });
+    expect(r).toMatchObject({ created: 2, updated: 0 });
 
     state = await loadBoardState(db, boardId);
     expect(

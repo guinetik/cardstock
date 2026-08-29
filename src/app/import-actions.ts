@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { currentAccess } from "@/lib/access-server";
-import { applyPlan } from "@/lib/import/apply";
+import { ApplyError, applyPlan } from "@/lib/import/apply";
 import { loadBoardState } from "@/lib/import/board-state";
 import { planImport } from "@/lib/import/plan";
 import type { BoardState, Plan } from "@/lib/import/types";
@@ -16,6 +16,17 @@ export type ImportPlanResult =
 export type ImportApplyResult =
   | { ok: true; created: number; updated: number; href: string }
   | { error: string; href?: string };
+
+/**
+ * Filing is not one transaction: when it stops partway, what was written is
+ * still there. The message says how far it got so the next run is informed.
+ */
+function applyMessage(e: unknown): string {
+  const err = e as Error;
+  return err instanceof ApplyError
+    ? `Stopped after ${err.created} created, ${err.updated} changed: ${err.message}`
+    : err.message;
+}
 
 async function sheets(form: FormData) {
   const file = form.get("file");
@@ -76,7 +87,7 @@ export async function applyBoardImport(
     revalidatePath(b.href);
     return { ok: true, ...r, href: b.href };
   } catch (e) {
-    return { error: (e as Error).message };
+    return { error: applyMessage(e) };
   }
 }
 
@@ -183,6 +194,6 @@ export async function applyProjectImport(
     revalidatePath("/");
     return { ok: true, ...r, href };
   } catch (e) {
-    return { error: (e as Error).message, href };
+    return { error: applyMessage(e), href };
   }
 }

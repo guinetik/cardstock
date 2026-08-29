@@ -1,6 +1,10 @@
 /**
  * File the plan. Creates what is new first (lanes, groups, tags), then
  * writes cards in file order, then links. Never deletes anything.
+ *
+ * There is no transaction around this: one card at a time, through PostgREST.
+ * When a write fails partway, what was already filed stays filed — so the
+ * error carries the counts, and the caller says so out loud.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BoardState, Plan } from "./types";
@@ -9,14 +13,50 @@ function fail(what: string, error: { message: string } | null): never {
   throw new Error(`${what}: ${error?.message ?? "unknown error"}`);
 }
 
+/** A run that stopped partway, with what it had written by then. */
+export class ApplyError extends Error {
+  constructor(
+    message: string,
+    readonly created: number,
+    readonly updated: number,
+  ) {
+    super(message);
+    this.name = "ApplyError";
+  }
+}
+
+export interface ApplyCounts {
+  created: number;
+  updated: number;
+  /** Rows that only recorded the sheet — same content, different bytes. */
+  recalibrated: number;
+}
+
 export async function applyPlan(
   db: SupabaseClient,
   state: BoardState,
   plan: Plan,
   actor: string,
-): Promise<{ created: number; updated: number }> {
+): Promise<ApplyCounts> {
   if (!plan.ok)
     throw new Error("The plan has errors; fix the files and try again.");
+  const counts: ApplyCounts = { created: 0, updated: 0, recalibrated: 0 };
+  try {
+    await fileThePlan(db, state, plan, actor, counts);
+  } catch (e) {
+    throw new ApplyError((e as Error).message, counts.created, counts.updated);
+  }
+  return counts;
+}
+
+/** The writes themselves. `counts` is passed in so a throw still reports what landed. */
+async function fileThePlan(
+  db: SupabaseClient,
+  state: BoardState,
+  plan: Plan,
+  actor: string,
+  counts: ApplyCounts,
+): Promise<void> {
   const boardId = state.id;
 
   // Lanes: `create_work_lane` positions a new work lane before the first done/archive lane in one transaction.
@@ -95,8 +135,6 @@ export async function applyPlan(
     return r;
   };
 
-  let created = 0;
-  let updated = 0;
   const idByExternal = new Map<string, string>();
   for (const c of state.cards.values()) idByExternal.set(c.external_id, c.id);
   const pendingLinks: { from: string; relates: number[] }[] = [];
@@ -156,14 +194,24 @@ export async function applyPlan(
     if (row.patch.relates !== undefined)
       pendingLinks.push({ from: data.id, relates: row.patch.relates });
 
+    // A recalibrate row rewrites nothing a person would recognise — it just
+    // records the sheet — so it earns no history entry and no "changed" count.
+    if (prev && row.changes.length === 0) {
+      counts.recalibrated++;
+      continue;
+    }
     const { error: ee } = await db.from("card_events").insert({
       card_id: data.id,
       actor,
       kind: prev ? "imported" : "created",
-      payload: { source: `${row.id}.md`, hash: row.hash, changes: row.changes },
+      payload: {
+        source: `${row.id}.md`,
+        hash: row.hash,
+        changes: row.changes,
+      },
     });
     if (ee) fail(`#${row.id} event`, ee);
-    prev ? updated++ : created++;
+    prev ? counts.updated++ : counts.created++;
   }
 
   for (const { from, relates } of pendingLinks) {
@@ -182,5 +230,4 @@ export async function applyPlan(
       if (ie) fail("links", ie);
     }
   }
-  return { created, updated };
 }
