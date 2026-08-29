@@ -1,3 +1,4 @@
+import { isCardStatus } from "./card-status";
 import { PRIORITY_LABEL } from "./types";
 
 /** Board lane fields History needs to turn ids/keys into names. */
@@ -34,6 +35,7 @@ export type FormattedCardEvent = {
 const EDIT_ORDER = [
   "priority",
   "effort",
+  "status",
   "target_date",
   "target_label",
   "audience",
@@ -243,6 +245,9 @@ function editField(key: EditFieldKey, value: unknown): string {
       if (value === "L" || value === "M" || value === "H")
         return `set effort to ${value}`;
       return "changed effort";
+    case "status":
+      if (isCardStatus(value)) return `set status to ${value}`;
+      return "changed status";
     case "target_date":
       return typeof value === "string" && value
         ? `set the target date to ${value}`

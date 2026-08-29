@@ -200,6 +200,7 @@ describe("edited", () => {
             summary: "hi",
             priority: 2,
             effort: "M",
+            status: "wip",
             tags: ["t1"],
             body: true,
             extra_uuid: "nope",
@@ -209,7 +210,7 @@ describe("edited", () => {
         opts,
       ).facts,
     ).toBe(
-      "set priority to P2, set effort to M, rewrote the summary, changed the tags, edited the write-up, and changed extra_uuid",
+      "set priority to P2, set effort to M, set status to wip, rewrote the summary, changed the tags, edited the write-up, and changed extra_uuid",
     );
   });
 
@@ -218,13 +219,19 @@ describe("edited", () => {
       formatCardEvent(
         ev({
           kind: "edited",
-          payload: { priority: 9, effort: "X", target_date: "", audience: "x" },
+          payload: {
+            priority: 9,
+            effort: "X",
+            status: "nope",
+            target_date: "",
+            audience: "x",
+          },
         }),
         lanes,
         opts,
       ).facts,
     ).toBe(
-      "changed priority, changed effort, changed the target date, and changed audience",
+      "changed priority, changed effort, changed status, changed the target date, and changed audience",
     );
   });
 
