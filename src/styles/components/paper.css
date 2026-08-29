@@ -880,17 +880,21 @@
   .folder-tab:is(:hover, :focus-visible) {
     padding-top: 0.7rem;
   }
+  .folder--section .folder-tab:is(:hover, :focus-visible) {
+    padding-top: 0.5rem;
+  }
   .folder-tab:focus-visible {
     outline: 2px solid var(--pen-blue);
     outline-offset: 2px;
   }
-  .folder:has(.folder-tab:is(:hover, :focus-visible)) {
+  .folder:not(.folder--section):has(.folder-tab:is(:hover, :focus-visible)) {
     translate: 0 var(--motion-rise);
   }
-  .folder:has(.folder-tab:is(:hover, :focus-visible)) .folder-body {
+  .folder:not(.folder--section):has(.folder-tab:is(:hover, :focus-visible))
+    .folder-body {
     box-shadow: var(--shadow-lift);
   }
-  .folder:has(.folder-tab:active) {
+  .folder:not(.folder--section):has(.folder-tab:active) {
     translate: 0 var(--motion-press-y);
   }
   .folder-body {
@@ -1076,22 +1080,68 @@
   }
 
   /*
-   * ------------------------------------------------- the folder, opened
-   * The project page is the same folder laid open: the tab is the title, the
-   * boards are wide binders carrying the tally of their lanes.
+   * ------------------------------------------------- the project page
+   * The project is a letterhead (name, blurb, stamp). Each chapter below
+   * is a quiet section folder — same manila, Plex tab, no hover-lift.
    */
-  .folder--open .folder-tab {
-    font-size: 22px;
-    padding: 0.55rem 1.25rem 0.5rem;
+  .letterhead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem 1.5rem;
+    align-items: start;
+    margin: 0 0 1.75rem;
+  }
+  .letterhead h1 {
+    font-size: 1.85rem;
+    line-height: 1.15;
+  }
+  .letterhead-aside {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0.15rem;
+  }
+  .folder--section + .folder--section {
+    margin-top: 1.25rem;
+  }
+  .folder--section .folder-tab {
+    font-family: var(--font-sys);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: none;
     cursor: default;
   }
-  .folder--open .folder-tab > h1 {
+  .folder--section .folder-tab > h2 {
+    font-family: inherit;
     font-size: inherit;
     font-weight: inherit;
     letter-spacing: inherit;
+    text-transform: none;
   }
-  .folder--open .folder-body {
+  .folder-tab-dot {
+    color: var(--color-grey-faint);
+  }
+  .folder-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--color-grey);
+  }
+  .folder--section .folder-body {
     padding: 1.1rem 1.25rem 1.25rem;
+  }
+  .folder--section .folder-aside {
+    justify-content: flex-end;
+  }
+  .graph-board {
+    margin: 0 0 0.45rem;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-grey);
+  }
+  .graph-board + .graph {
+    margin-top: 0;
   }
   .binder--wide {
     width: 100%;
@@ -1127,25 +1177,13 @@
   }
 
   /*
-   * ------------------------------------------------------ the roster binder
-   * Who can open this folder, drawn as a binder of full-width rows under the
-   * open folder. Name as a tab, address in mono, role in the margin. The last
-   * row is blank stock — that is how you invite someone.
+   * ------------------------------------------------------ the roster
+   * Who can open this folder, as punched slips on the People section's stock.
+   * Name as a tab, address in mono, role in the margin. The last row is blank
+   * stock — that is how you invite someone.
    */
   .roster {
-    margin-top: 1.75rem;
-  }
-  .roster-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    padding-bottom: 0.55rem;
-  }
-  .roster .binder-name {
-    font-family: var(--font-heading);
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    margin-top: 0;
   }
   .roster-slips {
     display: flex;
@@ -1541,6 +1579,22 @@
     text-transform: uppercase;
     color: var(--color-grey-faint);
   }
+  .folder--section .cta,
+  .folder--section .danger {
+    margin: 0;
+    padding: 0.35rem 0 0.85rem;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .folder--section .danger {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-strong);
+  }
+  .folder--section .cta-title {
+    font-size: 18px;
+  }
 
   .eyebrow {
     font-family: var(--font-mono);
@@ -1549,25 +1603,6 @@
     letter-spacing: 0.11em;
     text-transform: uppercase;
     color: var(--color-grey-faint);
-  }
-  .section-head {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    margin-bottom: 0.6rem;
-    padding-bottom: 0.35rem;
-    border-bottom: 1px solid var(--border-strong);
-  }
-  .section-head > h2 {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .section-head > .count {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--color-grey);
   }
 }
 
@@ -1600,6 +1635,12 @@
 }
 
 @media (max-width: 40rem) {
+  .letterhead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .letterhead-aside {
+    justify-content: flex-start;
+  }
   .folder-body {
     grid-template-columns: minmax(0, 1fr);
   }
