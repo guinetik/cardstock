@@ -1,5 +1,6 @@
 "use client";
 
+import { Inbox, Upload } from "lucide-react";
 import { useState, useTransition } from "react";
 import {
   applyBoardImport,
@@ -77,10 +78,11 @@ export function BoardImportDialog({
         render={
           <button
             type="button"
-            className="binder-import paper-link"
+            className="binder-tool"
             aria-label={`Import into ${boardName}`}
+            title={`Import into ${boardName}`}
           >
-            ↑
+            <Upload size={14} aria-hidden="true" />
           </button>
         }
       />
@@ -122,18 +124,20 @@ export function BoardImportDialog({
         ) : (
           <div className="import-drop">
             <label
-              className="dropzone"
+              className="dropzone dropzone--drawer"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
                 choose(e.dataTransfer.files[0] ?? null);
               }}
             >
-              <span>
+              <Inbox size={20} aria-hidden="true" className="dropzone-icon" />
+              <span className="dropzone-say">
                 {pending
                   ? "Reading the sheets…"
-                  : "Drop a zip of the tracker here — one <n>.md per card — or choose one."}
+                  : `Clip sheets into ${boardName}.`}
               </span>
+              <span className="dropzone-alt">or choose a file</span>
               <input
                 type="file"
                 accept=".zip,application/zip"

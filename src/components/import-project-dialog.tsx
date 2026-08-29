@@ -1,5 +1,6 @@
 "use client";
 
+import { Inbox } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState, useTransition } from "react";
@@ -115,53 +116,60 @@ export function ImportProjectDialog({
             </div>
           </>
         ) : (
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <div className="import-drop">
+            <div className="import-binder">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label
+                  htmlFor="import-project-name"
+                  className="block space-y-1.5 text-sm"
+                >
+                  <span className="font-medium">Name</span>
+                  <Input
+                    id="import-project-name"
+                    required
+                    maxLength={80}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="What the team calls it"
+                  />
+                </label>
+                <label
+                  htmlFor="import-board-name"
+                  className="block space-y-1.5 text-sm"
+                >
+                  <span className="font-medium">First board</span>
+                  <Input
+                    id="import-board-name"
+                    required
+                    maxLength={80}
+                    value={boardName}
+                    onChange={(e) => setBoardName(e.target.value)}
+                    placeholder="Backlog"
+                  />
+                </label>
+              </div>
               <label
-                htmlFor="import-project-name"
-                className="block space-y-1.5 text-sm"
-              >
-                <span className="font-medium">Name</span>
-                <Input
-                  id="import-project-name"
-                  required
-                  maxLength={80}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="What the team calls it"
-                />
-              </label>
-              <label
-                htmlFor="import-board-name"
-                className="block space-y-1.5 text-sm"
-              >
-                <span className="font-medium">First board</span>
-                <Input
-                  id="import-board-name"
-                  required
-                  maxLength={80}
-                  value={boardName}
-                  onChange={(e) => setBoardName(e.target.value)}
-                  placeholder="Backlog"
-                />
-              </label>
-            </div>
-            <div className="import-drop">
-              <label
-                className={`dropzone${ready ? "" : " opacity-50"}`}
+                className={`dropzone dropzone--drawer${ready ? "" : " opacity-50"}`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
                   if (ready) choose(e.dataTransfer.files[0] ?? null);
                 }}
               >
-                <span>
-                  {!ready
-                    ? "Name the project and its first board, then drop the zip."
-                    : pending
-                      ? "Reading the sheets…"
-                      : "Drop a zip of the tracker here — one <n>.md per card — or choose one."}
+                <Inbox size={20} aria-hidden="true" className="dropzone-icon" />
+                <span className="dropzone-say">
+                  {!ready ? (
+                    "Name the project and its first board, then clip the sheets in."
+                  ) : pending ? (
+                    "Reading the sheets…"
+                  ) : (
+                    <>
+                      Clip your sheets in — a zip of <code>&lt;n&gt;.md</code>{" "}
+                      files, one per card.
+                    </>
+                  )}
                 </span>
+                <span className="dropzone-alt">or choose a file</span>
                 <input
                   type="file"
                   accept=".zip,application/zip"
@@ -176,8 +184,8 @@ export function ImportProjectDialog({
                   {planned.error}
                 </p>
               )}
-              {contract}
             </div>
+            {contract}
           </div>
         )}
       </DialogContent>

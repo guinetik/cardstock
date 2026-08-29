@@ -304,15 +304,20 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
               decisions written into its frontmatter. Nothing here is locked in.
             </p>
           </div>
-          <button
-            type="button"
-            className="cta-button"
-            aria-disabled="true"
-            title="Not available yet"
-          >
-            Download .zip
-          </button>
-          <span className="cta-note">Coming soon</span>
+          {canManage ? (
+            <a href={`${href}/export.zip`} className="cta-button" download>
+              Download .zip
+            </a>
+          ) : (
+            <button type="button" className="cta-button" aria-disabled="true">
+              Download .zip
+            </button>
+          )}
+          <span className="cta-note">
+            {canManage
+              ? `One folder per board · ${plural(cardCount, "sheet", "sheets")}`
+              : "Owners and project admins"}
+          </span>
         </section>
         <section className="danger" aria-labelledby="danger-heading">
           <div className="min-w-0">

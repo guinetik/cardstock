@@ -46,44 +46,46 @@ export function SheetContract() {
   return (
     <aside className="contract" aria-label="Sheet contract">
       <p className="contract-lede">
-        One <code>&lt;n&gt;.md</code> per card, named by its id, frontmatter
-        between <code>---</code> fences, the body below. Any folder depth. Keys
-        the schema does not know are kept verbatim.
+        A sheet is a markdown file: frontmatter between <code>---</code> fences,
+        the body below. Keys the schema does not know are kept verbatim.
       </p>
-      <dl className="contract-keys">
-        {keys
-          .filter((k) => required.has(k))
-          .map((k) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>
-                {line(k)} <span className="stat stat--blocked">required</span>
-              </dd>
-            </div>
-          ))}
-        {keys
-          .filter((k) => !required.has(k) && !managed.has(k))
-          .map((k) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{line(k)}</dd>
-            </div>
-          ))}
-        {keys
-          .filter((k) => managed.has(k))
-          .map((k) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>
-                {line(k)}{" "}
-                <span className="stat stat--info">written by the board</span>
-              </dd>
-            </div>
-          ))}
-      </dl>
-      <pre className="contract-sample">
-        <code>{SAMPLE}</code>
-      </pre>
+      <details className="contract-fold">
+        <summary>How a sheet is written</summary>
+        <dl className="contract-keys">
+          {keys
+            .filter((k) => required.has(k))
+            .map((k) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>
+                  {line(k)} <span className="stat stat--blocked">required</span>
+                </dd>
+              </div>
+            ))}
+          {keys
+            .filter((k) => !required.has(k) && !managed.has(k))
+            .map((k) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{line(k)}</dd>
+              </div>
+            ))}
+          {keys
+            .filter((k) => managed.has(k))
+            .map((k) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>
+                  {line(k)}{" "}
+                  <span className="stat stat--info">written by the board</span>
+                </dd>
+              </div>
+            ))}
+        </dl>
+        <pre className="contract-sample">
+          <code>{SAMPLE}</code>
+        </pre>
+      </details>
     </aside>
   );
 }

@@ -1,3 +1,4 @@
+import { Download, Gauge } from "lucide-react";
 import Link from "next/link";
 import { BoardImportDialog } from "@/components/board-import-dialog";
 import { SheetContract } from "@/components/sheet-contract";
@@ -21,7 +22,7 @@ export interface BinderProject {
   name: string;
   description: string | null;
   boards: BinderBoard[];
-  /** Owner or project admin — controls the ↓/↑ import/export affordances. */
+  /** Owner or project admin — controls the download/import tools on the foot. */
   canManage: boolean;
 }
 
@@ -63,30 +64,35 @@ export function Binder({ project }: { project: BinderProject }) {
                   <span className="binder-count">
                     {plural(b.cards, "card", "cards")}
                   </span>
-                  {project.canManage && (
-                    <span className="binder-io">
-                      <a
-                        href={`${href}/b/${b.slug}/export.zip`}
-                        className="binder-export paper-link"
-                        aria-label={`Download ${b.name} as sheets`}
-                        title="Download sheets"
-                      >
-                        ↓
-                      </a>
-                      <BoardImportDialog
-                        boardId={b.id}
-                        boardName={b.name}
-                        contract={contract}
-                      />
-                    </span>
-                  )}
-                  <Link
-                    href={`${href}/b/${b.slug}/cockpit`}
-                    className="binder-cockpit paper-link"
-                    aria-label={`${b.name} cockpit`}
-                  >
-                    Take stock
-                  </Link>
+                  <span className="binder-io">
+                    {project.canManage && (
+                      <>
+                        <a
+                          href={`${href}/b/${b.slug}/export.zip`}
+                          className="binder-tool"
+                          aria-label={`Download ${b.name} as sheets`}
+                          title={`Download ${b.name} as sheets`}
+                          download
+                        >
+                          <Download size={14} aria-hidden="true" />
+                        </a>
+                        <BoardImportDialog
+                          boardId={b.id}
+                          boardName={b.name}
+                          contract={contract}
+                        />
+                      </>
+                    )}
+                    <Link
+                      href={`${href}/b/${b.slug}/cockpit`}
+                      className="binder-tool binder-tool--pen"
+                      aria-label={`${b.name} cockpit`}
+                      title={`Take stock of ${b.name}`}
+                    >
+                      <Gauge size={14} aria-hidden="true" />
+                      Take stock
+                    </Link>
+                  </span>
                 </div>
               </li>
             ))}

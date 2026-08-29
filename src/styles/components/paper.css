@@ -1018,9 +1018,11 @@
   .binder {
     position: relative;
     display: flex;
-    width: 14rem;
+    /* Wide enough for the count and the three keys on the foot, in one row. */
+    width: 15.5rem;
     max-width: 100%;
-    min-height: 7.25rem;
+    /* Tall enough that the toolbar on the foot never crowds the board name. */
+    min-height: 8rem;
     flex-direction: column;
     padding: 0.8rem 0.85rem 0.7rem calc(0.7rem + 0.85rem);
     background: var(--surface-card);
@@ -1100,15 +1102,20 @@
   }
   .binder-foot {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
     margin-top: auto;
     padding-top: 0.6rem;
   }
+  /* The wide binder on the project page still writes its links as links. */
+  .binder--wide .binder-foot {
+    align-items: baseline;
+  }
   .binder-count {
     font-family: var(--font-mono);
     font-size: 11px;
+    white-space: nowrap;
     color: var(--color-grey);
   }
   /* Take stock: the cockpit, a link of its own above the cover link. */
@@ -1117,19 +1124,55 @@
     z-index: 1;
     font-size: 12px;
   }
+  /*
+   * The foot is a toolbar: the count written in the margin, the keys at the
+   * fore-edge. It sits above the cover link, so pressing a key does not open
+   * the board underneath it.
+   */
   .binder-io {
     position: relative;
     z-index: 1;
     display: inline-flex;
-    gap: 10px;
+    align-items: center;
+    gap: 6px;
     margin-left: auto;
-    margin-right: 10px;
-    font-family: var(--font-mono);
-    font-size: 12px;
   }
-  .binder-import,
-  .binder-export {
+  /* An ink-filled key, 28 square, the glyph cut out of it in stock. */
+  .binder-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0;
+    background: var(--color-ink);
+    border: 1px solid var(--color-ink);
+    border-radius: var(--radius-btn);
+    color: var(--surface-card);
     line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: translate var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  .binder-tool:hover {
+    translate: 0 var(--motion-press-y);
+  }
+  .binder-tool:focus-visible {
+    outline: 2px solid var(--pen-blue);
+    outline-offset: 2px;
+  }
+  /* Take stock is the cockpit, so it is written in the red pen — and named. */
+  .binder-tool--pen {
+    gap: 5px;
+    padding: 0 9px;
+    background: var(--pen-red);
+    border-color: var(--pen-red);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
   .dropzone {
     display: grid;
@@ -1141,6 +1184,36 @@
     text-align: center;
     cursor: pointer;
   }
+  /* The in-tray: the same drawer the inbox lane is, cut into the page. */
+  .dropzone--drawer {
+    align-content: center;
+    gap: 6px;
+    min-height: 148px;
+    border: 0;
+    box-shadow: var(--shadow-well);
+  }
+  .dropzone-icon {
+    color: var(--color-grey);
+  }
+  .dropzone-say {
+    max-width: 22rem;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--color-ink2);
+  }
+  .dropzone-alt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-grey-faint);
+  }
+  /* Left pane of an import: the binder being filled — fields, then the tray. */
+  .import-binder {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+  }
   .import-drop {
     display: grid;
     gap: 16px;
@@ -1148,6 +1221,22 @@
   }
   .contract {
     font-size: 12px;
+  }
+  /* The reference sheet, folded: one line of prose, the table behind a crease. */
+  .contract-fold {
+    margin-top: 10px;
+    border-top: 1px solid var(--border-hairline);
+  }
+  .contract-fold > summary {
+    padding-top: 8px;
+    font-family: var(--font-heading);
+    font-size: 15px;
+    color: var(--color-ink-strong);
+    cursor: pointer;
+  }
+  .contract-fold > summary:focus-visible {
+    outline: 2px solid var(--pen-blue);
+    outline-offset: 2px;
   }
   .contract-keys {
     display: grid;
