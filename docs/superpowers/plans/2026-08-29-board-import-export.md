@@ -2582,3 +2582,14 @@ Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
 - **Spec coverage.** Semantics (Task 5, 6), dry run + re-plan on apply (Task 7), all-or-nothing (Task 5 `ok`, Task 6 throws), `source_text` + rebase (Tasks 6, 8, 11), line-edit export with the three body modes (Task 3), schema as contract incl. drift test, generated contract panel, `tracker-item` dropped (Tasks 1, 9), `fflate` + 4 MB cap (Task 4), lane/group/tag creation rules (Tasks 5, 6), no compensating delete + "exists and is empty" message (Tasks 7, 10), binder affordances and the two dialogs (Tasks 9, 10), owner/member gates (Task 7), CLI rebuilt on shared modules (Task 11), e2e for import-twice, changed row, export byte-identity, project import (Tasks 8–10). The seven writer guarantees in the spec map to the nine tests in Task 3 plus the CLI proof in Task 11 Step 4.
 - **Gaps accepted.** The e2e "post a comment → export diff is only the comment" guarantee is covered at unit level (Task 3) rather than end to end; adding it to `e2e/export-zip.spec.ts` is a small follow-up once the comment composer is stable under Playwright.
 - **Type consistency.** `Plan`/`PlanRow`/`CardPatch` defined in Task 4 and used unchanged in 5, 6, 7, 9, 11; `CardSheet`/`SHEET_KEYS`/`SHEET_KEY_ORDER` from Task 2 used in 3, 5, 8; `sheetFromCard` lives in `plan.ts` (Task 5) and is imported by 8 and 11; `writeSheet(sourceText, sheet, { tagRef })` signature identical in 3, 8, 11; `applyPlan(db, state, plan, actor)` identical in 6, 7, 11; `BinderBoard.id` added in Task 9 and supplied by `page.tsx`.
+
+---
+
+### Task 12: UX pass — binder toolbar, project download, fichário import dialogs (added 2026-08-29 from owner feedback)
+
+Full brief: `.superpowers/sdd/2026-08-29-board-import-export/task-12-brief.md` (kept in the workspace; summary here).
+
+- Binder foot becomes a toolbar: ink-filled square icon buttons for **Download** / **Import** (managers only), a red pen button for **Take stock**. The `↓ ↑` glyphs go.
+- Project page "Take this project home" is live: new `GET /p/[project]/export.zip` zips every board as `<board-slug>/<n>.md` via a shared `exportBoardEntries(db, boardId, prefix)` that the board route also uses.
+- Both import dialogs split into two panes: the binder (fields + a dropzone drawn as Paper's inbox drawer, copy in the fichário voice) and a folded reference sheet (`<details>` "How a sheet is written" holding the key table and sample). Instructions never sit inline with the form.
+- e2e: `e2e/project-export.spec.ts` (folder-per-board zip, byte-identical `backlog/5.md`; settings link). Existing import/export/shell specs keep passing.
