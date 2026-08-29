@@ -8,7 +8,6 @@ import {
   planBoardImport,
 } from "@/app/import-actions";
 import { ImportPlanTable } from "@/components/import-plan-table";
-import { SheetContract } from "@/components/sheet-contract";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,9 +25,16 @@ import {
 export function BoardImportDialog({
   boardId,
   boardName,
+  contract,
 }: {
   boardId: string;
   boardName: string;
+  /**
+   * The sheet contract, pre-rendered server-side by the caller (a server
+   * component) so `jsonSchema()`/zod never ship to the client bundle — this
+   * component is `"use client"` and would otherwise pull the whole schema in.
+   */
+  contract: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -141,7 +147,7 @@ export function BoardImportDialog({
                 {planned.error}
               </p>
             )}
-            <SheetContract />
+            {contract}
           </div>
         )}
       </DialogContent>

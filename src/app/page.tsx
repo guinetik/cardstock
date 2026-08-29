@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Binder, type BinderProject } from "@/components/binder";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { ImportProjectDialog } from "@/components/import-project-dialog";
-import { canManageProject } from "@/lib/access";
+import { manageableProjectIds } from "@/lib/access-server";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
 /** The shape `boards(..., cards(count))` comes back in. */
@@ -20,21 +20,15 @@ export default async function Home() {
   const member = await currentMember();
   if (!member) redirect("/login?error=member");
   const db = await supabaseServer();
-  const [{ data }, { data: memberships }] = await Promise.all([
+  const [{ data }, canManage] = await Promise.all([
     db
       .from("projects")
       .select(
         "id, slug, name, description, boards(id, slug, name, cards(count))",
       )
       .order("name"),
-    db
-      .from("project_members")
-      .select("project_id, role")
-      .eq("member_id", member.id),
+    manageableProjectIds(member),
   ]);
-  const roleByProject = new Map(
-    (memberships ?? []).map((m) => [m.project_id as string, m.role as string]),
-  );
   const projects: (BinderProject & { id: string })[] = (
     (data ?? []) as ProjectRow[]
   ).map((p) => ({
@@ -42,10 +36,7 @@ export default async function Home() {
     slug: p.slug,
     name: p.name,
     description: p.description,
-    canManage: canManageProject({
-      siteRole: member.role,
-      projectRole: roleByProject.get(p.id) ?? null,
-    }),
+    canManage: canManage(p.id),
     boards: [...(p.boards ?? [])]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((b) => ({

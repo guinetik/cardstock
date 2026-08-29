@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BoardImportDialog } from "@/components/board-import-dialog";
+import { SheetContract } from "@/components/sheet-contract";
 
 /**
  * A project drawn as a dossier: a manila folder whose tab is the project's
@@ -32,6 +33,9 @@ export function Binder({ project }: { project: BinderProject }) {
   const boards = project.boards;
   const cards = boards.reduce((n, b) => n + b.cards, 0);
   const href = `/p/${project.slug}`;
+  // Rendered once per project (a server component), not per board: the
+  // schema it reads off stays out of the client bundle either way.
+  const contract = <SheetContract />;
   return (
     <li className={`folder${boards.length ? "" : " folder--empty"}`}>
       <Link href={href} className="folder-tab">
@@ -69,7 +73,11 @@ export function Binder({ project }: { project: BinderProject }) {
                       >
                         ↓
                       </a>
-                      <BoardImportDialog boardId={b.id} boardName={b.name} />
+                      <BoardImportDialog
+                        boardId={b.id}
+                        boardName={b.name}
+                        contract={contract}
+                      />
                     </span>
                   )}
                   <Link

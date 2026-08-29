@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Binder, type BinderProject } from "@/components/binder";
+import { manageableProjectIds } from "@/lib/access-server";
 import { memberLabel } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { PortraitEditor } from "./portrait-editor";
@@ -20,16 +21,20 @@ export default async function ProfilePage() {
   const member = await currentMember();
   if (!member) redirect("/login?error=member");
   const db = await supabaseServer();
-  const { data } = await db
-    .from("projects")
-    .select("id, slug, name, description, boards(id, slug, name, cards(count))")
-    .order("name");
+  const [{ data }, canManage] = await Promise.all([
+    db
+      .from("projects")
+      .select(
+        "id, slug, name, description, boards(id, slug, name, cards(count))",
+      )
+      .order("name"),
+    manageableProjectIds(member),
+  ]);
   const projects: BinderProject[] = ((data ?? []) as ProjectRow[]).map((p) => ({
     slug: p.slug,
     name: p.name,
     description: p.description,
-    // Read-only display here; the import/export affordances only ever render on the projects page.
-    canManage: false,
+    canManage: canManage(p.id),
     boards: [...(p.boards ?? [])]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((b) => ({

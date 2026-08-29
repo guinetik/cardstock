@@ -37,3 +37,24 @@ export async function currentAccess(
     canManage: canManageProject(actor),
   };
 }
+
+/** Which of the member's projects they can manage (owner: all; otherwise their admin memberships). */
+export async function manageableProjectIds(member: {
+  id: string;
+  role: string;
+}): Promise<(projectId: string) => boolean> {
+  if (member.role === "owner") return () => true;
+  const db = await supabaseServer();
+  const { data } = await db
+    .from("project_members")
+    .select("project_id, role")
+    .eq("member_id", member.id);
+  const roleByProject = new Map(
+    (data ?? []).map((m) => [m.project_id as string, m.role as ProjectRole]),
+  );
+  return (projectId: string) =>
+    canManageProject({
+      siteRole: member.role,
+      projectRole: roleByProject.get(projectId) ?? null,
+    });
+}
