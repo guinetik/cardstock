@@ -80,16 +80,17 @@ describe("validateFrontmatter", () => {
     expect(() =>
       validateFrontmatter({ id: "x", title: "", tags: ["designer"] }, "bad.md"),
     ).toThrow(/bad\.md/);
-    expect(() =>
-      validateFrontmatter({
-        id: 1,
-        title: "t",
-        status: "backlog",
-        epic: "E",
-        area: "A",
-        tags: ["designer"],
-      }),
-    ).toThrow(/tracker-item/);
+  });
+  test("tags need not include tracker-item", () => {
+    const { data } = validateFrontmatter({
+      id: 1,
+      title: "t",
+      status: "backlog",
+      epic: "e",
+      area: "a",
+      tags: ["bug"],
+    });
+    expect(data.tags).toEqual(["bug"]);
   });
   test("date-ish keys accept free text; isoOrNull extracts the ISO ones", () => {
     const { data } = validateFrontmatter({
