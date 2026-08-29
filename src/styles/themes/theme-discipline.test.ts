@@ -227,6 +227,16 @@ describe("paper components", () => {
     expect(css).toContain(".roster-punch");
     expect(css).toContain(".roster-you");
   });
+
+  test("the project page is a letterhead and section folders", () => {
+    expect(css).toContain(".letterhead");
+    expect(css).toContain(".folder--section");
+    expect(css).not.toContain(".folder--open");
+    expect(css).not.toContain(".section-head");
+    expect(css).toContain(
+      ".folder:not(.folder--section):has(.folder-tab:is(:hover, :focus-visible))",
+    );
+  });
 });
 
 describe("card detail page chrome", () => {

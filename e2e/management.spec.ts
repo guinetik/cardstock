@@ -74,7 +74,7 @@ test("the project page lists members and invites someone without sending email",
   try {
     await signIn(page);
     await page.goto("/p/demo");
-    await expect(page.getByRole("heading", { name: "People" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "people" })).toBeVisible();
     await expect(
       page.getByText(OWNER.split("@")[0] ?? OWNER, { exact: true }),
     ).toBeVisible();
@@ -97,4 +97,30 @@ test("the project page lists members and invites someone without sending email",
   } finally {
     await dropMember(PROJECT_INVITED);
   }
+});
+
+test("the project page is a letterhead and four section folders", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/p/demo");
+  await expect(
+    page.getByRole("heading", { name: "Demo", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "boards", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "people", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "concepts", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "settings", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Take this project home" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Danger zone" })).toBeVisible();
 });
