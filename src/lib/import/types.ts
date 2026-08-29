@@ -34,7 +34,9 @@ export interface ExistingCard {
   shipped_on: string | null;
   needs: string | null;
   summary: string | null;
+  summary_edited_at: string | null;
   body_md: string | null;
+  body_edited_at: string | null;
   lane_id: string | null;
   rank: number;
   priority: 1 | 2 | 3 | null;

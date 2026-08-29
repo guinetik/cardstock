@@ -3,9 +3,13 @@
  *
  *   bun run etl:import --project <slug> --board <slug> --source <dir> [--dry-run]
  *
- * The same planner the projects page uses, with one difference the spec keeps:
- * this is a *sync*, so a file moves an existing card between lanes only when
- * its `lane:` differs from what it said at the last sync (`lane_from_source`).
+ * The same planner the projects page uses, with two differences the spec
+ * keeps for a sync (the web import is deliberately sheet-wins):
+ *   - a file moves an existing card between lanes only when its `lane:`
+ *     differs from what it said at the last sync (`lane_from_source`);
+ *   - a file never overwrites a summary or body a person has edited in the
+ *     app (`summary_edited_at` / `body_edited_at`), since the DB owns those
+ *     once that happens.
  * Everything else the file states wins, as on the page.
  */
 import { readdir, readFile } from "node:fs/promises";
@@ -51,15 +55,35 @@ const baseOf = new Map(
 );
 
 const plan = planImport(files, state, mapping);
-// Sync rule: an existing card only moves when the file changed its mind.
+// Sync rule: an existing card only moves lane when the file changed its
+// mind, and a file never overwrites a summary or body a person has edited
+// in the app — the DB owns those once that happens, same as the old CLI.
+let recalibrated = 0;
 for (const row of plan.rows) {
-  if (row.verdict !== "changed" || !row.patch.laneKey) continue;
-  if (!laneMoveFromSource(row.patch.laneKey, baseOf.get(row.id))) {
+  if (row.verdict !== "changed") continue;
+  const prev = state.cards.get(row.id);
+  if (
+    row.patch.laneKey &&
+    !laneMoveFromSource(row.patch.laneKey, baseOf.get(row.id))
+  ) {
     row.patch.laneKey = null;
     row.patch.rank = undefined;
     row.changes = row.changes.filter(
       (c) => c.key !== "lane" && c.key !== "rank",
     );
+  }
+  if (prev?.summary_edited_at) {
+    delete row.patch.columns.summary;
+    row.changes = row.changes.filter((c) => c.key !== "summary");
+  }
+  if (prev?.body_edited_at) {
+    delete row.patch.columns.body_md;
+    delete row.patch.columns.body_edited_at;
+    row.changes = row.changes.filter((c) => c.key !== "body");
+  }
+  if (row.changes.length === 0) {
+    plan.counts.changed--;
+    recalibrated++;
   }
 }
 
@@ -68,16 +92,19 @@ for (const row of plan.rows)
 if (!plan.ok) process.exit(1);
 
 if (dryRun) {
-  for (const row of plan.rows)
-    if (row.verdict !== "unchanged")
-      console.log(
-        `${row.verdict} #${row.id}${row.verdict === "new" ? ` → ${row.lane}` : ""}${row.verdict === "changed" ? ` [${row.changes.map((c) => c.key).join(", ")}]` : ""}`,
-      );
+  for (const row of plan.rows) {
+    if (row.verdict === "unchanged") continue;
+    const recal = row.verdict === "changed" && row.changes.length === 0;
+    const label = recal ? "recalibrated" : row.verdict;
+    console.log(
+      `${label} #${row.id}${row.verdict === "new" ? ` → ${row.lane}` : ""}${row.verdict === "changed" && !recal ? ` [${row.changes.map((c) => c.key).join(", ")}]` : ""}`,
+    );
+  }
 } else {
   await applyPlan(db, state, plan, "etl");
 }
 console.log(
-  `${dryRun ? "[dry-run] " : ""}${projectSlug}/${boardSlug}: ${plan.counts.new} created, ${plan.counts.changed} updated, ${plan.counts.unchanged} unchanged (${files.length} files)`,
+  `${dryRun ? "[dry-run] " : ""}${projectSlug}/${boardSlug}: ${plan.counts.new} created, ${plan.counts.changed} updated, ${recalibrated} recalibrated, ${plan.counts.unchanged} unchanged (${files.length} files)`,
 );
 if (plan.unappliedTags.length) {
   console.warn(

@@ -35,17 +35,15 @@ test("the login screen has no account menu", async ({ page }) => {
   );
 });
 
-test("the owner can open the import-project explainer", async ({ page }) => {
+test("the owner can open the import-project dialog", async ({ page }) => {
   await signIn(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Import project" }).click();
   await expect(
     page.getByRole("heading", { name: "Import a project" }),
   ).toBeVisible();
-  await expect(page.getByText(/db:apply --file/)).toBeVisible();
-  await expect(
-    page.getByText(/drop a zip of the markdown repo/i),
-  ).toBeVisible();
+  await expect(page.getByText("First board", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Zip of sheets")).toBeVisible();
 });
 
 test("a non-owner does not see the import button", async ({ page }) => {

@@ -57,7 +57,10 @@ test("a summary edited in the app survives the next import", async ({
     { encoding: "utf8", shell: process.platform === "win32" },
   );
   expect(r.status).toBe(0);
-  expect(r.stdout).toContain("1 updated");
+  // The file still differs on `summary`, but the sync rule protects an
+  // app-edited summary, so the row has nothing left to apply and is
+  // reported as recalibrated rather than updated.
+  expect(r.stdout).toContain("1 recalibrated");
 
   await page.reload();
   await expect(page.locator("#summary")).toHaveValue(typed);
