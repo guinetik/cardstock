@@ -48,7 +48,7 @@ Resetting a forgotten password is not built yet — it needs mail. Until then, c
 
 | Command | What it does |
 |---|---|
-| `bun run etl:import --project <p> --board <b> --source <dir>` | Parse `<id>.md` files, validate against `etl/schema.ts`, upsert by `(board, external_id)`. Markdown owns title/status/body/epic/area/dates/needs/relates/tags; the DB owns lane/rank/priority/effort/target/audience/archive. A new card takes the lane its file names, or the inbox; an existing card moves only when the file's `lane:` differs from what it said at the last sync, so a drag survives a file that has not changed its mind. Status never decides a lane. Unchanged files are skipped by hash. |
+| `bun run etl:import --project <p> --board <b> --source <dir>` | Same planner as the projects page; a file only moves an existing card when its `lane:` changed since the last sync. |
 | `bun run etl:import-board-state --project <p> --board <b> --file <export.json>` | Apply a `designer-board/1` export (lane, rank, target, effort, value→priority) on top of imported cards. |
 | `bun run etl:schema` | Emit `docs/frontmatter.schema.json` from the zod schema. |
 | `bun run db:seed-members --project <slug>` | `OWNER_EMAIL` → site owner, `MEMBER_EMAILS` → project admins, both into `members` + `project_members`. |

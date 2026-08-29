@@ -77,10 +77,11 @@ that matter right now, and a sheet is the same sheet in both places.
 
 - `docs/paper.md` — *The folder*, *Lanes*: the visual vocabulary.
 - `README.md` — *Markdown owns the narrative, the app owns the board.*
-- `etl/import.ts`, `etl/export.ts` — sheets in, margin out.
+- `src/lib/import/plan.ts`, `src/lib/frontmatter/write.ts` — sheets in, sheets out.
 - `etl/mirror-board-state.ts` — moving decisions between two binders.
 - `docs/specs/2026-08-26-cardstock-design.md` — the ownership table and the
   decisions taken.
+- `docs/superpowers/specs/2026-08-29-board-import-export-design.md`
 
 ## Differentiators the fable points at
 
