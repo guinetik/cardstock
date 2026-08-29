@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { Portrait } from "@/components/portrait";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,26 +28,28 @@ export async function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex items-center gap-1.5 text-sm hover:underline"
+        className="flex items-center gap-2 text-sm hover:underline"
         aria-label="Account menu"
       >
+        {name}
         <Portrait
           email={member.email}
-          size={20}
-          className="portrait portrait--sm"
+          size={34}
+          className="portrait portrait--topbar"
         />
-        {name}
-        {member.role === "owner" && (
-          <span className="rounded-full border px-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            owner
-          </span>
-        )}
         <ChevronDown className="size-3.5 opacity-60" aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal">
-            <span className="block text-sm font-medium">{name}</span>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="text-sm font-medium">{name}</span>
+              {member.role === "owner" && (
+                <span className="border border-[var(--border-strong)] px-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  owner
+                </span>
+              )}
+            </span>
             <span className="block text-xs text-muted-foreground">
               {member.email}
             </span>
@@ -62,6 +65,11 @@ export async function UserMenu() {
             Users
           </DropdownMenuItem>
         )}
+        <DropdownMenuSeparator />
+        <div className="flex items-center justify-between gap-3 px-1.5 py-1.5">
+          <span className="text-sm text-muted-foreground">Theme</span>
+          <ThemeToggle />
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           render={

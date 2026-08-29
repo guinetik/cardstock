@@ -14,8 +14,10 @@ import {
 /**
  * Two-state light/dark control. Writes `localStorage.theme` as `"light"` | `"dark"`.
  * Follows `prefers-color-scheme` only until the user stores an explicit choice.
+ *
+ * @param className - Optional layout overrides when the toggle sits in a menu row.
  */
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const [theme, setTheme] = useState<ThemeName>("paper");
   const mqRef = useRef<MediaQueryList | null>(null);
   const onChangeRef = useRef<(() => void) | null>(null);
@@ -87,7 +89,10 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="inline-flex size-8 items-center justify-center rounded-[var(--radius-btn)] text-[var(--color-ink)] hover:bg-[var(--fill-subtle)]"
+      className={
+        className ??
+        "inline-flex size-8 items-center justify-center text-[var(--color-ink)] hover:bg-[var(--fill-subtle)]"
+      }
       aria-label="Toggle colour theme"
       aria-pressed={dark}
       suppressHydrationWarning
