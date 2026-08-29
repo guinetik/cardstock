@@ -72,6 +72,7 @@ See `docs/deploy.md` — hosted Supabase (migrations pushed with the CLI, Auth r
 
 ## Docs
 
+- `docs/fichario.md` — **the fichário**: why it is called cardstock, and what the name decides
 - `docs/paper.md` — **Paper**, the design system: stock, pen and highlighter, type, lanes
 - `docs/realtime.md` — live board: how two people see each other's moves
 - `docs/specs/2026-08-26-cardstock-design.md` — design and decisions
