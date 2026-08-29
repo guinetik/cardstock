@@ -73,6 +73,7 @@ See `docs/deploy.md` — hosted Supabase (migrations pushed with the CLI, Auth r
 ## Docs
 
 - `docs/paper.md` — **Paper**, the design system: stock, pen and highlighter, type, lanes
+- `docs/realtime.md` — live board: how two people see each other's moves
 - `docs/specs/2026-08-26-cardstock-design.md` — design and decisions
 - `docs/plans/2026-08-26-implementation-plan.md` — phases
 - `docs/frontmatter.schema.json` — the tracker contract

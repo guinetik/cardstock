@@ -31,6 +31,7 @@ import {
   deleteLane,
   moveCard,
   moveLane,
+  refreshBoard,
   renameLane,
   savePrefs,
   updateCard,
@@ -57,6 +58,7 @@ import { CardItem } from "./card-item";
 import { FilterBar } from "./filter-bar";
 import { LaneColumn } from "./lane-column";
 import { LaneCrudDialog, type LaneDialogMode } from "./lane-crud-dialog";
+import { useBoardRealtime } from "./use-board-realtime";
 
 /**
  * Prefer the droppable under the pointer so an empty work lane wins over
@@ -124,7 +126,17 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [laneBusy, setLaneBusy] = useState<string | null>(null);
   const [laneDialog, setLaneDialog] = useState<LaneDialogMode>(null);
   const [cardLane, setCardLane] = useState<Lane | null>(null);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
+
+  useBoardRealtime({
+    boardId: data.board.id,
+    busy: pending || laneBusy !== null,
+    fetch: () => refreshBoard(data.project.slug, data.board.slug),
+    apply: (s) => {
+      setCards(s.cards);
+      setLanes(s.lanes);
+    },
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
