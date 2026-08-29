@@ -48,6 +48,8 @@ export interface ExistingCard {
   archived_by: string | null;
   color: string | null;
   source_hash: string | null;
+  /** Whether the row already stores the sheet it was imported from. */
+  has_source_text: boolean;
   frontmatter_extra: Record<string, unknown>;
   tag_ids: string[];
   relates: number[];

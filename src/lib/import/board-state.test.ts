@@ -38,4 +38,31 @@ describe("loadBoardState", () => {
     });
     await expect(loadBoardState(db, "board-1")).rejects.toThrow(/lanes.*boom/);
   });
+  test("the stored sheet becomes a flag; the joins are shaped, not carried", async () => {
+    const db = fakeDb({
+      cards: {
+        data: [
+          {
+            id: "c1",
+            external_id: "1",
+            source_text: "a stored sheet",
+            frontmatter_extra: null,
+            card_tags: [{ tag_id: "t1" }],
+            card_links: [{ to_card: "c2", kind: "relates" }],
+          },
+          { id: "c2", external_id: "2", source_text: null, card_tags: null },
+        ],
+        error: null,
+      },
+    });
+    const state = await loadBoardState(db, "board-1");
+    const one = state.cards.get("1")!;
+    expect(one.has_source_text).toBe(true);
+    expect(one.tag_ids).toEqual(["t1"]);
+    expect(one.relates).toEqual([2]);
+    expect("source_text" in one).toBe(false);
+    expect("card_tags" in one).toBe(false);
+    expect("card_links" in one).toBe(false);
+    expect(state.cards.get("2")!.has_source_text).toBe(false);
+  });
 });

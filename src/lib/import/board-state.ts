@@ -25,7 +25,7 @@ export async function loadBoardState(
     db
       .from("cards")
       .select(
-        "id, external_id, title, status, epic, area, raised_by, raised_on, shipped_on, needs, summary, summary_edited_at, body_md, body_edited_at, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, color, source_hash, frontmatter_extra, card_tags(tag_id), card_links!card_links_from_card_fkey(to_card, kind)",
+        "id, external_id, title, status, epic, area, raised_by, raised_on, shipped_on, needs, summary, summary_edited_at, body_md, body_edited_at, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, color, source_hash, source_text, frontmatter_extra, card_tags(tag_id), card_links!card_links_from_card_fkey(to_card, kind)",
       )
       .eq("board_id", boardId),
     db.from("epics").select("id, source_name").eq("board_id", boardId),
@@ -42,13 +42,20 @@ export async function loadBoardState(
     (cards ?? []).map((c) => [c.id as string, c.external_id as string]),
   );
   const map = new Map<string, ExistingCard>();
-  for (const c of cards ?? []) {
+  for (const row of cards ?? []) {
+    // The joins and the sheet itself are shaped here, not carried: an
+    // `ExistingCard` is columns, and the sheet can be megabytes per card.
+    const { card_tags, card_links, source_text, ...c } = row as Record<
+      string,
+      unknown
+    >;
     const links =
-      (c.card_links as { to_card: string; kind: string }[] | null) ?? [];
+      (card_links as { to_card: string; kind: string }[] | null) ?? [];
     map.set(c.external_id as string, {
       ...(c as unknown as ExistingCard),
+      has_source_text: source_text != null,
       frontmatter_extra: (c.frontmatter_extra as Record<string, unknown>) ?? {},
-      tag_ids: ((c.card_tags as { tag_id: string }[] | null) ?? []).map(
+      tag_ids: ((card_tags as { tag_id: string }[] | null) ?? []).map(
         (t) => t.tag_id,
       ),
       relates: links

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { laneNameFromKey, planImport } from "./plan";
+import { writeSheet } from "@/lib/frontmatter/write";
+import { laneNameFromKey, planImport, sheetFromCard } from "./plan";
 import type { BoardState, ExistingCard } from "./types";
 
 const sheet = (id: number, fm: string, body = "## Ask\n\nHi.") => ({
@@ -34,6 +35,7 @@ function state(cards: Partial<ExistingCard>[] = []): BoardState {
     archived_by: null,
     color: null,
     source_hash: null,
+    has_source_text: true,
     frontmatter_extra: {},
     tag_ids: [],
     relates: [],
@@ -93,6 +95,34 @@ describe("planImport", () => {
     const hash = new Bun.CryptoHasher("sha256").update(f.text).digest("hex");
     const plan = planImport([f], state([{ source_hash: hash }]));
     expect(plan.rows[0].verdict).toBe("unchanged");
+  });
+  test("the same hash with no stored sheet is recalibrated, not skipped", () => {
+    const f = sheet(1, "");
+    const hash = new Bun.CryptoHasher("sha256").update(f.text).digest("hex");
+    const plan = planImport(
+      [f],
+      state([{ source_hash: hash, has_source_text: false }]),
+    );
+    const row = plan.rows[0];
+    if (row.verdict !== "changed") throw new Error(row.verdict);
+    expect(row.changes).toEqual([]);
+    expect(row.patch.columns).toMatchObject({ source_text: f.text });
+    expect(row.patch).toMatchObject({ laneKey: null, rank: undefined });
+    expect(plan.counts).toEqual({ new: 0, changed: 1, unchanged: 0, error: 0 });
+  });
+  test("the rank a file states is the position in the lane, not the sort key", () => {
+    const plan = planImport(
+      [sheet(1, "lane: now\nrank: 1")],
+      state([
+        { id: "a", external_id: "1", lane_id: "L-now", rank: 0 },
+        { id: "b", external_id: "2", lane_id: "L-now", rank: 2.5 },
+        { id: "c", external_id: "3", lane_id: "L-now", rank: 7 },
+      ]),
+    );
+    // card 1 sits first in the lane, so the board already says `rank: 1`
+    const row = plan.rows[0];
+    if (row.verdict !== "changed") throw new Error(row.verdict);
+    expect(row.changes.map((c) => c.key)).not.toContain("rank");
   });
   test("the sheet wins; a key it does not state is left alone", () => {
     const plan = planImport(
@@ -162,6 +192,65 @@ describe("planImport", () => {
       verdict: "error",
       message: expect.stringMatching(/filename/),
     });
+  });
+});
+
+describe("sheetFromCard", () => {
+  test("rank in file form is the position in the lane, not the sort key", () => {
+    const s = state([
+      { id: "a", external_id: "1", lane_id: "L-now", rank: 0 },
+      { id: "b", external_id: "2", lane_id: "L-now", rank: 2.5 },
+      { id: "c", external_id: "3", lane_id: "L-now", rank: 7 },
+    ]);
+    expect([...s.cards.values()].map((c) => sheetFromCard(c, s).rank)).toEqual([
+      1, 2, 3,
+    ]);
+  });
+  test("moving one card leaves its lane-mates' sheets byte-identical", () => {
+    const lane = (id: number, rank: number) =>
+      sheet(id, `lane: now\nrank: ${rank}`);
+    const card = (id: number, rank: number, lane_id: string) => ({
+      id: `c${id}`,
+      external_id: String(id),
+      title: `Card ${id}`,
+      lane_id,
+      rank,
+    });
+    const before = state([
+      card(1, 1, "L-now"),
+      card(2, 2, "L-now"),
+      card(3, 3, "L-now"),
+    ]);
+    // the board agrees with the files it was imported from
+    for (const id of [1, 2, 3])
+      expect(
+        writeSheet(
+          lane(id, id).text,
+          sheetFromCard(before.cards.get(String(id))!, before),
+        ),
+      ).toBe(lane(id, id).text);
+    // card 3 leaves the lane; 1 and 2 keep their positions and their bytes
+    const after = state([
+      card(1, 1, "L-now"),
+      card(2, 2, "L-now"),
+      card(3, 1, "L-done"),
+    ]);
+    for (const id of [1, 2])
+      expect(
+        writeSheet(
+          lane(id, id).text,
+          sheetFromCard(after.cards.get(String(id))!, after),
+        ),
+      ).toBe(lane(id, id).text);
+    expect(
+      writeSheet(lane(3, 3).text, sheetFromCard(after.cards.get("3")!, after)),
+    ).toBe(
+      lane(3, 3).text.replace("lane: now\nrank: 3", "lane: done\nrank: 1"),
+    );
+  });
+  test("a card with no lane states no rank", () => {
+    const s = state([{ id: "a", external_id: "1", lane_id: null, rank: 4 }]);
+    expect(sheetFromCard(s.cards.get("1")!, s).rank).toBeNull();
   });
 });
 

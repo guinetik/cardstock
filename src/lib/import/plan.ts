@@ -38,6 +38,36 @@ export function laneNameFromKey(key: string): string {
   return joined ? joined[0].toUpperCase() + joined.slice(1) : joined;
 }
 
+/**
+ * `rank` on a card is a fractional sort key — 2.5 sits between 2 and 3 — and
+ * that is the board's private business. A file states the position instead:
+ * 1, 2, 3 down the lane. Computed once per board state, not per card.
+ */
+const positions = new WeakMap<BoardState, Map<string, number>>();
+function rankInLane(card: ExistingCard, state: BoardState): number | null {
+  if (!card.lane_id) return null;
+  let byCard = positions.get(state);
+  if (!byCard) {
+    byCard = new Map();
+    const lanes = new Map<string, ExistingCard[]>();
+    for (const c of state.cards.values()) {
+      if (!c.lane_id) continue;
+      const peers = lanes.get(c.lane_id);
+      peers ? peers.push(c) : lanes.set(c.lane_id, [c]);
+    }
+    for (const peers of lanes.values()) {
+      peers.sort(
+        (a, b) => a.rank - b.rank || a.external_id.localeCompare(b.external_id),
+      );
+      peers.forEach((c, i) => {
+        byCard?.set(c.id, i + 1);
+      });
+    }
+    positions.set(state, byCard);
+  }
+  return byCard.get(card.id) ?? null;
+}
+
 /** The board's view of a card, in file form, for the diff. */
 export function sheetFromCard(
   card: ExistingCard,
@@ -62,7 +92,7 @@ export function sheetFromCard(
     summary: card.summary,
     relates: card.relates,
     lane: lane?.key ?? null,
-    rank: card.rank,
+    rank: rankInLane(card, state),
     priority: card.priority,
     effort: card.effort,
     plannedStart: card.planned_start_date,
@@ -156,7 +186,10 @@ export function planImport(
         throw new Error(`id ${fm.id} does not match the filename ${file.name}`);
 
       const prev = state.cards.get(id);
-      if (prev && prev.source_hash === parsed.hash) {
+      // Same bytes as last time and the sheet is already stored: nothing to do.
+      // A card imported before sheets were stored has the hash but not the
+      // text, and must be recalibrated once so its download can be a line edit.
+      if (prev && prev.source_hash === parsed.hash && prev.has_source_text) {
         rows.push({ id, title: fm.title, verdict: "unchanged" });
         counts.unchanged++;
         continue;
