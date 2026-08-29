@@ -1,3 +1,26 @@
+/** Tracker status vocabulary. One card has exactly one of these. */
+export const CARD_STATUSES = [
+  "backlog",
+  "blocked",
+  "wip",
+  "held",
+  "built",
+  "handed",
+  "shipped",
+  "done",
+] as const;
+
+/** One value from `CARD_STATUSES`. */
+export type CardStatus = (typeof CARD_STATUSES)[number];
+
+/** True when `value` is a tracker status word. */
+export function isCardStatus(value: unknown): value is CardStatus {
+  return (
+    typeof value === "string" &&
+    (CARD_STATUSES as readonly string[]).includes(value)
+  );
+}
+
 const STATUS_CHIP: Record<string, string> = {
   wip: "stat stat--wip",
   built: "stat stat--info",
