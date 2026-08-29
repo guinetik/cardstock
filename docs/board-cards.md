@@ -1,6 +1,6 @@
 # Board card density
 
-Board cards rest as **`#id`, title, epic, and the decisions already made** — the two pen squares for priority and effort, plus a status word when it is not `backlog`. That is the bird's-eye scan. Unrated cards show nothing rather than empty slots. A selected `color` adds `card-color--{name}` on the `<article>` only (parsed with `parseCardColor`), tinting the paper; the drag overlay keeps the tint and omits the picker.
+Board cards rest as **`#id`, title, epic, and the decisions already made** — the two pen squares for priority and effort, plus a status word when it is not `backlog`. The filter bar can restrict by that same word: a Status cluster lists whatever values this board actually has; nothing selected means every status. That is the bird's-eye scan. Unrated cards show nothing rather than empty slots. A selected `color` adds `card-color--{name}` on the `<article>` only (parsed with `parseCardColor`), tinting the paper; the drag overlay keeps the tint and omits the picker.
 
 Hover (or keyboard focus-within) lifts the card out of the lane and opens `.card-peek`. The resting summary (`.card-rest`) collapses at the same moment and on the same clock, so nothing is on screen twice and the card never gets shorter mid-opening (an instant `display: none` used to drop the bottom edge ~25px for a few frames, which threw a pointer near the edge off the card and left hover flickering). The drag overlay stays compact so the ghost does not balloon.
 

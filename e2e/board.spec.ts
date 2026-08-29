@@ -122,6 +122,19 @@ test("filters: search narrows, P1 chip filters, clear restores", async ({
   expect(p1).toBeLessThan(total);
 });
 
+test("filters: status chip narrows, clear restores", async ({ page }) => {
+  const total = await page.locator("article:visible").count();
+  await page
+    .locator("#filters")
+    .getByRole("button", { name: "wip", exact: true })
+    .click();
+  const wip = await page.locator("article:visible").count();
+  expect(wip).toBeGreaterThan(0);
+  expect(wip).toBeLessThan(total);
+  await page.getByRole("button", { name: "Clear" }).click();
+  expect(await page.locator("article:visible").count()).toBe(total);
+});
+
 test("archive from the card page hides it and shows it under 'archived'", async ({
   page,
 }) => {
