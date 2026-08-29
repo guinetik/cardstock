@@ -95,7 +95,7 @@ export function FilterBar(props: {
       <input
         type="search"
         placeholder="Search #id or title"
-        className="paper-field h-auto min-w-56 flex-1 basis-72 text-[13.5px] sm:max-w-96"
+        className="paper-field lane-column-width h-auto shrink-0 text-[13.5px]"
         value={f.query}
         onChange={(e) => onChange({ ...f, query: e.target.value })}
         aria-label="Search"

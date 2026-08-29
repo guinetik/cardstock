@@ -103,8 +103,8 @@ export function LaneColumn(props: {
   const width = min
     ? "w-7"
     : view === "max"
-      ? "w-[min(880px,44vw)]"
-      : "w-[clamp(280px,22vw,420px)]";
+      ? "lane-column-width--max"
+      : "lane-column-width";
 
   if (min) {
     return (

@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { Portrait } from "@/components/portrait";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeMenuItem } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,10 +66,7 @@ export async function UserMenu() {
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <div className="flex items-center justify-between gap-3 px-1.5 py-1.5">
-          <span className="text-sm text-muted-foreground">Theme</span>
-          <ThemeToggle />
-        </div>
+        <ThemeMenuItem />
         <DropdownMenuSeparator />
         <DropdownMenuItem
           render={

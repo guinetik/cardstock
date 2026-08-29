@@ -2,6 +2,7 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {
   applyTheme,
   resolveTheme,
@@ -12,12 +13,10 @@ import {
 } from "@/lib/theme";
 
 /**
- * Two-state light/dark control. Writes `localStorage.theme` as `"light"` | `"dark"`.
+ * Light/dark state and toggle for components that switch the paper theme.
  * Follows `prefers-color-scheme` only until the user stores an explicit choice.
- *
- * @param className - Optional layout overrides when the toggle sits in a menu row.
  */
-export function ThemeToggle({ className }: { className?: string }) {
+export function useThemeToggle() {
   const [theme, setTheme] = useState<ThemeName>("paper");
   const mqRef = useRef<MediaQueryList | null>(null);
   const onChangeRef = useRef<(() => void) | null>(null);
@@ -70,10 +69,8 @@ export function ThemeToggle({ className }: { className?: string }) {
 
   const dark = theme === "paper-night";
 
-  /**
-   * Persist light/dark and stop listening to the OS scheme.
-   */
-  function toggle() {
+  /** Persist light/dark and stop listening to the OS scheme. */
+  const toggle = useCallback(() => {
     const next: ThemeName = dark ? "paper" : "paper-night";
     const stored = next === "paper-night" ? "dark" : "light";
     try {
@@ -84,7 +81,18 @@ export function ThemeToggle({ className }: { className?: string }) {
     applyTheme(next, document.documentElement as ThemeRoot);
     setTheme(next);
     detachSystemListener();
-  }
+  }, [dark, detachSystemListener]);
+
+  return { dark, toggle };
+}
+
+/**
+ * Two-state light/dark control. Writes `localStorage.theme` as `"light"` | `"dark"`.
+ *
+ * @param className - Optional layout overrides when the toggle sits in a menu row.
+ */
+export function ThemeToggle({ className }: { className?: string }) {
+  const { dark, toggle } = useThemeToggle();
 
   return (
     <button
@@ -100,5 +108,28 @@ export function ThemeToggle({ className }: { className?: string }) {
     >
       {dark ? <Sun size={16} /> : <Moon size={16} />}
     </button>
+  );
+}
+
+/** Account-menu row: the whole item toggles light/dark, not just the icon. */
+export function ThemeMenuItem() {
+  const { dark, toggle } = useThemeToggle();
+
+  return (
+    <DropdownMenuItem
+      onClick={toggle}
+      aria-label="Toggle colour theme"
+      aria-pressed={dark}
+      className="justify-between"
+    >
+      Theme
+      <span
+        className="inline-flex size-8 items-center justify-center text-[var(--color-ink)]"
+        aria-hidden="true"
+        suppressHydrationWarning
+      >
+        {dark ? <Sun size={16} /> : <Moon size={16} />}
+      </span>
+    </DropdownMenuItem>
   );
 }

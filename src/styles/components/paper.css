@@ -466,6 +466,14 @@
     color: var(--color-grey-faint);
   }
 
+  /** Default kanban column width — the filter search uses the same measure. */
+  .lane-column-width {
+    width: clamp(280px, 22vw, 420px);
+  }
+  .lane-column-width--max {
+    width: min(880px, 44vw);
+  }
+
   .card-peek {
     display: grid;
     grid-template-rows: 0fr;
