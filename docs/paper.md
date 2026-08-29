@@ -111,19 +111,18 @@ the folder holds a `.folder-stamp` with the card count, in pen red, the one
 tilted thing on the page besides a dragged card. Nothing is written twice:
 the tab names the project, the binders name the boards.
 
-The project page is the same folder laid open (`.folder--open`): the tab is
-the title, and inside it each board is a wide `.binder` carrying the tally of
-its lanes as `.stat`s in the lane kind's pen, with *Take stock* (the cockpit)
-and *Export CSV* on its foot. Under the folder sits the **roster binder**
-(`.roster`): who can open this folder, each person a full-width `.roster-slip`
-with the name as a tab, the address in mono, and the role in the margin. The
-last row is blank stock — that is how an owner invites someone. Below that
-the board's tag groups are drawn as a **concept graph** (`.graph`): each group
-is a `.graph-node` wearing its highlighter on its spine, and the tags branch
-from it along a ruled trunk as `.mark`s — a concept contains its tags, so the
-edges are lines, not arrows. The page ends with the two big asks, same shape
-and opposite pens: `.cta` to take the project home as markdown, `.danger` to
-delete it.
+The project page is a **letterhead** plus a stack of section folders
+(`.folder--section`). The letterhead is the project name in Newsreader, the
+blurb, the counts as `.stat`s, and the `.folder-stamp` in the margin — the
+stamp is written once. Each chapter below is its own manila file with a quiet
+Plex tab (`boards`, `people`, `concepts`, `settings`); the tab does not lift
+the folder. Binders live only in Boards — wide `.binder`s with lane `.stat`s,
+*Take stock*, and *Export CSV*, and *New board* in the aside. People is punched
+`.roster-slip`s on that folder's stock, last row blank for the invite.
+Concepts is the **concept graph** (`.graph`): each group a `.graph-node` with
+highlighter on its spine, tags as `.mark`s on a ruled trunk. Settings holds
+the two asks as inner rows, same shape and opposite pens: `.cta` to take the
+project home as markdown, `.danger` to delete it.
 
 ## Lanes
 

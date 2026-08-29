@@ -11,9 +11,9 @@ in one RPC so a person cannot be allowlisted without a project to land in.
 | `/p/[project]` | The roster for this folder. Any project member can see it. The owner can invite and remove. |
 | `/users` | The same writes, across every project. Owner-only. |
 
-On the project page the roster is a binder of full-width rows (`.roster`):
-name as a tab, email in mono, role in the margin, *Remove* to take someone off
-this folder. The blank row at the foot is the invite.
+On the project page the roster is punched slips (`.roster`) inside the People
+folder: name as a tab, email in mono, role in the margin, *Remove* to take
+someone off this folder. The blank row at the foot is the invite.
 
 ## Invite
 
