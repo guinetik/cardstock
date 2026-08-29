@@ -5,6 +5,7 @@ import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { markHue } from "@/lib/types";
 import { CreateBoardDialog } from "./create-board-dialog";
 import { ProjectPeople, type ProjectPerson } from "./project-people";
+import { ProjectSection } from "./project-section";
 import { TaxonomyEditor, type TaxonomyGroup } from "./taxonomy-editor";
 
 /** The shapes the nested select comes back in. */
@@ -121,158 +122,159 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
         ← Projects
       </Link>
 
-      {/* The folder, opened. */}
-      <div
-        className={`folder folder--open${boards.length ? "" : " folder--empty"}`}
-      >
-        <span className="folder-tab">
+      <header className="letterhead">
+        <div className="min-w-0">
           <h1>{project.name}</h1>
-        </span>
-        <div className="folder-body">
-          <div className="min-w-0">
-            {project.description ? (
-              <p className="folder-blurb">{project.description}</p>
-            ) : (
-              <p className="folder-blurb text-[var(--color-grey-faint)]">
-                No description.
-              </p>
-            )}
-            <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-              <span className="stat stat--flat stat--ink">
-                {plural(boards.length, "board", "boards")}
-              </span>
-              <span className="stat stat--flat">
-                {plural(cardCount, "card", "cards")}
-              </span>
-              {onFile > 0 && (
-                <span className="stat stat--flat stat--faint">
-                  {onFile} from .md files
-                </span>
-              )}
-            </p>
-          </div>
-          {boards.length > 0 ? (
-            <ul className="binders" aria-label="Boards">
-              {boards.map((board) => {
-                const lanes = [...(board.lanes ?? [])].sort(
-                  (a, b) => a.position - b.position,
-                );
-                const cards = board.cards ?? [];
-                const live = cards.filter((c) => !c.archived_at);
-                const archived = cards.length - live.length;
-                const byLane = new Map<string, number>();
-                for (const c of live) {
-                  if (c.lane_id)
-                    byLane.set(c.lane_id, (byLane.get(c.lane_id) ?? 0) + 1);
-                }
-                const boardHref = `${href}/b/${board.slug}`;
-                return (
-                  <li key={board.id} className="binder binder--wide">
-                    <span className="binder-rivets" aria-hidden="true" />
-                    <h2 className="binder-name">
-                      <Link href={boardHref} className="binder-open">
-                        {board.name}
-                      </Link>
-                      <code className="graph-key ml-2">{board.slug}</code>
-                    </h2>
-                    <p className="binder-tally">
-                      {lanes
-                        .filter((l) => l.kind !== "archive")
-                        .map((l) => (
-                          <span
-                            key={l.id}
-                            className={`stat ${KIND_STAT[l.kind]}`}
-                          >
-                            {l.name}{" "}
-                            <b className="font-medium">
-                              {byLane.get(l.id) ?? 0}
-                            </b>
-                          </span>
-                        ))}
-                      {archived > 0 && (
-                        <span className="stat stat--faint">
-                          archived <b className="font-medium">{archived}</b>
-                        </span>
-                      )}
-                      {cards.length === 0 && (
-                        <span className="stat stat--flat stat--faint">
-                          no cards yet
-                        </span>
-                      )}
-                    </p>
-                    <div className="binder-foot">
-                      <span className="binder-count">
-                        {plural(cards.length, "card", "cards")}
-                      </span>
-                      <span className="binder-links">
-                        <Link
-                          href={`${boardHref}/cockpit`}
-                          className="binder-cockpit paper-link"
-                          aria-label={`${board.name} cockpit`}
-                        >
-                          Take stock
-                        </Link>
-                        <a
-                          href={`${boardHref}/export`}
-                          className="binder-cockpit paper-link"
-                          aria-label={`Export ${board.name} as CSV`}
-                        >
-                          Export CSV
-                        </a>
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+          {project.description ? (
+            <p className="folder-blurb">{project.description}</p>
           ) : (
-            <p className="binders-empty">
-              No boards yet. A new board starts with Unsorted, Now, Next, Done
-              and Archive lanes; work lanes can be renamed or added on the board
-              itself.
+            <p className="folder-blurb text-[var(--color-grey-faint)]">
+              No description.
             </p>
           )}
-          <div className="folder-aside">
-            {cardCount > 0 ? (
-              <span className="folder-stamp" aria-hidden="true">
-                {plural(cardCount, "card", "cards")}
-                <br />
-                filed
-              </span>
-            ) : (
-              <span
-                className="folder-stamp folder-stamp--faint"
-                aria-hidden="true"
-              >
-                nothing
-                <br />
-                filed
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <span className="stat stat--flat stat--ink">
+              {plural(boards.length, "board", "boards")}
+            </span>
+            <span className="stat stat--flat">
+              {plural(cardCount, "card", "cards")}
+            </span>
+            {onFile > 0 && (
+              <span className="stat stat--flat stat--faint">
+                {onFile} from .md files
               </span>
             )}
-            <CreateBoardDialog
-              projectId={project.id}
-              projectSlug={project.slug}
-            />
-          </div>
+          </p>
         </div>
-      </div>
+        <div className="letterhead-aside">
+          {cardCount > 0 ? (
+            <span className="folder-stamp" aria-hidden="true">
+              {plural(cardCount, "card", "cards")}
+              <br />
+              filed
+            </span>
+          ) : (
+            <span
+              className="folder-stamp folder-stamp--faint"
+              aria-hidden="true"
+            >
+              nothing
+              <br />
+              filed
+            </span>
+          )}
+        </div>
+      </header>
 
-      <ProjectPeople
-        projectId={project.id}
-        projectName={project.name}
-        people={people}
-        currentMemberId={member.id}
-        canInvite={member.role === "owner"}
-      />
+      <ProjectSection
+        id="boards-heading"
+        title="boards"
+        count={String(boards.length)}
+        empty={boards.length === 0}
+        aside={
+          <CreateBoardDialog
+            projectId={project.id}
+            projectSlug={project.slug}
+          />
+        }
+      >
+        {boards.length > 0 ? (
+          <ul className="binders" aria-label="Boards">
+            {boards.map((board) => {
+              const lanes = [...(board.lanes ?? [])].sort(
+                (a, b) => a.position - b.position,
+              );
+              const cards = board.cards ?? [];
+              const live = cards.filter((c) => !c.archived_at);
+              const archived = cards.length - live.length;
+              const byLane = new Map<string, number>();
+              for (const c of live) {
+                if (c.lane_id)
+                  byLane.set(c.lane_id, (byLane.get(c.lane_id) ?? 0) + 1);
+              }
+              const boardHref = `${href}/b/${board.slug}`;
+              return (
+                <li key={board.id} className="binder binder--wide">
+                  <span className="binder-rivets" aria-hidden="true" />
+                  <h2 className="binder-name">
+                    <Link href={boardHref} className="binder-open">
+                      {board.name}
+                    </Link>
+                    <code className="graph-key ml-2">{board.slug}</code>
+                  </h2>
+                  <p className="binder-tally">
+                    {lanes
+                      .filter((l) => l.kind !== "archive")
+                      .map((l) => (
+                        <span
+                          key={l.id}
+                          className={`stat ${KIND_STAT[l.kind]}`}
+                        >
+                          {l.name}{" "}
+                          <b className="font-medium">{byLane.get(l.id) ?? 0}</b>
+                        </span>
+                      ))}
+                    {archived > 0 && (
+                      <span className="stat stat--faint">
+                        archived <b className="font-medium">{archived}</b>
+                      </span>
+                    )}
+                    {cards.length === 0 && (
+                      <span className="stat stat--flat stat--faint">
+                        no cards yet
+                      </span>
+                    )}
+                  </p>
+                  <div className="binder-foot">
+                    <span className="binder-count">
+                      {plural(cards.length, "card", "cards")}
+                    </span>
+                    <span className="binder-links">
+                      <Link
+                        href={`${boardHref}/cockpit`}
+                        className="binder-cockpit paper-link"
+                        aria-label={`${board.name} cockpit`}
+                      >
+                        Take stock
+                      </Link>
+                      <a
+                        href={`${boardHref}/export`}
+                        className="binder-cockpit paper-link"
+                        aria-label={`Export ${board.name} as CSV`}
+                      >
+                        Export CSV
+                      </a>
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="binders-empty">
+            No boards yet. A new board starts with Unsorted, Now, Next, Done and
+            Archive lanes; work lanes can be renamed or added on the board
+            itself.
+          </p>
+        )}
+      </ProjectSection>
+
+      <ProjectSection
+        id="people-heading"
+        title="people"
+        count={String(people.length)}
+      >
+        <ProjectPeople
+          projectId={project.id}
+          projectName={project.name}
+          people={people}
+          currentMemberId={member.id}
+          canInvite={member.role === "owner"}
+        />
+      </ProjectSection>
 
       {boards.length > 0 && (
-        <section className="mt-12" aria-labelledby="concepts-heading">
-          <div className="section-head">
-            <h2 id="concepts-heading">Concepts</h2>
-            <span className="count">
-              how each board sorts its cards, and the tags that follow
-            </span>
-          </div>
+        <ProjectSection id="concepts-heading" title="concepts">
           <div className="space-y-8">
             {boards.map((board) => {
               const taxonomy = (
@@ -289,9 +291,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
               return (
                 <div key={board.id}>
                   {boards.length > 1 && (
-                    <h3 className="mb-2 text-[15px] font-semibold uppercase tracking-[0.06em]">
-                      {board.name}
-                    </h3>
+                    <p className="graph-board">{board.name}</p>
                   )}
                   <TaxonomyEditor
                     boardId={board.id}
@@ -302,51 +302,51 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
               );
             })}
           </div>
-        </section>
+        </ProjectSection>
       )}
 
-      {/* Take the whole folder home. Not wired up yet. */}
-      <section className="cta mt-14" aria-labelledby="download-heading">
-        <div className="min-w-0">
-          <h2 id="download-heading" className="cta-title">
-            Take this project home
-          </h2>
-          <p className="cta-body">
-            Every card as a markdown file, one per sheet, with the board
-            decisions written into its frontmatter. Nothing here is locked in.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="cta-button"
-          aria-disabled="true"
-          title="Not available yet"
-        >
-          Download .zip
-        </button>
-        <span className="cta-note">Coming soon</span>
-      </section>
-
-      <section className="danger mt-6" aria-labelledby="danger-heading">
-        <div className="min-w-0">
-          <h2 id="danger-heading" className="cta-title">
-            Danger zone
-          </h2>
-          <p className="cta-body">
-            Deleting a project removes its boards, lanes and every card in them.
-            The markdown files you have exported are not touched.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="cta-button cta-button--danger"
-          aria-disabled="true"
-          title="Not available yet"
-        >
-          Delete this project
-        </button>
-        <span className="cta-note">Owners only · coming soon</span>
-      </section>
+      <ProjectSection id="settings-heading" title="settings">
+        <section className="cta" aria-labelledby="download-heading">
+          <div className="min-w-0">
+            <h2 id="download-heading" className="cta-title">
+              Take this project home
+            </h2>
+            <p className="cta-body">
+              Every card as a markdown file, one per sheet, with the board
+              decisions written into its frontmatter. Nothing here is locked in.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="cta-button"
+            aria-disabled="true"
+            title="Not available yet"
+          >
+            Download .zip
+          </button>
+          <span className="cta-note">Coming soon</span>
+        </section>
+        <section className="danger" aria-labelledby="danger-heading">
+          <div className="min-w-0">
+            <h2 id="danger-heading" className="cta-title">
+              Danger zone
+            </h2>
+            <p className="cta-body">
+              Deleting a project removes its boards, lanes and every card in
+              them. The markdown files you have exported are not touched.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="cta-button cta-button--danger"
+            aria-disabled="true"
+            title="Not available yet"
+          >
+            Delete this project
+          </button>
+          <span className="cta-note">Owners only · coming soon</span>
+        </section>
+      </ProjectSection>
     </main>
   );
 }

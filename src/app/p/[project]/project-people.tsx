@@ -10,16 +10,9 @@ export type ProjectPerson = {
 };
 
 /**
- * English count for the roster — "1 person" vs "2 people".
- */
-function plural(n: number, one: string, many: string) {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
-/**
- * Who can open this folder, drawn as one wide binder of full-width rows. The
- * owner invites on the blank sheet at the foot; removing someone leaves them
- * on the allowlist.
+ * Who can open this folder, as punched slips on the People section's stock.
+ * The owner invites on the blank sheet at the foot; removing someone leaves
+ * them on the allowlist.
  */
 export function ProjectPeople({
   projectId,
@@ -35,19 +28,7 @@ export function ProjectPeople({
   canInvite: boolean;
 }) {
   return (
-    <section
-      className="binder binder--wide roster"
-      aria-labelledby="people-heading"
-    >
-      <span className="binder-rivets" aria-hidden="true" />
-      <header className="roster-head">
-        <h2 id="people-heading" className="binder-name">
-          People
-        </h2>
-        <span className="binder-count">
-          {plural(people.length, "person", "people")}
-        </span>
-      </header>
+    <div className="roster">
       <ul className="roster-slips" aria-label="People">
         {people.map((person) => {
           const name = person.displayName ?? person.email;
@@ -95,6 +76,6 @@ export function ProjectPeople({
           lockedProjectId={projectId}
         />
       )}
-    </section>
+    </div>
   );
 }

@@ -122,5 +122,7 @@ test("the project page is a letterhead and four section folders", async ({
   await expect(
     page.getByRole("heading", { name: "Take this project home" }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Danger zone" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Danger zone" }),
+  ).toBeVisible();
 });
