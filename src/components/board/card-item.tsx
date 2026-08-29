@@ -5,6 +5,7 @@ import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
+import { statusChipClass } from "@/lib/card-status";
 import { daysInLane } from "@/lib/filters";
 import {
   type Card,
@@ -16,17 +17,6 @@ import {
 } from "@/lib/types";
 import { CardColorPicker } from "./card-color-picker";
 import { Ratings } from "./ratings";
-
-const STATUS_CHIP: Record<string, string> = {
-  wip: "stat stat--wip",
-  built: "stat stat--info",
-  handed: "stat stat--info",
-  held: "stat stat--muted",
-  blocked: "stat stat--blocked",
-  shipped: "stat stat--success",
-  done: "stat stat--success",
-  backlog: "stat stat--muted",
-};
 
 /**
  * DnD wrapper for a board card. `data-id` is the external id for e2e.
@@ -174,7 +164,7 @@ export function CardItem(props: {
               </p>
             )}
             {card.status !== "backlog" && (
-              <span className={STATUS_CHIP[card.status] ?? "stat stat--muted"}>
+              <span className={statusChipClass(card.status)}>
                 {card.status}
               </span>
             )}
@@ -211,7 +201,7 @@ export function CardItem(props: {
                 {card.epic}
               </span>
             )}
-            <span className={STATUS_CHIP[card.status] ?? "stat stat--muted"}>
+            <span className={statusChipClass(card.status)}>
               {card.status}
             </span>
             {card.needs && (
