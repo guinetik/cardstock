@@ -48,6 +48,9 @@
   --shadow-card: 0 1px 0 rgb(27 25 21 / 0.03), 0 1px 2px rgb(27 25 21 / 0.07);
   --shadow-lift:
     0 2px 4px rgb(27 25 21 / 0.08), 0 14px 28px -10px rgb(27 25 21 / 0.22);
+  /* In hand: clear of the board, the shadow falls further and softer. */
+  --shadow-hand:
+    0 4px 8px rgb(27 25 21 / 0.1), 0 30px 50px -12px rgb(27 25 21 / 0.34);
   --shadow-well: inset 0 1px 3px rgb(27 25 21 / 0.09);
   --scrim: rgb(27 25 21 / 0.28);
 

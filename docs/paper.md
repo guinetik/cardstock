@@ -68,8 +68,9 @@ Three families, each with a job, loaded through `next/font/google` in
 
 ## Edges, lift, motion
 
-2px is the whole radius scale. Elevation is three heights — flat in the well,
-`--shadow-card` resting, `--shadow-lift` in hand or under a dialog — all of them
+2px is the whole radius scale. Elevation is four heights — flat in the well,
+`--shadow-card` resting, `--shadow-lift` pointed at, pinned, or under a dialog,
+and `--shadow-hand` for the card being dragged, clear of the board — all of them
 contact shadows, never a glow. The dragged card (`.paper-card--overlay`) is the
 only thing in the product allowed to rotate.
 
@@ -89,8 +90,9 @@ time and reads as a jump however long you make it.
 
 A card waits `--motion-dwell` (180ms) before opening, so brushing past a lane
 does not set off a row of expansions; leaving closes it immediately, with no
-delay. `.card-rest` hides on the same delay via `transition: display 0s
-allow-discrete`, otherwise the card sits blank while the peek waits.
+delay. `.card-rest` collapses on the same delay and the same duration (a
+`grid-template-rows` transition, like the peek), so the card sits neither blank
+while the peek waits nor shorter while it grows.
 
 Board cards sit in a 3px horizontal gutter (`SortableCard`) so the swell has
 somewhere to grow. Without it a hovered card outgrows the lane's scroll

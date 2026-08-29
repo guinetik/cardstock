@@ -35,7 +35,7 @@ describe("issue body editor contract", () => {
   });
 
   test("uses the issue body panel without removing comments", async () => {
-    const page = await source(`${ROUTE}/page.tsx`);
+    const page = await source(`${ROUTE}/card-sheet.tsx`);
 
     expect(page).toContain("<IssueBodyPanel");
     expect(page).toContain("bodyMarkdown={issue.body}");

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { loadBoard } from "@/lib/board-data";
 import {
   formatCommentAt,
   joinIssueBody,
@@ -599,4 +600,16 @@ export async function savePrefs(
 
 export async function revalidateBoard(project: string, board: string) {
   revalidatePath(`/p/${project}/b/${board}`);
+}
+
+/**
+ * A fresh snapshot of what moves on the board, for the realtime doorbell.
+ * Same loader as the page, so a refetch can never disagree with a reload.
+ */
+export async function refreshBoard(
+  projectSlug: string,
+  boardSlug: string,
+): Promise<{ cards: Card[]; lanes: Lane[] }> {
+  const { cards, lanes } = await loadBoard(projectSlug, boardSlug);
+  return { cards, lanes };
 }

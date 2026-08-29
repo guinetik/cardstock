@@ -2,6 +2,7 @@
   /* ---------------------------------------------------------------- stock */
 
   .paper-card {
+    cursor: default;
     background: var(--surface-card);
     border: 1px solid var(--border-hairline);
     border-radius: var(--radius-card);
@@ -24,12 +25,28 @@
     z-index: 1;
     position: relative;
   }
+  /*
+   * The rise moves the card's bottom edge up ~1px. A pointer resting on that
+   * last pixel would fall off, drop the card, land on it again, and loop. So
+   * while lifted the card keeps a thin halo under it that still counts as the
+   * card: sitting behind the content, it takes no clicks, only the hover.
+   */
+  .paper-card:is(:hover, :focus-within):not(.paper-card--overlay)::after {
+    content: "";
+    position: absolute;
+    inset: -3px 0;
+    z-index: -1;
+  }
+  /* Fields on the card are still text, whatever the card's cursor says. */
+  .paper-card :is(input, textarea) {
+    cursor: auto;
+  }
   .paper-card:active {
     translate: 0 var(--motion-press-y);
   }
-  /* In hand: the only rotation in the product. */
+  /* In hand: clear of the board, and the only rotation in the product. */
   .paper-card--overlay {
-    box-shadow: var(--shadow-lift);
+    box-shadow: var(--shadow-hand);
     border-color: var(--border-strong);
     rotate: -0.7deg;
   }
@@ -344,10 +361,23 @@
     min-height: 0;
     overflow: hidden;
   }
-  /* The resting summary steps aside exactly when the peek opens, not before —
-     otherwise the card is briefly blank while the peek waits out its dwell. */
+  /*
+   * The resting summary steps aside exactly when the peek opens, not before —
+   * otherwise the card is briefly blank while the peek waits out its dwell.
+   * It collapses on the same clock the peek grows on, never `display: none`:
+   * an instant removal made the card ~25px shorter for the first frames of
+   * the opening, dropped a pointer near the bottom edge off the card, and
+   * left hover flickering in and out.
+   */
   .card-rest {
-    transition: display 0s allow-discrete;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--motion-duration-ui)
+      var(--motion-ease-settle);
+  }
+  .card-rest-inner {
+    min-height: 0;
+    overflow: hidden;
   }
   /*
    * The back of the card is a filled-in form: a label column in the margin,
@@ -379,9 +409,64 @@
     transition-delay: var(--motion-dwell);
   }
   .paper-card:is(:hover, :focus-within):not(.paper-card--overlay) .card-rest {
-    display: none;
+    grid-template-rows: 0fr;
     transition-delay: var(--motion-dwell);
   }
+}
+
+/*
+ * Pinned: held up off the desk. The peek stays out, the summary stays aside,
+ * and the card keeps the lifted shadow and edge so it reads as still in hand
+ * after the pointer has moved on. It does not rise or swell — that is the
+ * pointer's own cue, and it comes back on hover.
+ */
+.paper-card[data-pinned="true"]:not(.paper-card--overlay) {
+  box-shadow: var(--shadow-lift);
+  border-color: var(--border-strong);
+  position: relative;
+  z-index: 1;
+}
+.paper-card[data-pinned="true"]:not(.paper-card--overlay) .card-peek {
+  grid-template-rows: 1fr;
+  transition-delay: 0s;
+}
+.paper-card[data-pinned="true"]:not(.paper-card--overlay) .card-rest {
+  grid-template-rows: 0fr;
+}
+
+/*
+ * The rail: pin and maximize, stacked in the corner opposite the card
+ * number. Hidden at rest; shown with the peek, or whenever the card is pinned
+ * so the way back is always in reach.
+ */
+.card-rail {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  opacity: 0;
+  transition: opacity var(--motion-duration-hover) var(--motion-ease-out);
+}
+.paper-card:is(:hover, :focus-within) .card-rail,
+.paper-card[data-pinned="true"] .card-rail {
+  opacity: 1;
+}
+.card-rail > * {
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: var(--radius-input);
+  color: var(--color-grey);
+}
+.card-rail > *:is(:hover, :focus-visible) {
+  color: var(--color-ink);
+  background: var(--surface-panel);
+}
+.card-rail > [data-on="true"] {
+  color: var(--color-ink);
 }
 
 @media (hover: none) {
@@ -389,7 +474,7 @@
     grid-template-rows: 1fr;
   }
   .paper-card:focus-within:not(.paper-card--overlay) .card-rest {
-    display: none;
+    grid-template-rows: 0fr;
   }
 }
 
@@ -399,7 +484,8 @@
   .paper-card:hover,
   .paper-card:focus-within,
   .paper-card:active,
-  .card-peek {
+  .card-peek,
+  .card-rest {
     transition: none;
     translate: none;
     scale: none;

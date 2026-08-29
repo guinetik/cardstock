@@ -1,6 +1,7 @@
 "use client";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
 import { daysInLane } from "@/lib/filters";
@@ -81,10 +82,14 @@ export function CardItem(props: {
   flat?: boolean;
   onPatch?: (id: string, p: CardPatch) => void;
   onArchive?: (id: string, on: boolean) => void;
+  /** Left open on the desk: the peek stays out after the pointer leaves. */
+  pinned?: boolean;
+  onPin?: (id: string, on: boolean) => void;
   projectSlug?: string;
   boardSlug?: string;
 }) {
   const { card, lane } = props;
+  const pinned = !!props.pinned;
   const days = lane?.kind === "waiting" ? daysInLane(card) : null;
   const overSla =
     days != null && lane?.sla_days != null && days > lane.sla_days;
@@ -105,53 +110,92 @@ export function CardItem(props: {
   return (
     <article
       className={`group relative paper-card p-2.5 ${props.overlay ? "paper-card--overlay" : ""} ${props.flat && !props.overlay ? "paper-card--flat" : ""} ${card.archived_at ? "opacity-60" : ""}`}
+      data-pinned={pinned ? "true" : undefined}
     >
-      <div className="flex items-baseline gap-2">
+      {/* The rail sits opposite the card number: pin, then maximize. */}
+      {!props.overlay && (props.onPin || props.projectSlug) && (
+        <div className="card-rail" onPointerDown={(e) => e.stopPropagation()}>
+          {props.onPin && (
+            <button
+              type="button"
+              aria-label={pinned ? "Unpin card" : "Pin card"}
+              title={pinned ? "Unpin" : "Keep open"}
+              data-on={pinned ? "true" : undefined}
+              onClick={(e) => {
+                props.onPin?.(card.id, !pinned);
+                // A mouse click should not leave focus on the button, or
+                // :focus-within holds the card open after an unpin. Keyboard
+                // users keep their place.
+                if (e.detail > 0) e.currentTarget.blur();
+              }}
+            >
+              {pinned ? <PinOff size={13} /> : <Pin size={13} />}
+            </button>
+          )}
+          {props.projectSlug && (
+            <Link
+              href={detail}
+              aria-label="Open in place"
+              title="Open over the board"
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <Maximize2 size={13} />
+            </Link>
+          )}
+        </div>
+      )}
+      <div className="flex items-baseline gap-2 pr-6">
         <span className="shrink-0 font-mono text-[11.5px] text-[var(--color-grey-faint)]">
           #{card.external_id}
         </span>
         <p className="min-w-0 text-[18px] font-medium leading-snug">
           {props.projectSlug ? (
-            <Link href={detail} className="hover:underline">
+            // A plain anchor: the issue *page*. Only the rail's maximize is
+            // meant to be intercepted into the in-place dialog.
+            <a href={detail} className="hover:underline">
               {card.title}
-            </Link>
+            </a>
           ) : (
             card.title
           )}
         </p>
       </div>
 
-      <div className="card-rest mt-1 flex items-center gap-2">
-        {card.epic && (
-          <p className="truncate text-[11px] text-[var(--color-grey)]">
-            {card.epic}
-          </p>
-        )}
-        {card.status !== "backlog" && (
-          <span className={STATUS_CHIP[card.status] ?? "stat stat--muted"}>
-            {card.status}
-          </span>
-        )}
-        {(card.priority || card.effort) && (
-          <span className="ml-auto flex shrink-0 gap-1">
-            {card.priority && (
-              <span
-                className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
-                title={`Priority ${card.priority}`}
-              >
-                P{card.priority}
+      <div className="card-rest">
+        <div className="card-rest-inner">
+          <div className="mt-1 flex items-center gap-2">
+            {card.epic && (
+              <p className="truncate text-[11px] text-[var(--color-grey)]">
+                {card.epic}
+              </p>
+            )}
+            {card.status !== "backlog" && (
+              <span className={STATUS_CHIP[card.status] ?? "stat stat--muted"}>
+                {card.status}
               </span>
             )}
-            {card.effort && (
-              <span
-                className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
-                title="Effort"
-              >
-                {card.effort}
+            {(card.priority || card.effort) && (
+              <span className="ml-auto flex shrink-0 gap-1">
+                {card.priority && (
+                  <span
+                    className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
+                    title={`Priority ${card.priority}`}
+                  >
+                    P{card.priority}
+                  </span>
+                )}
+                {card.effort && (
+                  <span
+                    className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
+                    title="Effort"
+                  >
+                    {card.effort}
+                  </span>
+                )}
               </span>
             )}
-          </span>
-        )}
+          </div>
+        </div>
       </div>
 
       <div className="card-peek">
@@ -186,14 +230,14 @@ export function CardItem(props: {
               </span>
             )}
             {props.projectSlug && !props.overlay && (
-              <Link
+              <a
                 href={detail}
                 className="paper-link ml-auto text-[11.5px]"
                 onPointerDown={(e) => e.stopPropagation()}
                 data-testid="open-issue"
               >
                 Open issue
-              </Link>
+              </a>
             )}
             {props.onArchive && (
               <button
@@ -211,7 +255,10 @@ export function CardItem(props: {
           <section
             className="card-form mt-2.5 border-t border-[var(--border-hairline)] pt-2.5"
             aria-label="Card fields"
-            onPointerDown={(e) => e.stopPropagation()}
+            // The form is most of an open card, so it is a handle too. Only
+            // the text fields keep the pointer to themselves: a press-and-move
+            // there is selecting text, not picking the card up. Buttons need
+            // nothing — the sensor's distance threshold keeps a click a click.
             onKeyDown={(e) => e.stopPropagation()}
           >
             {card.tag_ids.length > 0 && (
@@ -240,6 +287,7 @@ export function CardItem(props: {
                 <div className="flex flex-col gap-1">
                   <input
                     type="date"
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="paper-field h-6 w-full font-mono text-[11.5px]"
                     value={card.target_date ?? ""}
                     onChange={(e) =>
@@ -252,6 +300,7 @@ export function CardItem(props: {
                   />
                   <input
                     type="text"
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="paper-field h-6 w-full text-[11.5px] italic placeholder:not-italic"
                     placeholder="or a rough date — end of Q3"
                     value={card.target_label ?? ""}
