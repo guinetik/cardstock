@@ -2087,7 +2087,6 @@ export function ImportPlanTable({ plan }: { plan: Plan }) {
 import { useState, useTransition } from "react";
 import { type ImportApplyResult, type ImportPlanResult, applyBoardImport, planBoardImport } from "@/app/import-actions";
 import { ImportPlanTable } from "@/components/import-plan-table";
-import { SheetContract } from "@/components/sheet-contract";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -2215,7 +2214,7 @@ Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
 - Create: `e2e/project-import.spec.ts`
 
 **Interfaces:**
-- Consumes: `planProjectImport`, `applyProjectImport` (Task 7), `ImportPlanTable`, `SheetContract` (Task 9).
+- Consumes: `planProjectImport`, `applyProjectImport` (Task 7), `ImportPlanTable` (Task 9). `SheetContract` is server-only: the dialog takes it as a `contract: React.ReactNode` prop, rendered by the server component `src/app/page.tsx` (`<ImportProjectDialog contract={<SheetContract />} />`) — same pattern `BoardImportDialog` uses after Task 9's fix round. Never import `SheetContract` into a `"use client"` file.
 
 - [ ] **Step 1: Write the failing e2e test**
 
@@ -2267,14 +2266,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { type ImportApplyResult, type ImportPlanResult, applyProjectImport, planProjectImport } from "@/app/import-actions";
 import { ImportPlanTable } from "@/components/import-plan-table";
-import { SheetContract } from "@/components/sheet-contract";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { keyFromName } from "@/lib/keys";
 
 /** A binder from a folder of sheets: name it, name its first board, drop the zip, read the plan, create. */
-export function ImportProjectDialog() {
+/** `contract` is `<SheetContract />` rendered by the server page, so the schema never reaches the client bundle. */
+export function ImportProjectDialog({ contract }: { contract: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -2354,7 +2353,7 @@ export function ImportProjectDialog() {
                 <input type="file" accept=".zip,application/zip" aria-label="Zip of sheets" className="sr-only" disabled={!ready} onChange={(e) => choose(e.target.files?.[0] ?? null)} />
               </label>
               {planned && "error" in planned && <p className="text-sm text-[var(--pen-red)]" role="alert">{planned.error}</p>}
-              <SheetContract />
+              {contract}
             </div>
           </div>
         )}
@@ -2363,6 +2362,10 @@ export function ImportProjectDialog() {
   );
 }
 ```
+
+- [ ] **Step 3b: Pass the contract from the server page**
+
+In `src/app/page.tsx` (a server component), import `SheetContract` from `@/components/sheet-contract` and change `<ImportProjectDialog />` to `<ImportProjectDialog contract={<SheetContract />} />`. Also add `import type React from "react"` in the dialog if tsc needs the `React.ReactNode` namespace.
 
 - [ ] **Step 4: Move the CLI explainer to the README**
 
@@ -2386,7 +2389,7 @@ Expected: PASS — the management spec still finds "Import project", "New projec
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/import-project-dialog.tsx README.md e2e/project-import.spec.ts
+git add src/components/import-project-dialog.tsx src/app/page.tsx README.md e2e/project-import.spec.ts
 git commit -m "project import: a folder of sheets becomes a binder
 
 Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
