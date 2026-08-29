@@ -11,8 +11,8 @@ export type ProjectPerson = {
 
 /**
  * Who can open this folder, as wide binders on the People section's stock.
- * The owner invites on the blank cover at the foot; removing someone leaves
- * them on the allowlist.
+ * An owner or project admin invites on the blank cover at the foot; removing
+ * someone leaves them on the allowlist.
  */
 export function ProjectPeople({
   projectId,
@@ -20,12 +20,14 @@ export function ProjectPeople({
   people,
   currentMemberId,
   canInvite,
+  allowAdminRole = false,
 }: {
   projectId: string;
   projectName: string;
   people: ProjectPerson[];
   currentMemberId: string;
   canInvite: boolean;
+  allowAdminRole?: boolean;
 }) {
   return (
     <div className="roster">
@@ -77,6 +79,7 @@ export function ProjectPeople({
           variant="slip"
           projects={[{ id: projectId, name: projectName }]}
           lockedProjectId={projectId}
+          allowAdminRole={allowAdminRole}
         />
       )}
     </div>

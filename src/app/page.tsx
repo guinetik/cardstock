@@ -69,7 +69,7 @@ export default async function Home() {
             <p className="folder-blurb">
               {owner
                 ? "Create a project, then add a board to it and start filing cards."
-                : "You have not been added to a project yet. Ask an owner to add you from the Users page."}
+                : "You have not been added to a project yet. Ask an owner or a project admin to add you."}
             </p>
           </div>
         </div>

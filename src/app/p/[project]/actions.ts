@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { currentAccess } from "@/lib/access-server";
 import { cleanName, keyFromName } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
@@ -19,6 +20,9 @@ export async function createBoard(
   if (!name) return { error: "Enter a board name (80 characters or fewer)." };
   const slug = keyFromName(name);
   if (!slug) return { error: "The board name needs a letter or number." };
+  const access = await currentAccess(projectId);
+  if (!access?.canManage)
+    return { error: "Only an owner or project admin can create a board." };
 
   const db = await supabaseServer();
   const { error } = await db.rpc("create_board", {

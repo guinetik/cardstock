@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A project member can drop a zip of `<n>.md` sheets onto a board (or, as owner, onto the projects page to make a new project), see a dry-run table, confirm, and later download the board back as a zip where untouched sheets are byte-identical and edited ones differ only where the board made a mark.
+**Goal:** An owner or project admin can drop a zip of `<n>.md` sheets onto a board (or, as owner, onto the projects page to make a new project), see a dry-run table, confirm, and later download the board back as a zip where untouched sheets are byte-identical and edited ones differ only where the board made a mark.
 
 **Architecture:** The frontmatter contract (zod schema, lenient parser, tag mapping, writer) moves from `etl/` to `src/lib/frontmatter/` so the app and the CLI share one set of rules. A pure planner (`src/lib/import/plan.ts`) turns files + board state into a `Plan`; an applier writes it through the member's RLS client. Export is a line edit of the stored sheet (`cards.source_text`), never a render of the row unless there is no sheet. Server actions and one route handler expose it; two dialogs on the projects page drive it.
 
@@ -18,7 +18,7 @@
 - `frontmatterSchema` is the contract: it validates, decides new-file key order, generates `docs/frontmatter.schema.json` and the dialog's instructions. `tracker-item` is no longer required.
 - New lanes are `kind: 'work'`, named from the key, inserted before the first built/done/archive lane. `group:tag` refs create groups/tags; bare tags no group declares are reported as *not applied*, never guessed.
 - Upload cap 4 MB (`MAX_UPLOAD_BYTES = 4 * 1024 * 1024`). Only entries whose basename matches `/^\d+\.md$/` count; any folder depth.
-- Board import/export: any project member. Project import: owner only.
+- Board import/export: owner or project admin. Project import: owner only.
 - Paper, not shadcn defaults: verdicts are `.stat` in pen (`stat--success` new, `stat--wip` changed, plain unchanged, `stat--blocked` error); ids in mono; no toasts — errors render on the sheet.
 - Existing e2e selectors stay stable: "Import project", "New project", "New board", label "Name".
 - `bun run check` (biome + tsc) must be green at every commit. Commit messages end with `Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s`.

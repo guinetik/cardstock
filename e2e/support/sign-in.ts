@@ -55,11 +55,7 @@ export async function signIn(page: Page) {
  * a permanent test account around, and so a test that needs a *non*-owner says
  * so itself instead of depending on how the seed happens to be shaped.
  */
-export async function createMember(
-  email: string,
-  password: string,
-  role: "admin" | "member" = "admin",
-) {
+export async function createMember(email: string, password: string) {
   await dropMember(email);
   const { error } = await admin.auth.admin.createUser({
     email,
@@ -70,11 +66,45 @@ export async function createMember(
   const { error: e2 } = await admin
     .from("members")
     .upsert(
-      { email, display_name: email.split("@")[0], role },
+      { email, display_name: email.split("@")[0], role: "member" },
       { onConflict: "email" },
     );
   if (e2) throw new Error(`could not invite ${email}: ${e2.message}`);
   return email;
+}
+
+export async function projectId(slug: string) {
+  const { data, error } = await admin
+    .from("projects")
+    .select("id")
+    .eq("slug", slug)
+    .single();
+  if (error || !data)
+    throw new Error(`project ${slug} not found: ${error?.message}`);
+  return data.id as string;
+}
+
+/** Attach an allowlisted member to a project with a project role. */
+export async function attachToProject(
+  email: string,
+  slug: string,
+  role: "admin" | "member",
+) {
+  const { data: member, error } = await admin
+    .from("members")
+    .select("id")
+    .eq("email", email)
+    .single();
+  if (error || !member)
+    throw new Error(`member ${email} not found: ${error?.message}`);
+  const id = await projectId(slug);
+  const { error: e2 } = await admin
+    .from("project_members")
+    .upsert(
+      { project_id: id, member_id: member.id, role },
+      { onConflict: "project_id,member_id" },
+    );
+  if (e2) throw new Error(`could not attach ${email}: ${e2.message}`);
 }
 
 /** Remove a throwaway member and any auth user for them. */

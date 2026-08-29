@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LaneMap } from "@/components/lane-map";
+import { canManageProject, isSiteOwner } from "@/lib/access";
 import { laneMicrocosm } from "@/lib/lane-map";
 import { oneRelated } from "@/lib/related";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
@@ -104,6 +105,12 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
     .sort((a, b) =>
       (a.displayName ?? a.email).localeCompare(b.displayName ?? b.email),
     );
+  const mine = people.find((person) => person.memberId === member.id);
+  const canManage = canManageProject({
+    siteRole: member.role,
+    projectRole: mine?.role ?? null,
+  });
+  const owner = isSiteOwner(member.role);
 
   const allCards = boards.flatMap((b) => b.cards ?? []);
   const cardCount = allCards.length;
@@ -169,10 +176,12 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
         count={String(boards.length)}
         empty={boards.length === 0}
         aside={
-          <CreateBoardDialog
-            projectId={project.id}
-            projectSlug={project.slug}
-          />
+          canManage ? (
+            <CreateBoardDialog
+              projectId={project.id}
+              projectSlug={project.slug}
+            />
+          ) : undefined
         }
       >
         {boards.length > 0 ? (
@@ -212,13 +221,15 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
                       >
                         Take stock
                       </Link>
-                      <a
-                        href={`${boardHref}/export`}
-                        className="binder-cockpit paper-link"
-                        aria-label={`Export ${board.name} as CSV`}
-                      >
-                        Export CSV
-                      </a>
+                      {canManage && (
+                        <a
+                          href={`${boardHref}/export`}
+                          className="binder-cockpit paper-link"
+                          aria-label={`Export ${board.name} as CSV`}
+                        >
+                          Export CSV
+                        </a>
+                      )}
                     </span>
                   </div>
                 </li>
@@ -244,7 +255,8 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
           projectName={project.name}
           people={people}
           currentMemberId={member.id}
-          canInvite={member.role === "owner"}
+          canInvite={canManage}
+          allowAdminRole={owner}
         />
       </ProjectSection>
 

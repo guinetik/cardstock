@@ -1,10 +1,10 @@
 /**
  * Seed the member allowlist and attach everyone to the given project.
  *
- * OWNER_EMAIL is promoted to `role = 'owner'` — that is how a fresh deploy
- * bootstraps its owner from infrastructure config. From then on the row is the
- * source of truth: further members can be added by SQL, or by a UI later.
- * MEMBER_EMAILS are seeded as ordinary admins.
+ * OWNER_EMAIL is promoted to `members.role = 'owner'` — that is how a fresh
+ * deploy bootstraps its owner from infrastructure config. From then on the
+ * row is the source of truth; there is exactly one owner.
+ * MEMBER_EMAILS are seeded as project admins (site role `member`).
  *
  * This only fills the allowlist. Signing in needs a password too, which is what
  * `bun run db:dev-password` gives a local account.
@@ -29,27 +29,35 @@ const { data: project } = await db
   .single();
 if (!project)
   throw new Error(`project '${projectSlug}' not found — run db:reset first`);
+const projectId = project.id;
 
-// Owner first, so the allowlist is never briefly ownerless on a fresh database.
-const roster = new Map<string, "owner" | "admin">();
-if (ownerEmail) roster.set(ownerEmail, "owner");
-for (const email of emails) if (!roster.has(email)) roster.set(email, "admin");
-
-for (const [email, role] of roster) {
+async function attach(
+  email: string,
+  siteRole: "owner" | "member",
+  projectRole: "admin" | "member",
+) {
   const { data: m, error } = await db
     .from("members")
     .upsert(
-      { email, display_name: email.split("@")[0], role },
+      { email, display_name: email.split("@")[0], role: siteRole },
       { onConflict: "email" },
     )
     .select("id")
     .single();
   if (error || !m) throw new Error(`${email}: ${error?.message}`);
-  await db
+  const { error: membershipError } = await db
     .from("project_members")
     .upsert(
-      { project_id: project.id, member_id: m.id },
+      { project_id: projectId, member_id: m.id, role: projectRole },
       { onConflict: "project_id,member_id" },
     );
-  console.log(`${role} ${email} → ${projectSlug}`);
+  if (membershipError) throw new Error(`${email}: ${membershipError.message}`);
+  console.log(`${siteRole}/${projectRole} ${email} → ${projectSlug}`);
+}
+
+// Owner first, so the allowlist is never briefly ownerless on a fresh database.
+if (ownerEmail) await attach(ownerEmail, "owner", "admin");
+for (const email of emails) {
+  if (email === ownerEmail) continue;
+  await attach(email, "member", "admin");
 }

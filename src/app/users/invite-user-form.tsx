@@ -15,10 +15,13 @@ export function InviteUserForm({
   projects,
   lockedProjectId,
   variant = "card",
+  allowAdminRole = true,
 }: {
   projects: Array<{ id: string; name: string }>;
   lockedProjectId?: string;
   variant?: "card" | "slip";
+  /** Site owner may invite a project admin; a project admin may not. */
+  allowAdminRole?: boolean;
 }) {
   const [state, action, pending] = useActionState(inviteUser, null);
   if (variant === "slip") {
@@ -42,6 +45,7 @@ export function InviteUserForm({
             pending={pending}
             error={state?.error}
             success={state?.success}
+            allowAdminRole={allowAdminRole}
             slip
           />
         </div>
@@ -63,6 +67,7 @@ export function InviteUserForm({
         pending={pending}
         error={state?.error}
         success={state?.success}
+        allowAdminRole={allowAdminRole}
       />
     </form>
   );
@@ -79,6 +84,7 @@ function InviteFields({
   error,
   success,
   slip = false,
+  allowAdminRole = true,
 }: {
   projects: Array<{ id: string; name: string }>;
   lockedProjectId?: string;
@@ -86,6 +92,7 @@ function InviteFields({
   error?: string;
   success?: string;
   slip?: boolean;
+  allowAdminRole?: boolean;
 }) {
   const fieldClass = slip ? "roster-fields" : "grid gap-3 sm:grid-cols-2";
   return (
@@ -183,7 +190,7 @@ function InviteFields({
             defaultValue="member"
           >
             <option value="member">Member</option>
-            <option value="admin">Project admin</option>
+            {allowAdminRole && <option value="admin">Project admin</option>}
           </select>
         </label>
         {slip && (

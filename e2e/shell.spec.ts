@@ -49,7 +49,7 @@ test("the owner can open the import-project explainer", async ({ page }) => {
 });
 
 test("a non-owner does not see the import button", async ({ page }) => {
-  await createMember(NON_OWNER, NON_OWNER_PASSWORD, "admin");
+  await createMember(NON_OWNER, NON_OWNER_PASSWORD);
   try {
     await signInAs(page, NON_OWNER, NON_OWNER_PASSWORD);
     await page.goto("/");

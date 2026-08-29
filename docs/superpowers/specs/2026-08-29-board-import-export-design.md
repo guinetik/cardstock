@@ -18,7 +18,7 @@ Three affordances on the projects page, all built on one shared importer and one
 2. **Board export** — on a board tab: download a zip of `<n>.md`, one per card, where an untouched sheet comes back byte-identical and an edited one differs only where the board made a mark.
 3. **Project import** — the existing grey button: drop the same kind of zip, name the project and its first board, and get a binder whose lanes and tag groups come from the sheets, through the same dry-run table.
 
-Owner-only for project import (it sits beside "New project"); any project member for board import and export (they can already create boards).
+Owner-only for project import (it sits beside "New project"); owner or project admin for board import and export (the same people who can create boards).
 
 The CLI (`etl:import`, `etl:export`) keeps working and is rebuilt on the same modules, so there is one set of rules.
 
@@ -127,7 +127,7 @@ After writing, the exporter updates `source_text` to the output and `lane_from_s
 
 `src/app/import-actions.ts` (`"use server"`):
 
-- `planBoardImport(form: FormData) → Plan | { error }` — fields `boardId`, `file`. Loads `BoardState` through the member's client, unzips, plans. Errors: not a member, not a zip, no sheets, too large.
+- `planBoardImport(form: FormData) → Plan | { error }` — fields `boardId`, `file`. Loads `BoardState` through the member's client, unzips, plans. Errors: not an owner or project admin, not a zip, no sheets, too large.
 - `applyBoardImport(form: FormData) → { ok; counts } | { error }` — same fields. Re-plans; refuses if `plan.ok` is false; applies; `revalidatePath("/")` and the board path.
 - `planProjectImport(form)` — fields `name`, `boardName`, `file`. Owner only. Plans against a *virtual* fresh board (the five default lanes from `create_board`, no groups) so the table can be shown before anything is created.
 - `applyProjectImport(form)` — owner only. `create_project` RPC, `create_board` RPC, load the real `BoardState`, re-plan, apply, redirect to the board. On apply failure returns `{ error, projectSlug }` and the dialog says the project exists and is empty.

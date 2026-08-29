@@ -27,7 +27,7 @@ bun run dev                               # http://localhost:3000
 
 cardstock is **invite-only**: `members` is the allowlist, and an email that is not on it never gets a session — onboarding is refused before any account is created, sign-in signs the user straight back out, and row-level security shows them nothing.
 
-The **Owner** is whoever deploys the app and owns its infrastructure. `OWNER_EMAIL` bootstraps that row on a fresh database; from then on `members.role = 'owner'` is the source of truth. Owners create projects from the projects page and manage the allowlist and project access at `/users`. Inviting records the address but sends no email; share the app URL and the person chooses a password on their first visit. Project members can create as many boards as the project needs.
+The **Owner** is whoever deploys the app and owns its infrastructure — one person, bootstrapped from `OWNER_EMAIL`. From then on `members.role = 'owner'` is the source of truth and the unique index refuses a second owner. Owners create projects from the projects page and manage the allowlist at `/users`. A project admin can invite **members** to that project, create boards, and export them; ordinary members use the boards and edit cards. Inviting records the address but sends no email; share the app URL and the person chooses a password on their first visit.
 
 Sign in with an email and a password. Someone who has just been invited picks their password on the login screen the first time — that is the whole onboarding, and no mail is involved. `signUp` cannot replace a password that already exists, so the form can create a first one but never take over an account.
 
@@ -51,7 +51,7 @@ Resetting a forgotten password is not built yet — it needs mail. Until then, c
 | `bun run etl:import --project <p> --board <b> --source <dir>` | Parse `<id>.md` files, validate against `etl/schema.ts`, upsert by `(board, external_id)`. Markdown owns title/status/body/epic/area/dates/needs/relates/tags; the DB owns lane/rank/priority/effort/target/audience/archive. A new card takes the lane its file names, or the inbox; an existing card moves only when the file's `lane:` differs from what it said at the last sync, so a drag survives a file that has not changed its mind. Status never decides a lane. Unchanged files are skipped by hash. |
 | `bun run etl:import-board-state --project <p> --board <b> --file <export.json>` | Apply a `designer-board/1` export (lane, rank, target, effort, value→priority) on top of imported cards. |
 | `bun run etl:schema` | Emit `docs/frontmatter.schema.json` from the zod schema. |
-| `bun run db:seed-members --project <slug>` | `OWNER_EMAIL` → owner, `MEMBER_EMAILS` → admins, both into `members` + `project_members`. |
+| `bun run db:seed-members --project <slug>` | `OWNER_EMAIL` → site owner, `MEMBER_EMAILS` → project admins, both into `members` + `project_members`. |
 | `bun run db:pull-prod` | Copy production into the local stack: dumps the hosted database (`PROD_DB_URL`) to `backups/`, resets local without the seed, replays public rows and auth users. `--restore <stamp>` replays a saved backup; `--dump-only` just writes it. Refuses to write anywhere but a local Supabase. |
 | `bun run db:test` | Access-control checks against the local database (owner, allowlist, RLS). |
 
