@@ -221,11 +221,11 @@ describe("paper components", () => {
     expect(css).toContain("color: var(--pen-blue)");
   });
 
-  test("the roster is a binder of punched slips", () => {
+  test("the roster is wide binders on the folder stock", () => {
     expect(css).toContain(".roster");
     expect(css).toContain(".roster-slip");
-    expect(css).toContain(".roster-punch");
     expect(css).toContain(".roster-you");
+    expect(css).not.toContain(".roster-punch");
   });
 
   test("the project page is a letterhead and section folders", () => {
@@ -236,6 +236,26 @@ describe("paper components", () => {
     expect(css).toContain(
       ".folder:not(.folder--section):has(.folder-tab:is(:hover, :focus-visible))",
     );
+  });
+
+  test("board binders chart lanes as a miniature board", () => {
+    expect(css).toContain(".lane-map");
+    expect(css).toContain(".lane-map-col");
+    expect(css).toContain(".lane-map-pack");
+    expect(css).toContain("flex-wrap: nowrap");
+    expect(css).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(css).toContain('[data-kind="inbox"]');
+    expect(css).toContain(".lane-map-cell");
+    expect(css).toContain(".lane-map-cell--vacant");
+    expect(css).toContain("overflow: visible");
+    expect(css).toContain("bottom: calc(100% + 4px)");
+    expect(css).toContain(".lane-map-cell--queued");
+    expect(css).toContain(".lane-map-cell--blocked");
+    expect(css).toContain(".lane-map-col .lane-map-cell.card-color--rose");
+    expect(css).not.toContain('[data-kind="work"] .lane-map-cell');
+    expect(css).not.toContain("overflow-x: auto");
+    expect(css).not.toContain(".lane-map-col--work");
+    expect(css).not.toContain(".lane-map-row");
   });
 });
 

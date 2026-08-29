@@ -116,9 +116,14 @@ The project page is a **letterhead** plus a stack of section folders
 blurb, the counts as `.stat`s, and the `.folder-stamp` in the margin — the
 stamp is written once. Each chapter below is its own manila file with a quiet
 Plex tab (`boards`, `people`, `concepts`, `settings`); the tab does not lift
-the folder. Binders live only in Boards — wide `.binder`s with lane `.stat`s,
-*Take stock*, and *Export CSV*, and *New board* in the aside. People is punched
-`.roster-slip`s on that folder's stock, last row blank for the invite.
+the folder. Binders live only in Boards — wide `.binder`s with a **lane microcosm**
+(`.lane-map`): one row of columns that shrink together (no scrollport),
+drawer vs panel stock, three cards filling a row. Untinted slips use the
+cockpit pens (queued, moving, late, blocked, delivered); a card's own tint
+wins. Names live in an absolute tip on hover,
+*Take stock*, and *Export CSV*, and *New board* in the aside. People is wide
+`.binder`s — white cover, riveted spine — one person per cover, last binder
+blank for the invite.
 Concepts is the **concept graph** (`.graph`): each group a `.graph-node` with
 highlighter on its spine, tags as `.mark`s on a ruled trunk. Settings holds
 the two asks as inner rows, same shape and opposite pens: `.cta` to take the

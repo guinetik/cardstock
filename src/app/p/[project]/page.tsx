@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { LaneMap } from "@/components/lane-map";
+import { laneMicrocosm } from "@/lib/lane-map";
 import { oneRelated } from "@/lib/related";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { markHue } from "@/lib/types";
@@ -19,6 +21,11 @@ interface CardRow {
   lane_id: string | null;
   archived_at: string | null;
   source_path: string | null;
+  color: string | null;
+  rank: number;
+  status: string | null;
+  needs: string | null;
+  target_date: string | null;
 }
 interface BoardRow {
   id: string;
@@ -45,16 +52,6 @@ interface MembershipRow {
   members: MemberEmbed | MemberEmbed[] | null;
 }
 
-/** The pen a lane's tally is written in: the same rule the board draws under its tab. */
-const KIND_STAT: Record<LaneRow["kind"], string> = {
-  inbox: "stat--muted",
-  work: "stat--ink",
-  waiting: "stat--wip",
-  built: "stat--info",
-  done: "stat--success",
-  archive: "stat--faint",
-};
-
 function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
 }
@@ -67,7 +64,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
   const { data } = await db
     .from("projects")
     .select(
-      "id, slug, name, description, boards(id, slug, name, lanes(id, name, kind, position), cards(lane_id, archived_at, source_path))",
+      "id, slug, name, description, boards(id, slug, name, lanes(id, name, kind, position), cards(lane_id, archived_at, source_path, color, rank, status, needs, target_date))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -185,13 +182,6 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
                 (a, b) => a.position - b.position,
               );
               const cards = board.cards ?? [];
-              const live = cards.filter((c) => !c.archived_at);
-              const archived = cards.length - live.length;
-              const byLane = new Map<string, number>();
-              for (const c of live) {
-                if (c.lane_id)
-                  byLane.set(c.lane_id, (byLane.get(c.lane_id) ?? 0) + 1);
-              }
               const boardHref = `${href}/b/${board.slug}`;
               return (
                 <li key={board.id} className="binder binder--wide">
@@ -202,29 +192,14 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
                     </Link>
                     <code className="graph-key ml-2">{board.slug}</code>
                   </h2>
-                  <p className="binder-tally">
-                    {lanes
-                      .filter((l) => l.kind !== "archive")
-                      .map((l) => (
-                        <span
-                          key={l.id}
-                          className={`stat ${KIND_STAT[l.kind]}`}
-                        >
-                          {l.name}{" "}
-                          <b className="font-medium">{byLane.get(l.id) ?? 0}</b>
-                        </span>
-                      ))}
-                    {archived > 0 && (
-                      <span className="stat stat--faint">
-                        archived <b className="font-medium">{archived}</b>
-                      </span>
-                    )}
-                    {cards.length === 0 && (
-                      <span className="stat stat--flat stat--faint">
-                        no cards yet
-                      </span>
-                    )}
-                  </p>
+                  {cards.length === 0 ? (
+                    <p className="binder-vacant">no cards yet</p>
+                  ) : (
+                    <LaneMap
+                      href={boardHref}
+                      rows={laneMicrocosm(lanes, cards)}
+                    />
+                  )}
                   <div className="binder-foot">
                     <span className="binder-count">
                       {plural(cards.length, "card", "cards")}

@@ -9,7 +9,7 @@ import { inviteUser } from "./actions";
  * Allowlist a person and attach them to a project. No mail is sent; they set a
  * password on first visit. `lockedProjectId` hides the project picker so the
  * project page can invite into the folder already open. `slip` draws the form
- * as the blank sheet at the foot of the roster binder.
+ * as a blank binder at the foot of the People folder.
  */
 export function InviteUserForm({
   projects,
@@ -23,8 +23,11 @@ export function InviteUserForm({
   const [state, action, pending] = useActionState(inviteUser, null);
   if (variant === "slip") {
     return (
-      <form action={action} className="roster-slip roster-slip--blank">
-        <span className="roster-punch" aria-hidden="true" />
+      <form
+        action={action}
+        className="binder binder--wide roster-slip roster-slip--blank"
+      >
+        <span className="binder-rivets" aria-hidden="true" />
         <div className="roster-invite">
           <div>
             <p className="roster-invite-kicker">Invite someone</p>

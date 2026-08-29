@@ -75,8 +75,8 @@ export function effortOf(card: Card): number | null {
 }
 
 export function taskSignal(
-  card: Card,
-  lane: Lane | undefined,
+  card: Pick<Card, "status" | "needs" | "target_date">,
+  lane: Pick<Lane, "kind"> | undefined,
   today = new Date(),
 ): TaskSignal {
   if (

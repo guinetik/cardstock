@@ -10,8 +10,8 @@ export type ProjectPerson = {
 };
 
 /**
- * Who can open this folder, as punched slips on the People section's stock.
- * The owner invites on the blank sheet at the foot; removing someone leaves
+ * Who can open this folder, as wide binders on the People section's stock.
+ * The owner invites on the blank cover at the foot; removing someone leaves
  * them on the allowlist.
  */
 export function ProjectPeople({
@@ -34,8 +34,11 @@ export function ProjectPeople({
           const name = person.displayName ?? person.email;
           const you = person.memberId === currentMemberId;
           return (
-            <li key={person.memberId} className="roster-slip">
-              <span className="roster-punch" aria-hidden="true" />
+            <li
+              key={person.memberId}
+              className="binder binder--wide roster-slip"
+            >
+              <span className="binder-rivets" aria-hidden="true" />
               <div className="roster-who">
                 <span className="roster-name">
                   {name}
