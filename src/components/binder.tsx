@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BoardImportDialog } from "@/components/board-import-dialog";
 
 /**
  * A project drawn as a dossier: a manila folder whose tab is the project's
@@ -7,6 +8,7 @@ import Link from "next/link";
  */
 
 export interface BinderBoard {
+  id: string;
   slug: string;
   name: string;
   /** Cards on the board, archived ones included. */
@@ -18,6 +20,8 @@ export interface BinderProject {
   name: string;
   description: string | null;
   boards: BinderBoard[];
+  /** Owner or project admin — controls the ↓/↑ import/export affordances. */
+  canManage: boolean;
 }
 
 function plural(n: number, one: string, many: string) {
@@ -55,6 +59,19 @@ export function Binder({ project }: { project: BinderProject }) {
                   <span className="binder-count">
                     {plural(b.cards, "card", "cards")}
                   </span>
+                  {project.canManage && (
+                    <span className="binder-io">
+                      <a
+                        href={`${href}/b/${b.slug}/export.zip`}
+                        className="binder-export paper-link"
+                        aria-label={`Download ${b.name} as sheets`}
+                        title="Download sheets"
+                      >
+                        ↓
+                      </a>
+                      <BoardImportDialog boardId={b.id} boardName={b.name} />
+                    </span>
+                  )}
                   <Link
                     href={`${href}/b/${b.slug}/cockpit`}
                     className="binder-cockpit paper-link"

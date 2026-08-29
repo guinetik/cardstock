@@ -11,7 +11,9 @@ interface ProjectRow {
   slug: string;
   name: string;
   description: string | null;
-  boards: { slug: string; name: string; cards: { count: number }[] }[] | null;
+  boards:
+    | { id: string; slug: string; name: string; cards: { count: number }[] }[]
+    | null;
 }
 
 export default async function ProfilePage() {
@@ -20,15 +22,18 @@ export default async function ProfilePage() {
   const db = await supabaseServer();
   const { data } = await db
     .from("projects")
-    .select("id, slug, name, description, boards(slug, name, cards(count))")
+    .select("id, slug, name, description, boards(id, slug, name, cards(count))")
     .order("name");
   const projects: BinderProject[] = ((data ?? []) as ProjectRow[]).map((p) => ({
     slug: p.slug,
     name: p.name,
     description: p.description,
+    // Read-only display here; the import/export affordances only ever render on the projects page.
+    canManage: false,
     boards: [...(p.boards ?? [])]
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((b) => ({
+        id: b.id,
         slug: b.slug,
         name: b.name,
         cards: b.cards?.[0]?.count ?? 0,

@@ -1117,6 +1117,104 @@
     z-index: 1;
     font-size: 12px;
   }
+  .binder-io {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    gap: 10px;
+    margin-left: auto;
+    margin-right: 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .binder-import,
+  .binder-export {
+    line-height: 1;
+  }
+  .dropzone {
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+    padding: 24px;
+    border: 1px dashed var(--border-strong);
+    background: var(--surface-well);
+    text-align: center;
+    cursor: pointer;
+  }
+  .import-drop {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .contract {
+    font-size: 12px;
+  }
+  .contract-keys {
+    display: grid;
+    gap: 2px;
+    margin: 8px 0;
+  }
+  .contract-keys div {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 8px;
+  }
+  .contract-keys dt {
+    font-family: var(--font-mono);
+  }
+  .contract-sample {
+    max-height: 220px;
+    overflow: auto;
+    padding: 8px;
+    border: 1px solid var(--border-hairline);
+    background: var(--surface-card);
+    font-size: 11px;
+  }
+  .plan-sides {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .plan-scroll {
+    max-height: 50vh;
+    overflow: auto;
+    border: 1px solid var(--border-hairline);
+  }
+  .plan-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .plan-table th,
+  .plan-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-hairline);
+    text-align: left;
+    vertical-align: top;
+  }
+  .plan-table th {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-grey);
+  }
+  .plan-chip {
+    display: inline-block;
+    margin: 0 6px 2px 0;
+    padding: 0 4px;
+    border: 1px solid var(--border-hairline);
+  }
+  .plan-counts {
+    margin-top: 8px;
+    color: var(--color-grey);
+  }
+  @media (max-width: 720px) {
+    .import-drop {
+      grid-template-columns: 1fr;
+    }
+  }
   .binders-empty {
     grid-column: 1;
     font-size: 13px;
