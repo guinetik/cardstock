@@ -48,7 +48,7 @@
 | `src/components/board-import-dialog.tsx` | drop → plan → done, for one board |
 | `src/components/import-project-dialog.tsx` | rewritten: drop + names → plan → create |
 | `src/components/binder.tsx` | ↓ / ↑ on each board tab |
-| `supabase/migrations/20260903000000_source_text.sql` | `cards.source_text` |
+| `supabase/migrations/20260906000000_source_text.sql` | `cards.source_text` |
 | `etl/schema.ts`, `etl/parse.ts`, `etl/mapping.ts`, `etl/frontmatter-write.ts` | re-export shims (kept so `etl/*.test.ts` and scripts keep their imports) |
 | `etl/import.ts`, `etl/export.ts` | rebuilt on the shared modules |
 
@@ -1294,7 +1294,7 @@ Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
 ### Task 6: `source_text`, board state from the database, and the applier
 
 **Files:**
-- Create: `supabase/migrations/20260903000000_source_text.sql`, `src/lib/import/board-state.ts`, `src/lib/import/apply.ts`, `src/lib/import/apply.integration.test.ts`
+- Create: `supabase/migrations/20260906000000_source_text.sql`, `src/lib/import/board-state.ts`, `src/lib/import/apply.ts`, `src/lib/import/apply.integration.test.ts`
 - Modify: `etl/import.ts` (store `source_text`) — one line, see Step 6
 
 **Interfaces:**
@@ -1310,7 +1310,7 @@ Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
 
 - [ ] **Step 1: Write the migration**
 
-`supabase/migrations/20260903000000_source_text.sql`:
+`supabase/migrations/20260906000000_source_text.sql`:
 ```sql
 -- The sheet as it was handed to us. Export is a line edit of this, never a
 -- render of the row, so an untouched file comes back byte-identical.
@@ -1460,25 +1460,12 @@ export async function applyPlan(
   if (!plan.ok) throw new Error("The plan has errors; fix the files and try again.");
   const boardId = state.id;
 
-  // Lanes: new work lanes go before the first built/done/archive lane.
+  // Lanes: `create_work_lane` positions a new work lane before the first done/archive lane in one transaction.
   const laneId = new Map(state.lanes.map((l) => [l.key, l.id]));
-  if (plan.newLanes.length) {
-    const terminal = state.lanes.filter((l) => ["built", "done", "archive"].includes(l.kind));
-    const insertAt = terminal.length ? Math.min(...terminal.map((l) => l.position)) : state.lanes.length;
-    const shift = state.lanes.filter((l) => l.position >= insertAt).sort((a, b) => b.position - a.position);
-    for (const l of shift) {
-      const { error } = await db.from("lanes").update({ position: l.position + plan.newLanes.length }).eq("id", l.id);
-      if (error) fail(`lane ${l.key}`, error);
-    }
-    for (const [i, l] of plan.newLanes.entries()) {
-      const { data, error } = await db
-        .from("lanes")
-        .insert({ board_id: boardId, key: l.key, name: l.name, kind: "work", position: insertAt + i })
-        .select("id")
-        .single();
-      if (error || !data) fail(`lane ${l.key}`, error);
-      laneId.set(l.key, data.id);
-    }
+  for (const l of plan.newLanes) {
+    const { data, error } = await db.rpc("create_work_lane", { p_board_id: boardId, p_key: l.key, p_name: l.name });
+    if (error || !data) fail(`lane ${l.key}`, error);
+    laneId.set(l.key, (data as { id: string }).id);
   }
 
   // Groups and tags.
@@ -1611,7 +1598,7 @@ Expected: PASS (1 test). Then `bun run db:reset && bun run etl:import --project 
 
 ```bash
 bun run check
-git add supabase/migrations/20260903000000_source_text.sql src/lib/import/board-state.ts src/lib/import/apply.ts src/lib/import/apply.integration.test.ts etl/import.ts
+git add supabase/migrations/20260906000000_source_text.sql src/lib/import/board-state.ts src/lib/import/apply.ts src/lib/import/apply.integration.test.ts etl/import.ts
 git commit -m "import: cards.source_text, board state from the database, and the applier
 
 Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
@@ -1625,7 +1612,7 @@ Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
 - Create: `src/app/import-actions.ts`
 
 **Interfaces:**
-- Consumes: Tasks 4–6; `currentMember`, `supabaseServer`; `cleanName`, `keyFromName` from `@/lib/keys`.
+- Consumes: Tasks 4–6; `currentMember`, `supabaseServer`; `currentAccess(projectId)` from `@/lib/access-server` (its `canManage` is owner-or-project-admin); `cleanName`, `keyFromName` from `@/lib/keys`.
 - Produces:
   ```ts
   export type ImportPlanResult = { plan: Plan; boardName: string } | { error: string };
@@ -1647,6 +1634,7 @@ import { loadBoardState } from "@/lib/import/board-state";
 import { planImport } from "@/lib/import/plan";
 import type { BoardState, Plan } from "@/lib/import/types";
 import { filesFromZip } from "@/lib/import/zip";
+import { currentAccess } from "@/lib/access-server";
 import { cleanName, keyFromName } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
@@ -1661,22 +1649,23 @@ async function sheets(form: FormData) {
   return filesFromZip(new Uint8Array(await file.arrayBuffer()));
 }
 
-/** The board and its project, through RLS: a non-member simply does not find it. */
+/** The board and its project, through RLS, for someone allowed to manage it (owner or project admin). */
 async function board(boardId: string) {
   const db = await supabaseServer();
   const { data } = await db
     .from("boards")
-    .select("id, slug, name, projects!inner(slug)")
+    .select("id, slug, name, project_id, projects!inner(slug)")
     .eq("id", boardId)
     .maybeSingle();
   if (!data) throw new Error("Board not found.");
+  const access = await currentAccess(data.project_id as string);
+  if (!access?.canManage) throw new Error("Only an owner or a project admin can import into this board.");
   const project = data.projects as unknown as { slug: string };
-  return { db, id: data.id as string, name: data.name as string, href: `/p/${project.slug}/b/${data.slug}` };
+  return { db, id: data.id as string, name: data.name as string, href: `/p/${project.slug}/b/${data.slug}`, email: access.member.email as string };
 }
 
 export async function planBoardImport(form: FormData): Promise<ImportPlanResult> {
   try {
-    if (!(await currentMember())) return { error: "Not signed in." };
     const b = await board(String(form.get("boardId") ?? ""));
     const files = await sheets(form);
     const state = await loadBoardState(b.db, b.id);
@@ -1688,14 +1677,12 @@ export async function planBoardImport(form: FormData): Promise<ImportPlanResult>
 
 export async function applyBoardImport(form: FormData): Promise<ImportApplyResult> {
   try {
-    const me = await currentMember();
-    if (!me) return { error: "Not signed in." };
     const b = await board(String(form.get("boardId") ?? ""));
     const files = await sheets(form);
     const state = await loadBoardState(b.db, b.id);
     const plan = planImport(files, state);
     if (!plan.ok) return { error: "Some files did not validate; nothing was imported." };
-    const r = await applyPlan(b.db, state, plan, me.email);
+    const r = await applyPlan(b.db, state, plan, b.email);
     revalidatePath("/");
     revalidatePath(b.href);
     return { ok: true, ...r, href: b.href };
@@ -1830,6 +1817,7 @@ Expected: FAIL — 404.
 
 ```ts
 import { zipSync } from "fflate";
+import { currentAccess } from "@/lib/access-server";
 import { buildVocabulary, tagRef } from "@/lib/frontmatter/mapping";
 import { cardToMarkdown, writeSheet } from "@/lib/frontmatter/write";
 import { loadBoardState } from "@/lib/import/board-state";
@@ -1852,11 +1840,13 @@ export async function GET(
   const db = await supabaseServer();
   const { data: b } = await db
     .from("boards")
-    .select("id, projects!inner(slug)")
+    .select("id, project_id, projects!inner(slug)")
     .eq("slug", board)
     .eq("projects.slug", project)
     .maybeSingle();
   if (!b) return new Response("not found", { status: 404 });
+  const access = await currentAccess(b.project_id as string);
+  if (!access?.canManage) return new Response("forbidden", { status: 403 });
 
   const state = await loadBoardState(db, b.id as string);
   const { data: sources } = await db
@@ -1918,7 +1908,7 @@ Claude-Session: https://claude.ai/code/session_01Qg7CHv1VLuHeppZ1ADEc3s"
 
 **Interfaces:**
 - Consumes: `planBoardImport`, `applyBoardImport` (Task 7), `jsonSchema` (Task 1), `cardToMarkdown` (Task 3), `Plan`/`PlanRow` (Task 4).
-- Produces: `<SheetContract />` (server-safe, no hooks), `<ImportPlanTable plan boardName />`, `<BoardImportDialog boardId boardName />`; `BinderBoard.id: string`.
+- Produces: `<SheetContract />` (server-safe, no hooks), `<ImportPlanTable plan boardName />`, `<BoardImportDialog boardId boardName />`; `BinderBoard.id: string`; `BinderProject.canManage: boolean` (owner or project admin — the ↓/↑ controls render only when true).
 
 - [ ] **Step 1: Write the failing e2e test**
 
@@ -2167,14 +2157,16 @@ export function BoardImportDialog({ boardId, boardName }: { boardId: string; boa
 
 - [ ] **Step 6: The binder affordances and the board id**
 
-In `src/components/binder.tsx`: add `id: string;` to `BinderBoard`; import `BoardImportDialog`; in `.binder-foot`, after `binder-count`, add:
+In `src/components/binder.tsx`: add `id: string;` to `BinderBoard` and `canManage: boolean;` to `BinderProject`; import `BoardImportDialog`; in `.binder-foot`, after `binder-count`, add:
 ```tsx
-                  <span className="binder-io">
-                    <a href={`${href}/b/${b.slug}/export.zip`} className="binder-export paper-link" aria-label={`Download ${b.name} as sheets`} title="Download sheets">↓</a>
-                    <BoardImportDialog boardId={b.id} boardName={b.name} />
-                  </span>
+                  {project.canManage && (
+                    <span className="binder-io">
+                      <a href={`${href}/b/${b.slug}/export.zip`} className="binder-export paper-link" aria-label={`Download ${b.name} as sheets`} title="Download sheets">↓</a>
+                      <BoardImportDialog boardId={b.id} boardName={b.name} />
+                    </span>
+                  )}
 ```
-In `src/app/page.tsx`: select `boards(id, slug, name, cards(count))`, add `id: string` to `ProjectRow["boards"]` items, and map `id: b.id`.
+In `src/app/page.tsx`: select `boards(id, slug, name, cards(count))`, add `id: string` to `ProjectRow["boards"]` items, map `id: b.id`; load the member's project roles once (`db.from("project_members").select("project_id, role").eq("member_id", member.id)`) and set `canManage: canManageProject({ siteRole: member.role, projectRole: roleByProject.get(p.id) ?? null })` per project, importing `canManageProject` from `@/lib/access`. Read `src/components/binder.tsx` and `src/app/page.tsx` as they are on the branch first — both changed after the plan was written; add to them, do not replace them.
 
 - [ ] **Step 7: Paper rules**
 
