@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { loadBoard } from "@/lib/board-data";
 import { type CardColor, isCardColor } from "@/lib/card-color";
+import { isCardStatus } from "@/lib/card-status";
 import {
   formatCommentAt,
   joinIssueBody,
@@ -72,16 +73,6 @@ function refreshBoards() {
   revalidatePath("/p/[project]/b/[board]", "page");
 }
 
-const CARD_STATUSES = new Set([
-  "backlog",
-  "blocked",
-  "wip",
-  "held",
-  "built",
-  "handed",
-  "shipped",
-  "done",
-]);
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Create an app-owned issue at the top of a lane, ready for markdown export. */
@@ -97,7 +88,7 @@ export async function createCard(
   if (!title || title.length > 240)
     return { ok: false, error: "Title must be between 1 and 240 characters." };
   const status = input.status ?? "backlog";
-  if (!CARD_STATUSES.has(status))
+  if (!isCardStatus(status))
     return { ok: false, error: "Invalid status." };
   const validDate = (value?: string) => !value || ISO_DATE.test(value);
   if (!validDate(input.plannedStartDate) || !validDate(input.targetDate))
@@ -405,6 +396,8 @@ export interface CardPatch {
   title?: string;
   /** Pastel tint to persist, or null to clear back to neutral. */
   color?: CardColor | null;
+  /** Tracker status word; validated with `isCardStatus` when present. */
+  status?: string;
 }
 
 export async function updateCard(
@@ -423,6 +416,9 @@ export async function updateCard(
     !isCardColor(clean.color)
   ) {
     return { ok: false, error: "Invalid color." };
+  }
+  if (Object.hasOwn(clean, "status") && !isCardStatus(clean.status)) {
+    return { ok: false, error: "Invalid status." };
   }
   // Hand ownership of the summary to the app: the next import must not replace
   // these words with the frontmatter's. The exporter writes it back out.

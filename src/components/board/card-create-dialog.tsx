@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { CardColor } from "@/lib/card-color";
+import { CARD_STATUSES, type CardStatus } from "@/lib/card-status";
 import type { Epic, Lane, TagGroup } from "@/lib/types";
 import { markHue } from "@/lib/types";
 import { CardColorPicker } from "./card-color-picker";
@@ -30,6 +31,18 @@ const label =
   "mb-1 block text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]";
 const field =
   "h-8 w-full rounded-[var(--radius-input)] border border-[var(--border-input)] bg-[var(--surface-input)] px-2.5 text-sm text-[var(--color-ink)]";
+
+/** Friendly create-dialog labels; option `value`s stay the raw `CARD_STATUSES` words. */
+const STATUS_CREATE_LABEL: Record<CardStatus, string> = {
+  backlog: "Backlog",
+  blocked: "Blocked",
+  wip: "In progress",
+  held: "Held",
+  built: "Built",
+  handed: "Handed over",
+  shipped: "Shipped",
+  done: "Done",
+};
 
 export function CardCreateDialog(props: {
   lane: Lane | null;
@@ -173,14 +186,11 @@ function CardCreateForm(
                 onChange={(event) => setStatus(event.target.value)}
                 disabled={busy}
               >
-                <option value="backlog">Backlog</option>
-                <option value="blocked">Blocked</option>
-                <option value="wip">In progress</option>
-                <option value="held">Held</option>
-                <option value="built">Built</option>
-                <option value="handed">Handed over</option>
-                <option value="shipped">Shipped</option>
-                <option value="done">Done</option>
+                {CARD_STATUSES.map((value) => (
+                  <option key={value} value={value}>
+                    {STATUS_CREATE_LABEL[value]}
+                  </option>
+                ))}
               </select>
             </label>
             <label htmlFor="new-card-epic">

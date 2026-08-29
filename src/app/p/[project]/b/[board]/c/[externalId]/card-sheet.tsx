@@ -136,6 +136,7 @@ export async function CardSheet({
       <CardEditor
         card={{
           id: card.id,
+          status: card.status,
           summary: card.summary,
           priority: card.priority,
           effort: card.effort,

@@ -9,11 +9,13 @@ import {
 import { CardColorPicker } from "@/components/board/card-color-picker";
 import { Button } from "@/components/ui/button";
 import { type CardColor, parseCardColor } from "@/lib/card-color";
+import { CARD_STATUSES } from "@/lib/card-status";
 import { markHue } from "@/lib/types";
 
 interface CardLite {
   id: string;
   external_id: string;
+  status: string;
   summary: string | null;
   priority: number | null;
   effort: string | null;
@@ -32,7 +34,7 @@ const fieldLabel =
   "mb-1 block text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]";
 
 /**
- * Inline editor for summary, ratings, dates, audience, color, and tags.
+ * Inline editor for summary, status, ratings, dates, audience, color, and tags.
  * Saves on blur/change; lives on the card page as part of the one sheet.
  * Tag groups rest as marked tags only; Edit tags opens the catalog.
  *
@@ -103,6 +105,21 @@ export function CardEditor({
         />
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <label>
+          <span className={fieldLabel}>Status</span>
+          <select
+            className={field}
+            defaultValue={card.status}
+            disabled={pending}
+            onChange={(e) => save({ status: e.target.value })}
+          >
+            {CARD_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           <span className={fieldLabel}>Priority</span>
           <select
