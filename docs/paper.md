@@ -114,12 +114,16 @@ the tab names the project, the binders name the boards.
 The project page is the same folder laid open (`.folder--open`): the tab is
 the title, and inside it each board is a wide `.binder` carrying the tally of
 its lanes as `.stat`s in the lane kind's pen, with *Take stock* (the cockpit)
-and *Export CSV* on its foot. Below it the board's tag groups are drawn as a
-**concept graph** (`.graph`): each group is a `.graph-node` wearing its
-highlighter on its spine, and the tags branch from it along a ruled trunk as
-`.mark`s — a concept contains its tags, so the edges are lines, not arrows.
-The page ends with the two big asks, same shape and opposite pens: `.cta` to
-take the project home as markdown, `.danger` to delete it.
+and *Export CSV* on its foot. Under the folder sits the **roster binder**
+(`.roster`): who can open this folder, each person a full-width `.roster-slip`
+with the name as a tab, the address in mono, and the role in the margin. The
+last row is blank stock — that is how an owner invites someone. Below that
+the board's tag groups are drawn as a **concept graph** (`.graph`): each group
+is a `.graph-node` wearing its highlighter on its spine, and the tags branch
+from it along a ruled trunk as `.mark`s — a concept contains its tags, so the
+edges are lines, not arrows. The page ends with the two big asks, same shape
+and opposite pens: `.cta` to take the project home as markdown, `.danger` to
+delete it.
 
 ## Lanes
 

@@ -7,6 +7,10 @@ import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
 export type UserActionResult = { error?: string; success?: string } | null;
 
+/**
+ * Allowlist an email and attach it to a project. Owner-only; the RPC is the
+ * write path so a half-written members row cannot exist without membership.
+ */
 export async function inviteUser(
   _previous: UserActionResult,
   form: FormData,
@@ -35,12 +39,13 @@ export async function inviteUser(
     p_role: role,
   });
   if (error) return { error: error.message };
-  revalidatePath("/users");
+  await revalidateMembership(db, projectId);
   return {
     success: `${email} can now onboard with a password and access the project.`,
   };
 }
 
+/** Take a person off one project. They stay on the allowlist. */
 export async function removeMembership(form: FormData): Promise<void> {
   const me = await currentMember();
   if (!me || me.role !== "owner") return;
@@ -52,5 +57,22 @@ export async function removeMembership(form: FormData): Promise<void> {
     p_project_id: projectId,
     p_member_id: memberId,
   });
+  await revalidateMembership(db, projectId);
+}
+
+/**
+ * Membership changes show up on the global Users page and on the folder the
+ * person was added to or taken off.
+ */
+async function revalidateMembership(
+  db: Awaited<ReturnType<typeof supabaseServer>>,
+  projectId: string,
+) {
   revalidatePath("/users");
+  const { data } = await db
+    .from("projects")
+    .select("slug")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (data?.slug) revalidatePath(`/p/${data.slug}`);
 }

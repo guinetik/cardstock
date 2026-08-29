@@ -220,6 +220,13 @@ describe("paper components", () => {
     expect(css).toContain(".paper-link");
     expect(css).toContain("color: var(--pen-blue)");
   });
+
+  test("the roster is a binder of punched slips", () => {
+    expect(css).toContain(".roster");
+    expect(css).toContain(".roster-slip");
+    expect(css).toContain(".roster-punch");
+    expect(css).toContain(".roster-you");
+  });
 });
 
 describe("card detail page chrome", () => {

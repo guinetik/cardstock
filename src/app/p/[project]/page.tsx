@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { oneRelated } from "@/lib/related";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { markHue } from "@/lib/types";
 import { CreateBoardDialog } from "./create-board-dialog";
+import { ProjectPeople, type ProjectPerson } from "./project-people";
 import { TaxonomyEditor, type TaxonomyGroup } from "./taxonomy-editor";
 
 /** The shapes the nested select comes back in. */
@@ -30,6 +32,16 @@ interface ProjectRow {
   name: string;
   description: string | null;
   boards: BoardRow[] | null;
+}
+interface MemberEmbed {
+  id: string;
+  email: string;
+  display_name: string | null;
+}
+interface MembershipRow {
+  member_id: string;
+  role: string;
+  members: MemberEmbed | MemberEmbed[] | null;
 }
 
 /** The pen a lane's tally is written in: the same rule the board draws under its tab. */
@@ -64,13 +76,36 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
     a.name.localeCompare(b.name),
   );
   const boardIds = boards.map((board) => board.id);
-  const { data: groups } = boardIds.length
-    ? await db
-        .from("tag_groups")
-        .select("id, board_id, key, name, position, tags(id, key, name)")
-        .in("board_id", boardIds)
-        .order("position")
-    : { data: null };
+  const [{ data: groups }, { data: memberships }] = await Promise.all([
+    boardIds.length
+      ? db
+          .from("tag_groups")
+          .select("id, board_id, key, name, position, tags(id, key, name)")
+          .in("board_id", boardIds)
+          .order("position")
+      : Promise.resolve({ data: null }),
+    db
+      .from("project_members")
+      .select("member_id, role, members(id, email, display_name)")
+      .eq("project_id", project.id),
+  ]);
+  const people: ProjectPerson[] = (
+    (memberships ?? []) as unknown as MembershipRow[]
+  )
+    .map((row) => {
+      const related = oneRelated(row.members);
+      if (!related) return null;
+      return {
+        memberId: related.id,
+        email: related.email,
+        displayName: related.display_name,
+        role: row.role,
+      };
+    })
+    .filter((row): row is ProjectPerson => row !== null)
+    .sort((a, b) =>
+      (a.displayName ?? a.email).localeCompare(b.displayName ?? b.email),
+    );
 
   const allCards = boards.flatMap((b) => b.cards ?? []);
   const cardCount = allCards.length;
@@ -221,6 +256,14 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
           </div>
         </div>
       </div>
+
+      <ProjectPeople
+        projectId={project.id}
+        projectName={project.name}
+        people={people}
+        currentMemberId={member.id}
+        canInvite={member.role === "owner"}
+      />
 
       {boards.length > 0 && (
         <section className="mt-12" aria-labelledby="concepts-heading">

@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { admin, dropMember, signIn } from "./support/sign-in";
+import { admin, dropMember, OWNER, signIn } from "./support/sign-in";
 
 const PROJECT_SLUG = "e2e-multi-project";
 const INVITED = "e2e-project-invite@example.test";
+const PROJECT_INVITED = "e2e-project-page-invite@example.test";
 
 test("an owner can create a project and more than one board", async ({
   page,
@@ -63,5 +64,37 @@ test("the users page invites someone to a project without sending email", async 
     ).toBeVisible();
   } finally {
     await dropMember(INVITED);
+  }
+});
+
+test("the project page lists members and invites someone without sending email", async ({
+  page,
+}) => {
+  await dropMember(PROJECT_INVITED);
+  try {
+    await signIn(page);
+    await page.goto("/p/demo");
+    await expect(page.getByRole("heading", { name: "People" })).toBeVisible();
+    await expect(
+      page.getByText(OWNER.split("@")[0] ?? OWNER, { exact: true }),
+    ).toBeVisible();
+
+    await page.getByLabel("Email").fill(PROJECT_INVITED);
+    await page.getByLabel("Display name").fill("Folder Invite");
+    await page.getByLabel("Role", { exact: true }).selectOption("member");
+    await page.getByRole("button", { name: "Invite user" }).click();
+    await expect(page.getByRole("status")).toContainText("can now onboard");
+    await expect(
+      page.getByText("Folder Invite", { exact: true }),
+    ).toBeVisible();
+
+    await page
+      .getByRole("button", { name: `Remove ${PROJECT_INVITED} from Demo` })
+      .click();
+    await expect(page.getByText("Folder Invite", { exact: true })).toHaveCount(
+      0,
+    );
+  } finally {
+    await dropMember(PROJECT_INVITED);
   }
 });

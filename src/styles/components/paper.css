@@ -390,6 +390,9 @@
   .paper-link:hover {
     text-decoration: underline;
   }
+  .paper-link--danger {
+    color: var(--pen-red);
+  }
 
   /*
    * A filter group is a fieldset on a printed form: the legend notches the
@@ -1124,6 +1127,183 @@
   }
 
   /*
+   * ------------------------------------------------------ the roster binder
+   * Who can open this folder, drawn as a binder of full-width rows under the
+   * open folder. Name as a tab, address in mono, role in the margin. The last
+   * row is blank stock — that is how you invite someone.
+   */
+  .roster {
+    margin-top: 1.75rem;
+  }
+  .roster-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.55rem;
+  }
+  .roster .binder-name {
+    font-family: var(--font-heading);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .roster-slips {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--border-strong);
+  }
+  .roster-slip {
+    display: grid;
+    grid-template-columns: 0.85rem minmax(0, 1fr) auto;
+    column-gap: 0.85rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+  .roster-punch {
+    position: relative;
+    align-self: stretch;
+    width: 0.85rem;
+    pointer-events: none;
+  }
+  .roster-punch::before,
+  .roster-punch::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 7px;
+    height: 10px;
+    translate: -50% -50%;
+    background: var(--surface-well);
+    border: 1px solid var(--border-strong);
+    border-radius: 1px;
+  }
+  .roster-punch::before {
+    top: 28%;
+  }
+  .roster-punch::after {
+    top: 72%;
+  }
+  .roster-who {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+  .roster-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.45rem 0.7rem;
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-ink-strong);
+  }
+  .roster-mail {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-grey);
+  }
+  .roster-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .roster-you {
+    display: inline-block;
+    padding: 0.12rem 0.38rem 0.1rem;
+    border: 1.5px solid var(--pen-red);
+    border-radius: var(--radius-card);
+    color: var(--pen-red);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.72;
+    mix-blend-mode: var(--mark-blend);
+    rotate: -6deg;
+  }
+  .roster-slip--blank {
+    grid-template-columns: 0.85rem minmax(0, 1fr);
+    align-items: start;
+    padding-top: 0.95rem;
+    padding-bottom: 0.15rem;
+    border-bottom: 0;
+    border-top: 1px dashed var(--border-strong);
+  }
+  .roster-invite {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .roster-invite-kicker {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--color-grey-faint);
+  }
+  .roster-invite-lead {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-ink2);
+  }
+  .roster-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 9rem auto;
+    gap: 0.55rem 0.7rem;
+    align-items: end;
+  }
+  .roster-fields label {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .roster-slip :is(input, select) {
+    height: 2rem;
+    width: 100%;
+    padding: 0 0.55rem;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-input);
+    color: var(--color-ink);
+    font-size: 13px;
+  }
+  .roster-slip :is(input, select):focus-visible {
+    outline: 2px solid var(--pen-blue);
+    outline-offset: 2px;
+  }
+  .roster-invite-go {
+    height: 2rem;
+    padding: 0 0.9rem;
+    background: var(--color-ink);
+    border: 1px solid var(--color-ink);
+    border-radius: var(--radius-btn);
+    color: var(--surface-card);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .roster-invite-go:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .roster-invite-note {
+    grid-column: 1 / -1;
+    font-size: 12.5px;
+  }
+
+  /*
    * ------------------------------------------------------ the concept graph
    * A board thinks in concepts. Each one is a node at the left; the tags a
    * card can carry branch from it along a trunk, as highlighter marks. The
@@ -1411,6 +1591,12 @@
     grid-column: 1;
     justify-self: start;
   }
+  .roster-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .roster-invite-go {
+    justify-self: start;
+  }
 }
 
 @media (max-width: 40rem) {
@@ -1423,6 +1609,13 @@
     height: auto;
     flex-direction: row-reverse;
     align-items: center;
+  }
+  .roster-slip {
+    grid-template-columns: 0.85rem minmax(0, 1fr);
+  }
+  .roster-meta {
+    grid-column: 2;
+    padding-top: 0.35rem;
   }
 }
 
