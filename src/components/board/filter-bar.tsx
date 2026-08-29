@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { statusChipClass } from "@/lib/card-status";
 import type { Filters, InboxSort } from "@/lib/filters";
 import { EFFORT_LABEL, markHue, type TagGroup } from "@/lib/types";
 
@@ -26,11 +27,14 @@ function Caret() {
 
 /**
  * Board filters, laid out as a printed form: every cluster is a fieldset with
- * a legend, so P1–P3 and L/M/H never appear as bare abbreviations. Only the
- * search field stands on its own, because a search box explains itself.
+ * a legend, so P1–P3, L/M/H, and tracker statuses never appear as bare abbreviations.
+ * Only the search field stands on its own, because a search box explains itself.
+ * Status chips appear only when `statuses` is non-empty; Clear empties `status`
+ * without resetting Internal.
  */
 export function FilterBar(props: {
   groups: TagGroup[];
+  statuses: string[];
   filters: Filters;
   onChange: (f: Filters) => void;
   filtering: boolean;
@@ -182,6 +186,28 @@ export function FilterBar(props: {
         ))}
       </fieldset>
 
+      {props.statuses.length > 0 && (
+        <fieldset className="fieldset">
+          <legend>Status</legend>
+          {props.statuses.map((status) => {
+            const on = f.status.has(status);
+            return (
+              <button
+                key={status}
+                type="button"
+                aria-pressed={on}
+                className={on ? statusChipClass(status) : "stat stat--muted"}
+                onClick={() =>
+                  onChange({ ...f, status: toggle(f.status, status) })
+                }
+              >
+                {status}
+              </button>
+            );
+          })}
+        </fieldset>
+      )}
+
       <fieldset className="fieldset gap-3">
         <legend>Also show</legend>
         <label className={check}>
@@ -230,6 +256,7 @@ export function FilterBar(props: {
               tags: new Set(),
               priority: new Set(),
               effort: new Set(),
+              status: new Set(),
               showArchived: false,
             })
           }

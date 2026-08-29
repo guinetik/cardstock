@@ -37,6 +37,7 @@ import {
   updateCard,
 } from "@/app/p/[project]/b/[board]/actions";
 import {
+  boardStatuses,
   emptyFilters,
   type Filters,
   type InboxSort,
@@ -536,6 +537,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       </header>
       <FilterBar
         groups={data.groups}
+        statuses={boardStatuses(cards)}
         filters={filters}
         onChange={setFilters}
         filtering={isFiltering(filters)}
