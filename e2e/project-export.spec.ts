@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { unzipSync } from "fflate";
+import { resetDemoBoard } from "./support/reset";
 import { signIn } from "./support/sign-in";
+
+// This spec compares a download with the file on disk, so it needs the demo
+// board exactly as the tracker states it — whatever ran before it.
+test.beforeAll(() => {
+  resetDemoBoard();
+});
 
 test("the project export zips every board into its own folder", async ({
   page,
