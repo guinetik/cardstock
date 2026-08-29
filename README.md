@@ -55,6 +55,14 @@ Resetting a forgotten password is not built yet — it needs mail. Until then, c
 | `bun run db:pull-prod` | Copy production into the local stack: dumps the hosted database (`PROD_DB_URL`) to `backups/`, resets local without the seed, replays public rows and auth users. `--restore <stamp>` replays a saved backup; `--dump-only` just writes it. Refuses to write anywhere but a local Supabase. |
 | `bun run db:test` | Access-control checks against the local database (owner, allowlist, RLS). |
 
+### Importing a project from the command line
+
+The projects page can do this from a zip. The command line is for trackers over 4 MB or for scripted seeds:
+
+1. Write a seed next to the tracker — project, board, lanes in order with kinds, tag groups — and apply it: `bun run db:apply --file path/to/seed.sql`.
+2. `bun run etl:import --project <slug> --board <slug> --source path/to/tracker`.
+3. `bun run db:seed-members --project <slug>` to let people in.
+
 Scheme tags map 1:1 onto a board's tag groups; per-project overrides go in a JSON passed with `--mapping` (default `etl/mappings/default.json`). Keep a real project's seed SQL and mapping next to its tracker, outside this repo.
 
 Lane definitions remain database configuration rather than part of the markdown contract. The export writes every card's current lane key, and import resolves that key against the board's current lanes. Renaming a lane therefore leaves markdown references intact; removing one rewrites affected cards to the selected destination on the next export.

@@ -1,6 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import type React from "react";
+import { useState, useTransition } from "react";
+import {
+  applyProjectImport,
+  type ImportApplyResult,
+  type ImportPlanResult,
+  planProjectImport,
+} from "@/app/import-actions";
+import { ImportPlanTable } from "@/components/import-plan-table";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,42 +19,61 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { keyFromName } from "@/lib/keys";
 
-/**
- * Explains how a project gets imported today.
- *
- * Importing is a command-line job for now: a board's lanes and tag vocabulary
- * are decisions someone makes once, not something a zip can infer. This dialog
- * documents that path; dropping a zip will drive the same steps later.
- */
-
-const STEPS: { title: string; body: string; code?: string }[] = [
-  {
-    title: "1. Describe the board",
-    body: "Write a seed next to your tracker: the project, its board, the lanes in order with their kinds (inbox, work, waiting, built, done, archive), and the tag groups. Lane keys are permanent — card frontmatter stores them.",
-    code: "your-tracker/\n  seed.sql        # project, board, lanes, tag groups, tags\n  mapping.json    # optional tag overrides\n  tracker/        # one .md per item",
-  },
-  {
-    title: "2. Apply it",
-    body: "Creates the project, board, lanes and tags. Safe to re-run — every statement is idempotent.",
-    code: "bun run db:apply --file path/to/seed.sql",
-  },
-  {
-    title: "3. Import the markdown",
-    body: "Parses every .md, validates the frontmatter, and upserts by (board, external_id). Markdown owns the narrative; the board owns lane, rank, priority, effort and dates. Unchanged files are skipped.",
-    code: "bun run etl:import --project <slug> --board <slug> \\\n  --source path/to/tracker",
-  },
-  {
-    title: "4. Let people in",
-    body: "The allowlist is separate from the import — a project with no members is invisible to everyone but the owner.",
-    code: "bun run db:seed-members --project <slug>",
-  },
-];
-
-export function ImportProjectDialog() {
+/** A binder from a folder of sheets: name it, name its first board, drop the zip, read the plan, create. */
+/** `contract` is `<SheetContract />` rendered by the server page, so the schema never reaches the client bundle. */
+export function ImportProjectDialog({
+  contract,
+}: {
+  contract: React.ReactNode;
+}) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [boardName, setBoardName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [planned, setPlanned] = useState<ImportPlanResult | null>(null);
+  const [done, setDone] = useState<ImportApplyResult | null>(null);
+  const [pending, start] = useTransition();
+
+  const form = (f: File) => {
+    const fd = new FormData();
+    fd.set("name", name);
+    fd.set("boardName", boardName);
+    fd.set("file", f);
+    return fd;
+  };
+  const reset = () => {
+    setFile(null);
+    setPlanned(null);
+    setDone(null);
+  };
+  const choose = (f: File | null) => {
+    if (!f) return;
+    setFile(f);
+    start(async () => setPlanned(await planProjectImport(form(f))));
+  };
+  const create = () => {
+    if (!file) return;
+    start(async () => {
+      const r = await applyProjectImport(form(file));
+      setDone(r);
+      if ("ok" in r) router.push(r.href);
+    });
+  };
+  const plan = planned && "plan" in planned ? planned.plan : null;
+  const ready = !!name.trim() && !!boardName.trim();
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) reset();
+      }}
+    >
       <DialogTrigger
         render={
           <Button variant="outline" size="sm">
@@ -53,33 +81,105 @@ export function ImportProjectDialog() {
           </Button>
         }
       />
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Import a project</DialogTitle>
           <DialogDescription>
-            A project is a markdown tracker plus the board decisions layered on
-            top. Today that import runs from the command line.
+            A folder of sheets becomes a binder: its lanes and tag groups come
+            from what the sheets say.
           </DialogDescription>
         </DialogHeader>
-        <ol className="space-y-4">
-          {STEPS.map((step) => (
-            <li key={step.title} className="space-y-1.5">
-              <h3 className="text-sm font-semibold">{step.title}</h3>
-              <p className="text-sm text-muted-foreground">{step.body}</p>
-              {step.code && (
-                <pre className="overflow-x-auto rounded-md border bg-muted/50 p-2.5 text-xs">
-                  <code>{step.code}</code>
-                </pre>
+        {plan ? (
+          <>
+            <p className="font-mono text-[11px] text-[var(--color-grey)]">
+              /p/{keyFromName(name)}/b/{keyFromName(boardName)}
+            </p>
+            <ImportPlanTable plan={plan} />
+            {done && "error" in done && (
+              <p className="text-sm text-[var(--pen-red)]" role="alert">
+                {done.error}
+                {done.href
+                  ? ` The project exists and is empty: ${done.href}`
+                  : ""}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={reset}>
+                Back
+              </Button>
+              <Button size="sm" disabled={pending || !plan.ok} onClick={create}>
+                {pending
+                  ? "Creating…"
+                  : `Create project and import ${plan.counts.new} cards`}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label
+                htmlFor="import-project-name"
+                className="block space-y-1.5 text-sm"
+              >
+                <span className="font-medium">Name</span>
+                <Input
+                  id="import-project-name"
+                  required
+                  maxLength={80}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="What the team calls it"
+                />
+              </label>
+              <label
+                htmlFor="import-board-name"
+                className="block space-y-1.5 text-sm"
+              >
+                <span className="font-medium">First board</span>
+                <Input
+                  id="import-board-name"
+                  required
+                  maxLength={80}
+                  value={boardName}
+                  onChange={(e) => setBoardName(e.target.value)}
+                  placeholder="Backlog"
+                />
+              </label>
+            </div>
+            <div className="import-drop">
+              <label
+                className={`dropzone${ready ? "" : " opacity-50"}`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (ready) choose(e.dataTransfer.files[0] ?? null);
+                }}
+              >
+                <span>
+                  {!ready
+                    ? "Name the project and its first board, then drop the zip."
+                    : pending
+                      ? "Reading the sheets…"
+                      : "Drop a zip of the tracker here — one <n>.md per card — or choose one."}
+                </span>
+                <input
+                  type="file"
+                  accept=".zip,application/zip"
+                  aria-label="Zip of sheets"
+                  className="sr-only"
+                  disabled={!ready}
+                  onChange={(e) => choose(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              {planned && "error" in planned && (
+                <p className="text-sm text-[var(--pen-red)]" role="alert">
+                  {planned.error}
+                </p>
               )}
-            </li>
-          ))}
-        </ol>
-        <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">Coming later:</span>{" "}
-          drop a zip of the markdown repo here and cardstock will infer the
-          tracker, propose lanes and tag groups from what it finds, and run
-          these steps for you.
-        </p>
+              {contract}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

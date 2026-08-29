@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Binder, type BinderProject } from "@/components/binder";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { ImportProjectDialog } from "@/components/import-project-dialog";
+import { SheetContract } from "@/components/sheet-contract";
 import { manageableProjectIds } from "@/lib/access-server";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
@@ -59,7 +60,7 @@ export default async function Home() {
         </div>
         {owner && (
           <div className="flex items-center gap-2">
-            <ImportProjectDialog />
+            <ImportProjectDialog contract={<SheetContract />} />
             <CreateProjectDialog />
           </div>
         )}
