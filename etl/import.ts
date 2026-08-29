@@ -10,7 +10,13 @@
  *   - a file never overwrites a summary or body a person has edited in the
  *     app (`summary_edited_at` / `body_edited_at`), since the DB owns those
  *     once that happens.
- * Everything else the file states wins, as on the page.
+ *
+ * Everything else the file states wins, on every sync: `priority`, `effort`,
+ * `target`, `planned_start`, the archive keys and `color` are taken from the
+ * file and overwrite whatever the board holds, however recently a person set
+ * it there. That is safe because the round trip runs the other way first — an
+ * export rebases every file onto the board's current values — so export, then
+ * import. Importing a stale folder of sheets undoes the board's own edits.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";

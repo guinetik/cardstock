@@ -48,7 +48,7 @@ Resetting a forgotten password is not built yet — it needs mail. Until then, c
 
 | Command | What it does |
 |---|---|
-| `bun run etl:import --project <p> --board <b> --source <dir>` | Same planner as the projects page; a file only moves an existing card when its `lane:` changed since the last sync. |
+| `bun run etl:import --project <p> --board <b> --source <dir>` | Same planner as the projects page: the sheet wins. `priority`, `effort`, `target`, `planned_start`, the archive keys and `color` follow the file on **every** sync, overwriting whatever the board holds. Only three things are protected: a card moves lane only when its `lane:` changed since the last sync (`lane_from_source`), and a summary or body edited in the app is never overwritten. This is safe because an export rebases the files onto the board's values first — export, then import. |
 | `bun run etl:import-board-state --project <p> --board <b> --file <export.json>` | Apply a `designer-board/1` export (lane, rank, target, effort, value→priority) on top of imported cards. |
 | `bun run etl:schema` | Emit `docs/frontmatter.schema.json` from the zod schema. |
 | `bun run db:seed-members --project <slug>` | `OWNER_EMAIL` → site owner, `MEMBER_EMAILS` → project admins, both into `members` + `project_members`. |
@@ -71,9 +71,15 @@ Lane definitions remain database configuration rather than part of the markdown 
 
 ```sh
 bun run check      # biome + tsc
-bun test           # ETL unit tests
+bun run test       # unit tests; loads .env.local, so the database-backed ones run too
 bun run test:e2e   # Playwright against the local stack (uses the installed Chrome)
 ```
+
+Plain `bun test` works as well; the tests that need the local Supabase skip themselves when `.env.local` is not loaded.
+
+### First export after upgrading
+
+Cards imported before the app stored sheets have no `source_text`, and their download is rendered from the row alone — the keys the board has no column for (`value`, `reconfirmed`, `merged`, `branch`, `spec`, `plan`, `technical_title`) are not in it. Re-import the tracker once (or run `bun run etl:export`) and every card gets its sheet stored; from then on a download is a line edit of the file you handed in.
 
 ## Deploy
 
