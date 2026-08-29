@@ -53,6 +53,7 @@ export async function GET(
   const enc = new TextEncoder();
   const rebase: {
     id: string;
+    external_id: string;
     source_text: string;
     lane_from_source: string | null;
   }[] = [];
@@ -66,18 +67,22 @@ export async function GET(
     if (text !== src)
       rebase.push({
         id: card.id,
+        external_id: card.external_id,
         source_text: text,
         lane_from_source: sheet.lane,
       });
   }
-  for (const r of rebase)
-    await db
+  for (const r of rebase) {
+    const { error } = await db
       .from("cards")
       .update({
         source_text: r.source_text,
         lane_from_source: r.lane_from_source,
       })
       .eq("id", r.id);
+    if (error)
+      console.error(`export rebase #${r.external_id}: ${error.message}`);
+  }
 
   const zip = zipSync(entries, { level: 6 });
   return new Response(zip, {

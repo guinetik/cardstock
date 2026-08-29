@@ -91,6 +91,33 @@ describe("writeSheet", () => {
     expect(out).toContain("custom_key: keep me\r\n");
     expect(out.split("\r\n").join("").includes("\n")).toBe(false);
   });
+  test("an unmapped bare tag is not the board's to remove", () => {
+    const file = FILE.replace(
+      "tags:\n  - designer\n  - wizard\n",
+      "tags:\n  - known\n  - mystery\n",
+    );
+    const tagRef = (t: string) => (t === "known" ? "g:known" : null);
+    const out = writeSheet(
+      file,
+      { ...sheetOf(file), tags: ["g:known"] },
+      { tagRef },
+    );
+    expect(out).toBe(file);
+  });
+  test("an unmapped bare tag survives a new tag being appended", () => {
+    const file = FILE.replace(
+      "tags:\n  - designer\n  - wizard\n",
+      "tags:\n  - known\n  - mystery\n",
+    );
+    const tagRef = (t: string) => (t === "known" ? "g:known" : null);
+    const out = writeSheet(
+      file,
+      { ...sheetOf(file), tags: ["g:known", "g:new"] },
+      { tagRef },
+    );
+    expect(out).toContain("tags:\n  - known\n  - mystery\n  - g:new\n");
+    expect(out.replace("  - g:new\n", "")).toBe(file);
+  });
 });
 
 describe("cardToMarkdown", () => {
