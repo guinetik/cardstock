@@ -107,7 +107,7 @@ export function sheetFromFrontmatter(
     plannedStart: isoOrNull(fm.planned_start),
     target: fm.target ? (iso(fm.target) ?? fm.target) : null,
     archived: fm.archived ?? null,
-    archivedBy: fm.archived ? (fm.archived_by ?? null) : null,
+    archivedBy: fm.archived_by ?? null,
     color: fm.color ?? null,
     extra,
     bodyMd,

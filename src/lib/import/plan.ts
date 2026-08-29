@@ -70,7 +70,7 @@ export function sheetFromCard(
     archived: card.archived_at
       ? card.archived_at.slice(0, 19).replace("T", " ")
       : null,
-    archivedBy: card.archived_at ? card.archived_by : null,
+    archivedBy: card.archived_by,
     color: card.color,
     extra: card.frontmatter_extra ?? {},
     bodyMd: card.body_md ?? "",

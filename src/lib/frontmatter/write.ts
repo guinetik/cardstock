@@ -7,12 +7,14 @@
  * left alone. `cardToMarkdown` builds a file from nothing, for a card that
  * never had one.
  */
-import { bodyWithoutH1, dequote, extractAsk, parseFile } from "./parse";
+import { bodyWithoutH1, parseFile } from "./parse";
+import { validateFrontmatter } from "./schema";
 import {
   type CardSheet,
   SHEET_KEY_ORDER,
   SHEET_KEYS,
   type SheetKey,
+  sheetFromFrontmatter,
 } from "./sheet";
 
 export const MANAGED_KEYS = [
@@ -109,23 +111,26 @@ export function writeSheet(
   opts: { tagRef?: (tag: string) => string | null } = {},
 ): string {
   const { nl, fm, body } = split(sourceText);
-  const parsed = parseFile(sourceText).frontmatter;
+  const parsed = parseFile(sourceText);
+  const srcBody = body.join("\n");
   const tagRef = opts.tagRef ?? ((t: string) => t);
 
-  // The file's own view of each key, normalised the way the sheet is.
-  const have = (key: SheetKey): Value => {
-    const raw = parsed[key];
-    if (key === "tags")
-      return ((raw as string[] | undefined) ?? []).map((t) => tagRef(t) ?? t);
-    if (key === "summary" && raw == null)
-      return extractAsk(body.join("\n")) || null;
-    if (key === "priority" && raw == null && parsed.value != null) {
-      const v = String(parsed.value).trim().toUpperCase()[0];
-      return v === "H" ? 1 : v === "M" ? 2 : v === "L" ? 3 : null;
-    }
-    if (Array.isArray(raw)) return raw.map((x) => String(dequote(x)));
-    return raw == null ? null : (dequote(raw) as string);
-  };
+  // The file's own view of each key, read through the very normaliser the
+  // import reads it through — otherwise a free-text `raised: TBD`, a
+  // lower-case `effort: m` or a `value:` standing in for `priority:` looks
+  // like a disagreement and an untouched line gets rewritten or deleted.
+  const { data: fileFm, extra: fileExtra } = validateFrontmatter(
+    parsed.frontmatter,
+  );
+  const fileTags = fileFm.tags;
+  const fileSheet = sheetFromFrontmatter(
+    fileFm,
+    fileExtra,
+    srcBody,
+    fileTags.map((t) => tagRef(t) ?? t),
+  );
+  const have = (key: SheetKey): Value =>
+    SHEET_KEYS[key].get(fileSheet) as Value;
 
   let lines = [...fm];
   const append: string[] = [];
@@ -137,16 +142,17 @@ export function writeSheet(
       let replacement: string[];
       if (key === "tags") {
         // keep the file's own lines for tags that survive, append the new refs
-        const fileTags = (parsed.tags as string[] | undefined) ?? [];
         const wanted = new Set((want as string[]) ?? []);
-        const kept = lines.slice(at.start + 1, at.end).filter((_ln, i) => {
-          const t = fileTags[i];
-          if (t == null) return false;
+        const block = lines.slice(at.start + 1, at.end);
+        const kept: string[] = [];
+        fileTags.forEach((t, i) => {
           // A tag the resolver has no opinion on (no board tag claims it)
           // is not ours to remove — only a tag we recognise, and that this
           // card no longer wants, drops out.
           const ref = tagRef(t);
-          return ref == null ? true : wanted.has(ref);
+          if (ref != null && !wanted.has(ref)) return;
+          // An inline `tags: [a, b]` has no lines of its own; write them out.
+          kept.push(block[i] ?? `${at.indent}- ${formatScalar(t)}`);
         });
         const keptRefs = new Set(
           fileTags.map((t) => tagRef(t) ?? t).filter((r) => wanted.has(r)),
@@ -170,7 +176,6 @@ export function writeSheet(
   lines = [...lines, ...append];
 
   // Body: untouched, appended to, or replaced — in that order of preference.
-  const srcBody = body.join("\n");
   const base = bodyWithoutH1(srcBody);
   let outBody: string[];
   if (sheet.bodyMd === base) outBody = body;

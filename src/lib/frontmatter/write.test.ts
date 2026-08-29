@@ -120,6 +120,60 @@ describe("writeSheet", () => {
   });
 });
 
+// Free-text date-ish values, `effort` in lower case, `value:` standing in for
+// `priority:`, and a lone `archived_by:` — every shape the old raw comparison
+// mistook for a difference and deleted from an untouched sheet.
+const LOOSE = `---
+id: 7
+title: A loose sheet
+status: wip
+epic: Round trip
+area: Designer
+raised: TBD
+reconfirmed: 2026-08-21, 2026-08-26
+planned_start: soon
+effort: m
+value: H
+archived_by: bob
+branch: feat/x
+tags: [designer, wizard]
+---
+# #7 — A loose sheet
+
+## Ask
+
+Nothing here should move.
+`;
+
+describe("writeSheet on a loose sheet", () => {
+  test("free text, lower-case effort, value and a lone archived_by all survive untouched", () => {
+    expect(writeSheet(LOOSE, sheetOf(LOOSE))).toBe(LOOSE);
+  });
+  test("priority the file already states through value: is not written again", () => {
+    const out = writeSheet(LOOSE, { ...sheetOf(LOOSE), priority: 1 });
+    expect(out).toBe(LOOSE);
+  });
+  test("a priority that disagrees with value: appends exactly one line", () => {
+    const out = writeSheet(LOOSE, { ...sheetOf(LOOSE), priority: 2 });
+    const a = LOOSE.split("\n");
+    const b = out.split("\n");
+    expect(b.filter((l) => !a.includes(l))).toEqual(["priority: 2"]);
+    expect(a.filter((l) => !b.includes(l))).toEqual([]);
+  });
+  test("an inline tags list plus a new ref rewrites only the tags lines", () => {
+    const out = writeSheet(LOOSE, {
+      ...sheetOf(LOOSE),
+      tags: ["designer", "wizard", "kind:bug"],
+    });
+    expect(out).toContain("kind:bug");
+    // every other line of the file is still there, in order
+    const kept = out.split("\n").filter((l) => !/^(tags:|\s*- |\[)/.test(l));
+    expect(kept).toEqual(
+      LOOSE.split("\n").filter((l) => !l.startsWith("tags:")),
+    );
+  });
+});
+
 describe("cardToMarkdown", () => {
   test("writes schema order, extras, managed block, H1, body — and round-trips", () => {
     const s = sheetOf(FILE);
