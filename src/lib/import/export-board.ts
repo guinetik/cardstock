@@ -22,10 +22,14 @@ export async function exportBoardEntries(
   prefix = "",
 ): Promise<Record<string, Uint8Array>> {
   const state = await loadBoardState(db, boardId);
-  const { data: sources } = await db
+  const { data: sources, error: sourcesError } = await db
     .from("cards")
     .select("id, source_text")
     .eq("board_id", boardId);
+  // A failed read would look like "no card has a stored sheet", and the rebase
+  // below would then write that loss into every row. Never.
+  if (sourcesError)
+    throw new Error(`export: source_text: ${sourcesError.message}`);
   const sourceOf = new Map(
     (sources ?? []).map((s) => [
       s.id as string,

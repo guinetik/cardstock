@@ -27,7 +27,13 @@ export async function GET(
   const access = await currentAccess(b.project_id as string);
   if (!access?.canManage) return new Response("forbidden", { status: 403 });
 
-  const entries = await exportBoardEntries(db, b.id as string);
+  let entries: Record<string, Uint8Array>;
+  try {
+    entries = await exportBoardEntries(db, b.id as string);
+  } catch (e) {
+    // A read that failed must not become a download built from rows alone.
+    return new Response((e as Error).message, { status: 500 });
+  }
   const zip = zipSync(entries, { level: 6 });
   return new Response(zip, {
     headers: {

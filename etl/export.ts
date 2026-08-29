@@ -22,10 +22,14 @@ const dryRun = flag("dry-run");
 const db = serviceClient();
 const ctx = await loadBoard(db, projectSlug, boardSlug);
 const state = await loadBoardState(db, ctx.board.id);
-const { data: sources } = await db
+const { data: sources, error: sourcesError } = await db
   .from("cards")
   .select("id, source_text")
   .eq("board_id", ctx.board.id);
+// A failed read would look like "no card has a stored sheet", and every file
+// would be rewritten from the row alone. Never.
+if (sourcesError)
+  throw new Error(`export: source_text: ${sourcesError.message}`);
 const sourceOf = new Map(
   (sources ?? []).map((s) => [s.id as string, s.source_text as string | null]),
 );
@@ -39,6 +43,8 @@ const resolve = (t: string) => {
 
 let changed = 0;
 let unchanged = 0;
+/** Unchanged files whose card had no stored sheet until now. */
+let stored = 0;
 for (const card of state.cards.values()) {
   const file = path.join(source, `${card.external_id}.md`);
   const sheet = sheetFromCard(card, state);
@@ -56,6 +62,17 @@ for (const card of state.cards.values()) {
     : cardToMarkdown(sheet);
   if (after === before) {
     unchanged++;
+    // A card imported before sheets were stored has no `source_text`, and the
+    // download would then be built from the row alone. The file is already
+    // right; store it so the next line edit has a base.
+    if (!sourceOf.get(card.id)) {
+      stored++;
+      if (!dryRun)
+        await db
+          .from("cards")
+          .update({ source_text: after, lane_from_source: sheet.lane })
+          .eq("id", card.id);
+    }
     continue;
   }
   changed++;
@@ -72,5 +89,5 @@ for (const card of state.cards.values()) {
     .eq("id", card.id);
 }
 console.log(
-  `${dryRun ? "[dry-run] " : ""}${projectSlug}/${boardSlug} → ${source}: ${changed} files created or updated, ${unchanged} unchanged`,
+  `${dryRun ? "[dry-run] " : ""}${projectSlug}/${boardSlug} → ${source}: ${changed} files created or updated, ${unchanged} unchanged${stored ? ` (${stored} sheet(s) stored)` : ""}`,
 );

@@ -31,11 +31,16 @@ export async function GET(
     .eq("project_id", p.id);
 
   const entries: Record<string, Uint8Array> = {};
-  for (const board of boards ?? []) {
-    Object.assign(
-      entries,
-      await exportBoardEntries(db, board.id as string, `${board.slug}/`),
-    );
+  try {
+    for (const board of boards ?? []) {
+      Object.assign(
+        entries,
+        await exportBoardEntries(db, board.id as string, `${board.slug}/`),
+      );
+    }
+  } catch (e) {
+    // A read that failed must not become a download built from rows alone.
+    return new Response((e as Error).message, { status: 500 });
   }
 
   const zip = zipSync(entries, { level: 6 });
