@@ -228,6 +228,15 @@ describe("paper components", () => {
     expect(css).not.toContain(".roster-punch");
   });
 
+  test("portraits are cut squares on the stock, not round clips", () => {
+    expect(css).toContain(".portrait");
+    expect(css).toContain(".portrait--sm");
+    expect(css).toContain(".portrait--lg");
+    expect(css).not.toMatch(
+      /\.portrait[^{]*\{[^}]*border-radius:\s*(50%|9999px)/,
+    );
+  });
+
   test("the project page is a letterhead and section folders", () => {
     expect(css).toContain(".letterhead");
     expect(css).toContain(".folder--section");

@@ -125,20 +125,22 @@ function InviteFields({
           htmlFor="invite-name"
           className={slip ? undefined : "space-y-1.5 text-sm"}
         >
-          <span className={slip ? undefined : "font-medium"}>Display name</span>
+          <span className={slip ? undefined : "font-medium"}>Name</span>
           {slip ? (
             <input
               id="invite-name"
               name="displayName"
+              required
               maxLength={80}
-              placeholder="Optional"
+              placeholder="Ada Lovelace"
             />
           ) : (
             <Input
               id="invite-name"
               name="displayName"
+              required
               maxLength={80}
-              placeholder="Optional"
+              placeholder="Ada Lovelace"
             />
           )}
         </label>

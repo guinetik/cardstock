@@ -1,5 +1,6 @@
 "use server";
 import { normalizeEmail, passwordProblem } from "@/lib/auth";
+import { cleanName, displayNameProblem } from "@/lib/keys";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export type LoginResult = { ok?: true; error?: string };
@@ -60,6 +61,10 @@ export async function setInitialPassword(
   const password = String(form.get("password") ?? "");
   const problem = passwordProblem(password, String(form.get("confirm") ?? ""));
   if (problem) return { error: problem };
+  const nameProblem = displayNameProblem(String(form.get("displayName") ?? ""));
+  const displayName = cleanName(String(form.get("displayName") ?? ""));
+  if (nameProblem || !displayName)
+    return { error: nameProblem ?? "Enter a name." };
 
   const db = await supabaseServer();
   const { data: invited, error: rpcError } = await db.rpc("is_invited", {
@@ -86,5 +91,10 @@ export async function setInitialPassword(
       error:
         "This instance still requires email confirmation. Ask the owner to turn it off.",
     };
+  const { error: nameError } = await db
+    .from("members")
+    .update({ display_name: displayName })
+    .eq("email", email);
+  if (nameError) return { error: nameError.message };
   return { ok: true };
 }

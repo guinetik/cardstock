@@ -45,6 +45,7 @@ async function setPassword(
   await page.goto("/login");
   await page.getByTestId("toggle-onboarding").click();
   await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Your name").fill("E2E onboard");
   await page.getByLabel("New password").fill(password);
   await page.getByLabel("Confirm password").fill(password);
   await page.getByRole("button", { name: "Set password and sign in" }).click();
@@ -110,6 +111,7 @@ test("a mismatched confirmation is rejected before anything is created", async (
   await page.goto("/login");
   await page.getByTestId("toggle-onboarding").click();
   await page.getByLabel("Email").fill(INVITEE);
+  await page.getByLabel("Your name").fill("E2E onboard");
   await page.getByLabel("New password").fill(PASSWORD);
   await page.getByLabel("Confirm password").fill(OTHER_PASSWORD);
   await page.getByRole("button", { name: "Set password and sign in" }).click();

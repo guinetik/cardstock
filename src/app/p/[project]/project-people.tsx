@@ -1,5 +1,7 @@
 import { removeMembership } from "@/app/users/actions";
 import { InviteUserForm } from "@/app/users/invite-user-form";
+import { Portrait } from "@/components/portrait";
+import { memberLabel } from "@/lib/keys";
 
 /** One row on the project roster: allowlist identity plus project role. */
 export type ProjectPerson = {
@@ -33,7 +35,7 @@ export function ProjectPeople({
     <div className="roster">
       <ul className="roster-slips" aria-label="People">
         {people.map((person) => {
-          const name = person.displayName ?? person.email;
+          const name = memberLabel(person.displayName);
           const you = person.memberId === currentMemberId;
           return (
             <li
@@ -41,14 +43,13 @@ export function ProjectPeople({
               className="binder binder--wide roster-slip"
             >
               <span className="binder-rivets" aria-hidden="true" />
+              <Portrait email={person.email} size={36} />
               <div className="roster-who">
                 <span className="roster-name">
                   {name}
                   {you && <span className="roster-you">you</span>}
                 </span>
-                {person.displayName && (
-                  <span className="roster-mail">{person.email}</span>
-                )}
+                <span className="roster-mail">{person.email}</span>
               </div>
               <div className="roster-meta">
                 <span className="stat stat--flat">{person.role}</span>

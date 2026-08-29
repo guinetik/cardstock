@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Portrait } from "@/components/portrait";
 import { Button } from "@/components/ui/button";
+import { memberLabel } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { removeMembership } from "./actions";
 import { InviteUserForm } from "./invite-user-form";
@@ -55,16 +57,17 @@ export default async function UsersPage() {
             );
             return (
               <li key={member.id} className="paper-lane p-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div>
-                    <span className="font-medium">
-                      {member.display_name ?? member.email}
-                    </span>
-                    {member.display_name && (
-                      <span className="ml-2 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Portrait email={member.email} size={36} />
+                    <div>
+                      <span className="font-medium">
+                        {memberLabel(member.display_name)}
+                      </span>
+                      <span className="ml-2 font-mono text-sm text-muted-foreground">
                         {member.email}
                       </span>
-                    )}
+                    </div>
                   </div>
                   <span className="text-xs uppercase tracking-wide text-muted-foreground">
                     {member.role}

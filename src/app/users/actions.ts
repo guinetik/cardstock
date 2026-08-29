@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { canInviteRole, canRemoveRole, type ProjectRole } from "@/lib/access";
 import { currentAccess } from "@/lib/access-server";
 import { normalizeEmail } from "@/lib/auth";
-import { cleanName } from "@/lib/keys";
+import { cleanName, displayNameProblem } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 
 export type UserActionResult = { error?: string; success?: string } | null;
@@ -23,12 +23,13 @@ export async function inviteUser(
 
   const email = normalizeEmail(String(form.get("email") ?? ""));
   const rawName = String(form.get("displayName") ?? "");
-  const displayName = rawName.trim() ? cleanName(rawName) : null;
+  const nameProblem = displayNameProblem(rawName);
+  const displayName = cleanName(rawName);
   const projectId = String(form.get("projectId") ?? "");
   const role = String(form.get("role") ?? "member");
   if (!email) return { error: "Enter a valid email address." };
-  if (rawName.trim() && !displayName)
-    return { error: "Keep the display name to 80 characters or fewer." };
+  if (nameProblem || !displayName)
+    return { error: nameProblem ?? "Enter a name." };
   if (!projectId) return { error: "Choose a project." };
   if (role !== "admin" && role !== "member")
     return { error: "Choose a valid project role." };

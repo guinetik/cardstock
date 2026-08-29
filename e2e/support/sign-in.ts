@@ -66,7 +66,7 @@ export async function createMember(email: string, password: string) {
   const { error: e2 } = await admin
     .from("members")
     .upsert(
-      { email, display_name: email.split("@")[0], role: "member" },
+      { email, display_name: "E2E user", role: "member" },
       { onConflict: "email" },
     );
   if (e2) throw new Error(`could not invite ${email}: ${e2.message}`);

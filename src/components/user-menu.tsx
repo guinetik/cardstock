@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { Portrait } from "@/components/portrait";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { memberLabel } from "@/lib/keys";
 import { currentMember } from "@/lib/supabase/server";
 
 /**
@@ -21,13 +23,18 @@ import { currentMember } from "@/lib/supabase/server";
 export async function UserMenu() {
   const member = await currentMember();
   if (!member) return null;
-  const name = member.display_name ?? member.email;
+  const name = memberLabel(member.display_name);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex items-center gap-1 text-sm hover:underline"
+        className="flex items-center gap-1.5 text-sm hover:underline"
         aria-label="Account menu"
       >
+        <Portrait
+          email={member.email}
+          size={20}
+          className="portrait portrait--sm"
+        />
         {name}
         {member.role === "owner" && (
           <span className="rounded-full border px-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -46,6 +53,9 @@ export async function UserMenu() {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/profile" />}>
+          Profile
+        </DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/" />}>Projects</DropdownMenuItem>
         {member.role === "owner" && (
           <DropdownMenuItem render={<Link href="/users" />}>

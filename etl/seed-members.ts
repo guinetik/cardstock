@@ -38,10 +38,7 @@ async function attach(
 ) {
   const { data: m, error } = await db
     .from("members")
-    .upsert(
-      { email, display_name: email.split("@")[0], role: siteRole },
-      { onConflict: "email" },
-    )
+    .upsert({ email, role: siteRole }, { onConflict: "email" })
     .select("id")
     .single();
   if (error || !m) throw new Error(`${email}: ${error?.message}`);

@@ -56,15 +56,26 @@ export function LoginForm({ next }: { next: string }) {
           aria-label={onboarding ? "New password" : "Password"}
         />
         {onboarding && (
-          <Input
-            type="password"
-            name="confirm"
-            required
-            minLength={MIN_PASSWORD}
-            autoComplete="new-password"
-            placeholder="Confirm password"
-            aria-label="Confirm password"
-          />
+          <>
+            <Input
+              type="text"
+              name="displayName"
+              required
+              maxLength={80}
+              autoComplete="name"
+              placeholder="Your name"
+              aria-label="Your name"
+            />
+            <Input
+              type="password"
+              name="confirm"
+              required
+              minLength={MIN_PASSWORD}
+              autoComplete="new-password"
+              placeholder="Confirm password"
+              aria-label="Confirm password"
+            />
+          </>
         )}
         <Button type="submit" className="w-full" disabled={busy}>
           {busy

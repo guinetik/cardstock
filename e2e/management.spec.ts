@@ -53,7 +53,7 @@ test("the users page invites someone to a project without sending email", async 
     await signIn(page);
     await page.goto("/users");
     await page.getByLabel("Email").fill(INVITED);
-    await page.getByLabel("Display name").fill("Project Invite");
+    await page.getByLabel("Name").fill("Project Invite");
     await page
       .getByLabel("Project", { exact: true })
       .selectOption({ label: "Demo" });
@@ -142,7 +142,7 @@ test("a project admin can create a board and invite a member, but not open /user
       page.locator('#invite-role option[value="admin"]'),
     ).toHaveCount(0);
     await page.getByLabel("Email").fill(ADMIN_INVITED);
-    await page.getByLabel("Display name").fill("Admin Invited");
+    await page.locator("#invite-name").fill("Admin Invited");
     await page.getByRole("button", { name: "Invite user" }).click();
     await expect(page.getByRole("status")).toContainText("can now onboard");
 

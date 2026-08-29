@@ -1302,10 +1302,29 @@
   }
   .roster-slip {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     column-gap: 0.85rem;
     align-items: center;
     width: 100%;
+  }
+  .portrait {
+    display: block;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    object-fit: cover;
+    background: var(--surface-well);
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-card);
+  }
+  .portrait--sm {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  .portrait--lg {
+    width: 5.5rem;
+    height: 5.5rem;
+    border-width: 2px;
   }
   .roster-who {
     display: flex;
@@ -1732,10 +1751,10 @@
     align-items: center;
   }
   .roster-slip {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
   }
   .roster-meta {
-    grid-column: 1;
+    grid-column: 1 / -1;
     padding-top: 0.35rem;
   }
 }
