@@ -60,10 +60,10 @@ export function Binder({ project }: { project: BinderProject }) {
                     {b.name}
                   </Link>
                 </h2>
-                <div className="binder-foot">
-                  <span className="binder-count">
-                    {plural(b.cards, "card", "cards")}
-                  </span>
+                <p className="binder-count">
+                  {plural(b.cards, "card", "cards")}
+                </p>
+                <div className="binder-foot binder-foot--tools">
                   <span className="binder-io">
                     {project.canManage && (
                       <>

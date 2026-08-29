@@ -1112,6 +1112,13 @@
   .binder--wide .binder-foot {
     align-items: baseline;
   }
+  /* On the projects page the count sits under the name and the keys start at the left. */
+  .binder-foot--tools {
+    justify-content: flex-start;
+  }
+  .binder > .binder-count {
+    margin-top: 0.3rem;
+  }
   .binder-count {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -1135,7 +1142,6 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-left: auto;
   }
   /* An ink-filled key, 28 square, the glyph cut out of it in stock. */
   .binder-tool {
