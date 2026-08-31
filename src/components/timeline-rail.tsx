@@ -1,6 +1,7 @@
 import { BookIcon, Columns3Icon, FlagIcon } from "lucide-react";
 import Link from "next/link";
 import { statusChipClass } from "@/lib/card-status";
+import type { GateOutcome } from "@/lib/gates";
 import {
   daysSince,
   type TimelineSignal,
@@ -25,6 +26,7 @@ export interface TimelineRailItem {
   effort: "L" | "M" | "H" | null;
   gateId: string | null;
   gateName: string | null;
+  gateOutcome: GateOutcome | null;
 }
 
 const MONTH = new Intl.DateTimeFormat("en-US", {
@@ -38,12 +40,23 @@ const SHORT_DATE = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const SIGNAL_LABEL: Record<TimelineSignal, string> = {
+  forgotten: "Forgotten",
+  overdue: "Overdue",
+  planned: "Planned",
+  active: "Open",
+  delivered: "Delivered",
+};
 const SIGNAL_COLOR: Record<TimelineSignal, string> = {
   forgotten: "var(--pen-red)",
   overdue: "var(--pen-amber)",
   planned: "var(--pen-blue)",
   active: "var(--color-grey-faint)",
   delivered: "var(--pen-green)",
+};
+const GATE_COLOR: Record<GateOutcome, string> = {
+  built: "var(--pen-blue)",
+  shipped: "var(--pen-green)",
 };
 
 function date(value: string) {
@@ -57,7 +70,7 @@ function ageLabel(value: string, today: string) {
   return `${age} days ago`;
 }
 
-/** Raised-date rail: gate name as the milestone, diagnostic on the date line. */
+/** Raised-date rail: coloured assessment plus gate name, date line underneath. */
 export function TimelineRail({
   items,
   today,
@@ -122,11 +135,28 @@ export function TimelineRail({
                         </span>{" "}
                         {item.title}
                       </Link>
-                      {item.gateName && (
-                        <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--color-ink)]">
-                          {item.gateName}
+                      <span className="flex shrink-0 flex-col items-end gap-0.5">
+                        <span
+                          className="border-l-2 pl-2 text-[9px] font-semibold uppercase tracking-[0.1em]"
+                          style={{ borderColor: color, color }}
+                          aria-label={`Assessment ${SIGNAL_LABEL[item.signal]}`}
+                        >
+                          {SIGNAL_LABEL[item.signal]}
                         </span>
-                      )}
+                        {item.gateName && (
+                          <span
+                            className="text-[9px] font-semibold uppercase tracking-[0.1em]"
+                            style={{
+                              color: item.gateOutcome
+                                ? GATE_COLOR[item.gateOutcome]
+                                : "var(--color-ink)",
+                            }}
+                            aria-label={`Gate ${item.gateName}`}
+                          >
+                            {item.gateName}
+                          </span>
+                        )}
+                      </span>
                     </div>
                     <p
                       className="mt-1 text-xs"

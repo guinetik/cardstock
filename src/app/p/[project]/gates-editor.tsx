@@ -145,7 +145,10 @@ function GatesForm({
           </h3>
         ) : null}
         <p className="cta-body">
-          Order is first match. The timeline uses the name as the milestone.
+          A gate is a milestone. Tick tracker <strong>statuses</strong> and/or
+          board <strong>lanes</strong> that belong to it. First match wins.
+          Pulse is optional — it fills the Built or Shipped column on the
+          timeline.
         </p>
         <form action={action} className="mt-3 space-y-4">
           <input type="hidden" name="boardId" value={boardId} />
@@ -158,23 +161,56 @@ function GatesForm({
                 key={gate.id}
                 className="space-y-2 border-b border-[var(--border-strong)] pb-4"
               >
-                <input
-                  type="text"
-                  maxLength={GATE_NAME_MAX}
-                  value={gate.name}
-                  onChange={(event) =>
-                    updateGate(gate.id, { name: event.target.value })
-                  }
-                  aria-label={
-                    gate.name ? `Name for ${gate.name}` : "Name for new gate"
-                  }
-                  className="paper-field w-56"
-                />
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-grey)]">
+                    Name
+                    <input
+                      type="text"
+                      maxLength={GATE_NAME_MAX}
+                      value={gate.name}
+                      onChange={(event) =>
+                        updateGate(gate.id, { name: event.target.value })
+                      }
+                      aria-label={
+                        gate.name
+                          ? `Name for ${gate.name}`
+                          : "Name for new gate"
+                      }
+                      className="paper-field mt-1 block w-56 normal-case tracking-normal"
+                    />
+                  </label>
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-grey)]">
+                    Pulse
+                    <select
+                      value={gate.outcome ?? ""}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        updateGate(gate.id, {
+                          outcome:
+                            value === "built" || value === "shipped"
+                              ? value
+                              : null,
+                        });
+                      }}
+                      aria-label={
+                        gate.name
+                          ? `Pulse for ${gate.name}`
+                          : "Pulse for new gate"
+                      }
+                      className="paper-field mt-1 block min-w-28 normal-case tracking-normal"
+                    >
+                      <option value="">None</option>
+                      <option value="built">Built column</option>
+                      <option value="shipped">Shipped column</option>
+                    </select>
+                  </label>
+                </div>
+                <fieldset className="fieldset flex-wrap">
+                  <legend>Statuses</legend>
                   {CARD_STATUSES.map((status) => (
                     <label
                       key={status}
-                      className="inline-flex items-center gap-1"
+                      className="inline-flex items-center gap-1 text-xs"
                     >
                       <input
                         type="checkbox"
@@ -187,12 +223,13 @@ function GatesForm({
                       {status}
                     </label>
                   ))}
-                </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                </fieldset>
+                <fieldset className="fieldset flex-wrap">
+                  <legend>Lanes</legend>
                   {lanes.map((lane) => (
                     <label
                       key={lane.id}
-                      className="inline-flex items-center gap-1"
+                      className="inline-flex items-center gap-1 text-xs"
                     >
                       <input
                         type="checkbox"
@@ -204,30 +241,8 @@ function GatesForm({
                       {lane.name}
                     </label>
                   ))}
-                </div>
+                </fieldset>
                 <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={gate.outcome ?? ""}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      updateGate(gate.id, {
-                        outcome:
-                          value === "built" || value === "shipped"
-                            ? value
-                            : null,
-                      });
-                    }}
-                    aria-label={
-                      gate.name
-                        ? `Outcome for ${gate.name}`
-                        : "Outcome for new gate"
-                    }
-                    className="paper-field"
-                  >
-                    <option value="">None</option>
-                    <option value="built">Built</option>
-                    <option value="shipped">Shipped</option>
-                  </select>
                   <button
                     type="button"
                     className="text-xs"

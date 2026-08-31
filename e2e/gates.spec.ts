@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { admin, signIn } from "./support/sign-in";
 
-test("gates rename the milestone on the timeline without looking like Planned + Built", async ({
+test("gates rename the milestone on the timeline and keep the Planned assessment", async ({
   page,
 }) => {
   const { data: board } = await admin
@@ -42,8 +42,8 @@ test("gates rename the milestone on the timeline without looking like Planned + 
     await page.goto("/p/demo/b/backlog/timeline");
     const row = page.locator('[data-timeline-id="7"]');
     await expect(row.getByText("Awaiting delivery")).toBeVisible();
+    await expect(row.getByText("Planned", { exact: true })).toBeVisible();
     await expect(row.getByText(/Planned · Target/)).toBeVisible();
-    await expect(row.getByText("Planned", { exact: true })).toHaveCount(0);
     await expect(row.locator(".stat")).toHaveCount(0);
   } finally {
     if (board?.id)

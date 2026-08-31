@@ -107,6 +107,7 @@ export default async function TimelinePage(
       effort: card.effort,
       gateId: gate?.id ?? null,
       gateName: gate?.name ?? null,
+      gateOutcome: gate?.outcome ?? null,
     };
   });
   const attention = visible

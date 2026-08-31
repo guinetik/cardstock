@@ -1,8 +1,9 @@
 # Board gates
 
 A gate is a named milestone for one board: a set of tracker statuses and/or
-lanes. First match wins. The timeline prints the gate on the right and the
-calendar diagnostic (Planned, Forgotten, Overdue, Delivered) on the date line.
+lanes. First match wins. The timeline prints both words on the right: the
+calendar assessment (Planned, Forgotten, Overdue, Delivered) in its pen, and
+the gate underneath. Pulse (Built or Shipped) fills a timeline column.
 
 Edit them on the project page, Gates section. Owners and project admins.
 Saving writes `boards.settings.gates`. Until you save, the board behaves as
