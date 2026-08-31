@@ -120,6 +120,18 @@ export function laneMicrocosm(
   return rows;
 }
 
+/**
+ * The task-cabin marks, drawn on a slip when the map is asked for marks.
+ * Kept in lockstep with the cockpit `TaskMap` legend; queued stays blank.
+ */
+export const LANE_MAP_MARK: Record<TaskSignal, string> = {
+  delivered: "✓",
+  blocked: "!",
+  late: "◷",
+  moving: "→",
+  queued: "",
+};
+
 /** CSS modifier when a slip has no card tint — matches the cockpit pens. */
 export const LANE_MAP_SIGNAL: Record<TaskSignal, string> = {
   delivered: "lane-map-cell--delivered",

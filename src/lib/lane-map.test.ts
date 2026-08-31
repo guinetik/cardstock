@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { LANE_MAP_SPAN, laneMicrocosm } from "./lane-map";
+import type { TaskSignal } from "./cockpit";
+import { LANE_MAP_MARK, LANE_MAP_SPAN, laneMicrocosm } from "./lane-map";
 
 const lanes = [
   {
@@ -103,5 +104,25 @@ describe("laneMicrocosm", () => {
   test("omits archived when nothing is filed away", () => {
     const rows = laneMicrocosm(lanes, []);
     expect(rows.some((r) => r.kind === "archive")).toBe(false);
+  });
+});
+
+describe("LANE_MAP_MARK", () => {
+  test("matches the task-cabin marks; queued stays blank", () => {
+    const signals: TaskSignal[] = [
+      "delivered",
+      "blocked",
+      "late",
+      "moving",
+      "queued",
+    ];
+    for (const signal of signals) {
+      expect(typeof LANE_MAP_MARK[signal]).toBe("string");
+    }
+    expect(LANE_MAP_MARK.delivered).toBe("✓");
+    expect(LANE_MAP_MARK.blocked).toBe("!");
+    expect(LANE_MAP_MARK.late).toBe("◷");
+    expect(LANE_MAP_MARK.moving).toBe("→");
+    expect(LANE_MAP_MARK.queued).toBe("");
   });
 });

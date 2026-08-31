@@ -1489,6 +1489,25 @@
     background: transparent;
     border-color: var(--border-strong);
   }
+  /* Marked variant: taller slips carrying the task-cabin marks (✓ ! ◷ →). */
+  .lane-map--marked .lane-map-pack {
+    grid-auto-rows: 1rem;
+  }
+  .lane-map--marked .lane-map-cell {
+    display: grid;
+    place-items: center;
+    min-height: 1rem;
+    font-family: var(--font-mono, monospace);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--pen-ink);
+  }
+  /* A card's pastel tint is paper, not pen: the mark writes in regular ink. */
+  .lane-map--marked .lane-map-cell[class*="card-color--"] {
+    color: var(--color-ink);
+  }
   .lane-map-tip {
     display: none;
     position: absolute;

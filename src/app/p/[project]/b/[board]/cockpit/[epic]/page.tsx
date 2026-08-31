@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { EpicDetail } from "@/components/cockpit/epic-detail";
 import { buildCockpitModel } from "@/lib/cockpit";
 import { loadCockpit } from "@/lib/cockpit-data";
+import { laneMicrocosm } from "@/lib/lane-map";
 import { currentMember } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -19,12 +20,19 @@ export default async function EpicCockpitPage(props: {
   );
   if (!view) notFound();
   const boardBase = `/p/${project}/b/${board}`;
+  const laneRows = laneMicrocosm(data.lanes, view.tasks);
+  const inboxLane =
+    data.lanes.find((lane) => lane.kind === "inbox") ?? data.lanes[0] ?? null;
   return (
     <main className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6">
       <EpicDetail
         view={view}
         cockpitBase={`${boardBase}/cockpit`}
         cardBase={`${boardBase}/c`}
+        boardHref={boardBase}
+        boardId={data.board.id}
+        laneRows={laneRows}
+        inboxLane={inboxLane}
       />
     </main>
   );

@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { LaneMap } from "@/components/lane-map";
 import type { CockpitEpic, EpicOutlook } from "@/lib/cockpit";
 import { OUTLOOK_LABEL } from "@/lib/cockpit";
+import type { LaneMicrocosmRow } from "@/lib/lane-map";
+import type { Lane } from "@/lib/types";
+import { ClipTaskDialog } from "./clip-task-dialog";
 import { EpicEditor } from "./epic-editor";
 import { EpicGantt } from "./gantt";
 import { TaskLegend, TaskMap } from "./task-map";
@@ -49,10 +53,18 @@ export function EpicDetail({
   view,
   cockpitBase,
   cardBase,
+  boardHref,
+  boardId,
+  laneRows,
+  inboxLane,
 }: {
   view: CockpitEpic;
   cockpitBase: string;
   cardBase: string;
+  boardHref: string;
+  boardId: string;
+  laneRows: LaneMicrocosmRow[];
+  inboxLane: Lane | null;
 }) {
   const m = view.metrics;
   const unscheduled = view.tasks.filter(
@@ -77,10 +89,31 @@ export function EpicDetail({
               "Describe the outcome so a reader can understand the promise without opening a task."}
           </p>
         </div>
-        <span className={`stat ${outlookClass[view.outlook]}`}>
-          {OUTLOOK_LABEL[view.outlook]}
-        </span>
+        <div className="flex items-center gap-3">
+          {inboxLane && (
+            <ClipTaskDialog
+              boardId={boardId}
+              lane={inboxLane}
+              epic={view.epic}
+            />
+          )}
+          <span className={`stat ${outlookClass[view.outlook]}`}>
+            {OUTLOOK_LABEL[view.outlook]}
+          </span>
+        </div>
       </header>
+
+      <section className="mt-5" aria-label="Where the tasks sit on the board">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-grey)]">
+            On the board
+          </h2>
+          <Link href={boardHref} className="paper-link text-xs">
+            Move things on the board →
+          </Link>
+        </div>
+        <LaneMap href={boardHref} rows={laneRows} marks />
+      </section>
 
       <section className="mt-6">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-grey)]">
