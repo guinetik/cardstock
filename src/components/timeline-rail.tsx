@@ -1,7 +1,11 @@
 import { BookIcon, Columns3Icon, FlagIcon } from "lucide-react";
 import Link from "next/link";
 import { statusChipClass } from "@/lib/card-status";
-import { daysSince, type TimelineSignal } from "@/lib/timeline";
+import {
+  daysSince,
+  type TimelineSignal,
+  timelineDiagnosticLine,
+} from "@/lib/timeline";
 import { EFFORT_PEN, PRIORITY_LABEL, PRIORITY_PEN } from "@/lib/types";
 
 export interface TimelineRailItem {
@@ -19,16 +23,12 @@ export interface TimelineRailItem {
   deliveredAt: string | null;
   priority: 1 | 2 | 3 | null;
   effort: "L" | "M" | "H" | null;
+  gateId: string | null;
+  gateName: string | null;
 }
 
 const MONTH = new Intl.DateTimeFormat("en-US", {
   month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-const DATE = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
   year: "numeric",
   timeZone: "UTC",
 });
@@ -38,13 +38,6 @@ const SHORT_DATE = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
-const SIGNAL_LABEL: Record<TimelineSignal, string> = {
-  forgotten: "Forgotten",
-  overdue: "Overdue",
-  planned: "Planned",
-  active: "Open",
-  delivered: "Delivered",
-};
 const SIGNAL_COLOR: Record<TimelineSignal, string> = {
   forgotten: "var(--pen-red)",
   overdue: "var(--pen-amber)",
@@ -64,25 +57,7 @@ function ageLabel(value: string, today: string) {
   return `${age} days ago`;
 }
 
-function destination(item: TimelineRailItem, today: string, watchDays: number) {
-  if (item.deliveredAt) return `Shipped ${DATE.format(date(item.deliveredAt))}`;
-  if (item.targetDate) {
-    if (item.signal === "overdue")
-      return `Target was ${DATE.format(date(item.targetDate))}`;
-    const remaining = daysSince(today, item.targetDate);
-    return `Target ${DATE.format(date(item.targetDate))}${remaining ? ` · in ${remaining} days` : " · today"}`;
-  }
-  if (item.targetLabel) return `Rough target · ${item.targetLabel}`;
-  const age = daysSince(item.raisedOn, today);
-  if (item.signal === "forgotten") {
-    const beyond = age - watchDays;
-    return beyond > 0
-      ? `No target · ${beyond} days past the watch window`
-      : `No target · reached the ${watchDays}-day watch window`;
-  }
-  return "No target yet";
-}
-
+/** Raised-date rail: gate name as the milestone, diagnostic on the date line. */
 export function TimelineRail({
   items,
   today,
@@ -147,15 +122,17 @@ export function TimelineRail({
                         </span>{" "}
                         {item.title}
                       </Link>
-                      <span
-                        className="border-l-2 pl-2 text-[9px] font-semibold uppercase tracking-[0.1em]"
-                        style={{ borderColor: color, color }}
-                      >
-                        {SIGNAL_LABEL[item.signal]}
-                      </span>
+                      {item.gateName && (
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--color-ink)]">
+                          {item.gateName}
+                        </span>
+                      )}
                     </div>
-                    <p className="mt-1 text-xs text-[var(--color-grey)]">
-                      {destination(item, today, watchDays)}
+                    <p
+                      className="mt-1 text-xs"
+                      style={{ color: SIGNAL_COLOR[item.signal] }}
+                    >
+                      {timelineDiagnosticLine(item, today, watchDays)}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       {item.priority && (
@@ -172,7 +149,7 @@ export function TimelineRail({
                           {item.effort}
                         </span>
                       )}
-                      {item.status !== "backlog" && (
+                      {item.status !== "backlog" && !item.gateName && (
                         <span className="flex items-center gap-1">
                           <FlagIcon
                             className="size-3 shrink-0 text-[var(--color-grey)]"

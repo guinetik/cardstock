@@ -441,4 +441,25 @@ describe("timelineDiagnosticLine", () => {
       ),
     ).toBe("Planned · Rough target · September");
   });
+
+  test("forgotten prefixes the old beyond and reached copy", () => {
+    const today = "2026-08-31";
+    const forgotten = {
+      signal: "forgotten" as const,
+      raisedOn: "2026-08-17",
+      targetDate: null as string | null,
+      targetLabel: null as string | null,
+      deliveredAt: null as string | null,
+    };
+    expect(timelineDiagnosticLine(forgotten, today, 14)).toBe(
+      "Forgotten · No target · reached the 14-day watch window",
+    );
+    expect(
+      timelineDiagnosticLine(
+        { ...forgotten, raisedOn: "2026-08-16" },
+        today,
+        14,
+      ),
+    ).toBe("Forgotten · No target · 1 days past the watch window");
+  });
 });

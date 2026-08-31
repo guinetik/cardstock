@@ -7,7 +7,7 @@ import {
 import { TimelineExplorer } from "@/components/timeline-explorer";
 import type { TimelineRailItem } from "@/components/timeline-rail";
 import { loadBoard } from "@/lib/board-data";
-import { cardGate, resolveBoardGates } from "@/lib/gates";
+import { cardGate, pulseHeading, resolveBoardGates } from "@/lib/gates";
 import { currentMember } from "@/lib/supabase/server";
 import {
   addTimelineDays,
@@ -89,6 +89,7 @@ export default async function TimelinePage(
     );
   const timelineItems: TimelineRailItem[] = raised.map((card) => {
     const signal = signals.get(card.id) ?? "active";
+    const gate = cardGate(card, gates);
     return {
       id: card.id,
       externalId: card.external_id,
@@ -104,6 +105,8 @@ export default async function TimelinePage(
       deliveredAt: card.delivered_at ?? card.shipped_on,
       priority: card.priority,
       effort: card.effort,
+      gateId: gate?.id ?? null,
+      gateName: gate?.name ?? null,
     };
   });
   const attention = visible
@@ -199,7 +202,7 @@ export default async function TimelinePage(
             </span>
           )}
           <span className="w-20 text-right text-[9px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
-            {lane?.name ?? "No lane"}
+            {cardGate(card, gates)?.name ?? lane?.name ?? "No lane"}
           </span>
         </span>
       </li>
@@ -281,6 +284,8 @@ export default async function TimelinePage(
       <RecentDeliveryPulse
         built={recentBuilt}
         shipped={recentShipped}
+        builtTitle={pulseHeading(gates, "built")}
+        shippedTitle={pulseHeading(gates, "shipped")}
         today={today}
         windowDays={pulseDays}
         windowStart={windowStart}
@@ -302,6 +307,7 @@ export default async function TimelinePage(
             items={timelineItems}
             today={today}
             watchDays={watchDays}
+            gates={gates.map((g) => ({ id: g.id, name: g.name }))}
           />
         ) : (
           <p className="border-y border-[var(--border-hairline)] py-8 text-sm text-muted-foreground">

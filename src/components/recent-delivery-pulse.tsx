@@ -31,11 +31,13 @@ function relativeDate(value: string, today: string) {
 
 function OutcomeColumn({
   title,
+  headingId,
   items,
   today,
   color,
 }: {
-  title: "Built" | "Shipped";
+  title: string;
+  headingId: string;
   items: RecentOutcomeItem[];
   today: string;
   color: string;
@@ -44,10 +46,10 @@ function OutcomeColumn({
     <section
       className="border-t-2 bg-[var(--surface-card)] px-4 py-3"
       style={{ borderColor: color }}
-      aria-labelledby={`recent-${title.toLowerCase()}`}
+      aria-labelledby={headingId}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <h3 id={`recent-${title.toLowerCase()}`} className="text-lg">
+        <h3 id={headingId} className="text-lg">
           {title}
         </h3>
         <span className="font-mono text-xs" style={{ color }}>
@@ -94,15 +96,20 @@ function OutcomeColumn({
   );
 }
 
+/** Built and shipped crossings in the selected window, titled from board gates. */
 export function RecentDeliveryPulse({
   built,
   shipped,
+  builtTitle,
+  shippedTitle,
   today,
   windowDays,
   windowStart,
 }: {
   built: RecentOutcomeItem[];
   shipped: RecentOutcomeItem[];
+  builtTitle: string;
+  shippedTitle: string;
   today: string;
   windowDays: number;
   windowStart: string;
@@ -115,7 +122,8 @@ export function RecentDeliveryPulse({
             Relative to today
           </h2>
           <p className="text-xs text-[var(--color-grey)]">
-            What crossed Built and Shipped during the last {windowDays} days.
+            What crossed {builtTitle} and {shippedTitle} during the last{" "}
+            {windowDays} days.
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -127,13 +135,15 @@ export function RecentDeliveryPulse({
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <OutcomeColumn
-          title="Built"
+          title={builtTitle}
+          headingId="recent-built"
           items={built}
           today={today}
           color="var(--pen-blue)"
         />
         <OutcomeColumn
-          title="Shipped"
+          title={shippedTitle}
+          headingId="recent-shipped"
           items={shipped}
           today={today}
           color="var(--pen-green)"

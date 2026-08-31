@@ -5,18 +5,22 @@ import { TimelineRail, type TimelineRailItem } from "./timeline-rail";
 
 type SignalFilter = TimelineRailItem["signal"] | "all";
 
+/** Filters the raised-date rail by search, epic, diagnostic, gate, and date range. */
 export function TimelineExplorer({
   items,
   today,
   watchDays,
+  gates,
 }: {
   items: TimelineRailItem[];
   today: string;
   watchDays: number;
+  gates: { id: string; name: string }[];
 }) {
   const [query, setQuery] = useState("");
   const [epic, setEpic] = useState("all");
   const [signal, setSignal] = useState<SignalFilter>("all");
+  const [gateFilter, setGateFilter] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
@@ -46,19 +50,32 @@ export function TimelineExplorer({
       if (epic !== "all" && epic !== "unassigned" && item.epicName !== epic)
         return false;
       if (signal !== "all" && item.signal !== signal) return false;
+      if (gateFilter === "ungated" && item.gateId) return false;
+      if (
+        gateFilter !== "all" &&
+        gateFilter !== "ungated" &&
+        item.gateId !== gateFilter
+      )
+        return false;
       const raised = item.raisedOn.slice(0, 10);
       if (from && raised < from) return false;
       if (to && raised > to) return false;
       return true;
     });
-  }, [epic, from, items, query, signal, to]);
+  }, [epic, from, gateFilter, items, query, signal, to]);
   const filtering =
-    !!query || epic !== "all" || signal !== "all" || !!from || !!to;
+    !!query ||
+    epic !== "all" ||
+    signal !== "all" ||
+    gateFilter !== "all" ||
+    !!from ||
+    !!to;
 
   function clear() {
     setQuery("");
     setEpic("all");
     setSignal("all");
+    setGateFilter("all");
     setFrom("");
     setTo("");
   }
@@ -106,6 +123,22 @@ export function TimelineExplorer({
             <option value="forgotten">Forgotten</option>
             <option value="overdue">Overdue</option>
             <option value="delivered">Delivered</option>
+          </select>
+        </label>
+        <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-grey)]">
+          Gate
+          <select
+            value={gateFilter}
+            onChange={(event) => setGateFilter(event.target.value)}
+            className="paper-field mt-1 block h-8 min-w-36 max-w-56 px-2 text-xs normal-case tracking-normal"
+          >
+            <option value="all">Any gate</option>
+            <option value="ungated">Ungated</option>
+            {gates.map((gate) => (
+              <option key={gate.id} value={gate.id}>
+                {gate.name}
+              </option>
+            ))}
           </select>
         </label>
         <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-grey)]">
