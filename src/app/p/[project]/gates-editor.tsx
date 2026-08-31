@@ -155,11 +155,11 @@ function GatesForm({
           <input type="hidden" name="projectSlug" value={projectSlug} />
           <input type="hidden" name="boardSlug" value={boardSlug} />
           <input type="hidden" name="gates" value={JSON.stringify(gates)} />
-          <ul className="space-y-4">
+          <ul className="space-y-3">
             {gates.map((gate, index) => (
               <li
                 key={gate.id}
-                className="space-y-2 border-b border-[var(--border-strong)] pb-4"
+                className="paper-card paper-card--still space-y-3 p-4"
               >
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--color-grey)]">
@@ -242,10 +242,10 @@ function GatesForm({
                     </label>
                   ))}
                 </fieldset>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
-                    className="text-xs"
+                    className="paper-link text-xs"
                     disabled={index === 0}
                     onClick={() => moveGate(index, -1)}
                   >
@@ -253,7 +253,7 @@ function GatesForm({
                   </button>
                   <button
                     type="button"
-                    className="text-xs"
+                    className="paper-link text-xs"
                     disabled={index === gates.length - 1}
                     onClick={() => moveGate(index, 1)}
                   >
@@ -261,7 +261,7 @@ function GatesForm({
                   </button>
                   <button
                     type="button"
-                    className="text-xs"
+                    className="paper-link paper-link--danger text-xs"
                     onClick={() =>
                       setGates((current) =>
                         current.filter((row) => row.id !== gate.id),
@@ -274,10 +274,10 @@ function GatesForm({
               </li>
             ))}
           </ul>
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
               type="button"
-              className="text-xs"
+              className="paper-btn"
               onClick={() =>
                 setGates((current) => [
                   ...current,
@@ -293,7 +293,7 @@ function GatesForm({
             >
               Add gate
             </button>
-            <button type="submit" className="cta-button" disabled={pending}>
+            <button type="submit" className="paper-btn" disabled={pending}>
               {pending ? "Saving…" : "Save gates"}
             </button>
           </div>

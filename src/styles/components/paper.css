@@ -44,6 +44,19 @@
   .paper-card:active {
     translate: 0 var(--motion-press-y);
   }
+  /*
+   * A form sheet in a folder well: same stock, no lift. Focus inside a field
+   * must not pull the whole gate towards the eye.
+   */
+  .paper-card.paper-card--still:is(:hover, :focus-within, :active) {
+    box-shadow: var(--shadow-card);
+    border-color: var(--border-hairline);
+    translate: none;
+    scale: none;
+  }
+  .paper-card.paper-card--still:is(:hover, :focus-within)::after {
+    content: none;
+  }
   /* In hand: clear of the board, and the only rotation in the product. */
   .paper-card--overlay {
     box-shadow: var(--shadow-hand);
@@ -1926,9 +1939,8 @@
     line-height: 1.45;
     color: var(--color-ink2);
   }
+  .paper-btn,
   .cta-button {
-    grid-row: 1;
-    grid-column: 2;
     padding: 0.7rem 1.5rem;
     background: var(--color-ink);
     border: 1px solid var(--color-ink);
@@ -1937,6 +1949,14 @@
     font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
+  }
+  .cta-button {
+    grid-row: 1;
+    grid-column: 2;
+  }
+  .paper-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
   }
   .cta-button--danger {
     background: transparent;
