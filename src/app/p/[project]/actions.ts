@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentAccess } from "@/lib/access-server";
+import { GATES_SETTING, validateGatesForSave } from "@/lib/gates";
 import { cleanName, keyFromName } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import {
@@ -288,4 +289,77 @@ export async function updateTimelineSettings(
 
   revalidatePath(`/p/${projectSlug}`);
   return { message: `Timeline will flag unplanned work after ${days} days.` };
+}
+
+/* -------------------------------------------------------------- board gates */
+
+export type GatesResult = { error?: string; message?: string } | null;
+
+/**
+ * Save a board's ordered gates. Owners and project admins only.
+ */
+export async function updateBoardGates(
+  _previous: GatesResult,
+  form: FormData,
+): Promise<GatesResult> {
+  const boardId = String(form.get("boardId") ?? "");
+  const projectSlug = String(form.get("projectSlug") ?? "");
+  const boardSlug = String(form.get("boardSlug") ?? "");
+  if (!boardId || !projectSlug || !boardSlug)
+    return { error: "Board not found." };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(String(form.get("gates") ?? ""));
+  } catch {
+    return { error: "Gates could not be saved." };
+  }
+
+  const db = await supabaseServer();
+  const { data: project } = await db
+    .from("projects")
+    .select("id")
+    .eq("slug", projectSlug)
+    .maybeSingle();
+  if (!project) return { error: "Project not found." };
+
+  const access = await currentAccess(project.id);
+  if (!access?.canManage)
+    return { error: "Only an owner or project admin can change gates." };
+
+  const { data, error: readError } = await db
+    .from("boards")
+    .select("id, project_id, settings, slug, lanes(id)")
+    .eq("id", boardId)
+    .maybeSingle();
+  if (readError || !data)
+    return { error: readError?.message ?? "Board not found." };
+
+  const board = data as {
+    id: string;
+    project_id: string;
+    settings: Record<string, unknown> | null;
+    slug: string;
+    lanes: { id: string }[] | null;
+  };
+  if (board.project_id !== project.id) return { error: "Board not found." };
+
+  const result = validateGatesForSave(
+    parsed,
+    new Set((board.lanes ?? []).map((lane) => lane.id)),
+  );
+  if (!result.ok) return { error: result.error };
+
+  const settings = (board.settings ?? {}) as Record<string, unknown>;
+  const { error } = await db
+    .from("boards")
+    .update({
+      settings: { ...settings, [GATES_SETTING]: result.gates },
+    })
+    .eq("id", board.id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/p/${projectSlug}`);
+  revalidatePath(`/p/${projectSlug}/b/${boardSlug}/timeline`);
+  return { message: "Gates saved." };
 }

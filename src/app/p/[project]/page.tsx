@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LaneMap } from "@/components/lane-map";
 import { canManageProject, isSiteOwner } from "@/lib/access";
+import { resolveBoardGates } from "@/lib/gates";
 import { laneMicrocosm } from "@/lib/lane-map";
 import { oneRelated } from "@/lib/related";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { forgottenAfterDays } from "@/lib/timeline";
 import { markHue } from "@/lib/types";
 import { CreateBoardDialog } from "./create-board-dialog";
+import { GatesEditor } from "./gates-editor";
 import { ProjectPeople, type ProjectPerson } from "./project-people";
 import { ProjectSection } from "./project-section";
 import { TaxonomyEditor, type TaxonomyGroup } from "./taxonomy-editor";
@@ -35,6 +37,7 @@ interface BoardRow {
   id: string;
   slug: string;
   name: string;
+  settings: Record<string, unknown> | null;
   lanes: LaneRow[] | null;
   cards: CardRow[] | null;
 }
@@ -69,7 +72,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
   const { data } = await db
     .from("projects")
     .select(
-      "id, slug, name, description, settings, boards(id, slug, name, lanes(id, name, kind, position, color), cards(lane_id, archived_at, source_path, color, rank, status, needs, target_date))",
+      "id, slug, name, description, settings, boards(id, slug, name, settings, lanes(id, name, kind, position, color), cards(lane_id, archived_at, source_path, color, rank, status, needs, target_date))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -296,6 +299,29 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
           </div>
         </ProjectSection>
       )}
+
+      <ProjectSection id="gates-heading" title="gates">
+        <div className="space-y-8">
+          {boards.map((board) => (
+            <GatesEditor
+              key={board.id}
+              boardId={board.id}
+              boardSlug={board.slug}
+              projectSlug={project.slug}
+              boardName={board.name}
+              showBoardName={boards.length > 1}
+              lanes={[...(board.lanes ?? [])]
+                .sort((a, b) => a.position - b.position)
+                .map((l) => ({ id: l.id, name: l.name }))}
+              initialGates={resolveBoardGates(
+                (board.settings ?? {}) as Record<string, unknown>,
+                board.lanes ?? [],
+              )}
+              canEdit={canManage}
+            />
+          ))}
+        </div>
+      </ProjectSection>
 
       <ProjectSection id="settings-heading" title="settings">
         {canManage ? (
