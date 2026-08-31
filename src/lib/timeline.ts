@@ -1,17 +1,16 @@
-import type { Card, Lane } from "./types";
 import {
-  DEFAULT_BUILT_STATUSES,
-  DEFAULT_SHIPPED_STATUSES,
-  statusList,
-  TIMELINE_BUILT_STATUSES_SETTING,
-  TIMELINE_SHIPPED_STATUSES_SETTING,
+  type BoardGate,
+  cardGate,
+  gateOutcomeSets,
+  resolveBoardGates,
 } from "./gates";
+import type { Card, Lane } from "./types";
 
 export {
-  TIMELINE_BUILT_STATUSES_SETTING,
-  TIMELINE_SHIPPED_STATUSES_SETTING,
   DEFAULT_BUILT_STATUSES,
   DEFAULT_SHIPPED_STATUSES,
+  TIMELINE_BUILT_STATUSES_SETTING,
+  TIMELINE_SHIPPED_STATUSES_SETTING,
 } from "./gates";
 
 const DAY = 86_400_000;
@@ -41,19 +40,16 @@ export interface TimelineOutcomeStatuses {
   shipped: ReadonlySet<string>;
 }
 
-/** Read the board's outcome mapping; anything malformed falls back whole. */
+/**
+ * Status-only outcome sets; milestones use gates.
+ */
 export function timelineOutcomeStatuses(
   settings: Record<string, unknown> | null | undefined,
 ): TimelineOutcomeStatuses {
+  const sets = gateOutcomeSets(resolveBoardGates(settings, []));
   return {
-    built: statusList(
-      settings?.[TIMELINE_BUILT_STATUSES_SETTING],
-      DEFAULT_BUILT_STATUSES,
-    ),
-    shipped: statusList(
-      settings?.[TIMELINE_SHIPPED_STATUSES_SETTING],
-      DEFAULT_SHIPPED_STATUSES,
-    ),
+    built: sets.built.statuses,
+    shipped: sets.shipped.statuses,
   };
 }
 
@@ -127,12 +123,13 @@ function eventStatus(payloadValue: unknown): string | undefined {
 /**
  * Read lifecycle dates from the mixed history formats already stored by the
  * board UI, the legacy ETL, and file imports. Events must be newest first.
+ * Outcome stamps follow resolved gates, not raw lane kinds.
  */
 export function timelineMilestones(
   cards: Pick<Card, "id" | "lane_id" | "created_at" | "status">[],
   lanes: Pick<Lane, "id" | "key" | "kind">[],
   events: TimelineHistoryEvent[],
-  outcomes: TimelineOutcomeStatuses = timelineOutcomeStatuses(null),
+  gates: readonly BoardGate[] = resolveBoardGates(null, lanes),
 ): TimelineMilestones {
   const enteredAt = new Map<string, string>();
   const builtAt = new Map<string, string>();
@@ -140,6 +137,7 @@ export function timelineMilestones(
   const createdAt = new Map<string, string>();
   const laneById = new Map(lanes.map((lane) => [lane.id, lane]));
   const laneByKey = new Map(lanes.map((lane) => [lane.key, lane]));
+  const sets = gateOutcomeSets(gates);
 
   for (const event of events) {
     if (event.kind === "moved" && !enteredAt.has(event.card_id))
@@ -148,9 +146,13 @@ export function timelineMilestones(
       createdAt.set(event.card_id, event.at);
 
     const lane = eventLane(event.payload, laneById, laneByKey);
-    if (lane?.kind === "built" && !builtAt.has(event.card_id))
+    if (lane && sets.built.laneIds.has(lane.id) && !builtAt.has(event.card_id))
       builtAt.set(event.card_id, event.at);
-    if (lane?.kind === "done" && !deliveredAt.has(event.card_id))
+    if (
+      lane &&
+      sets.shipped.laneIds.has(lane.id) &&
+      !deliveredAt.has(event.card_id)
+    )
       deliveredAt.set(event.card_id, event.at);
   }
 
@@ -164,14 +166,14 @@ export function timelineMilestones(
     if (!status) continue;
     const was = lastStatus.get(event.card_id);
     if (
-      outcomes.built.has(status) &&
-      !(was && outcomes.built.has(was)) &&
+      sets.built.statuses.has(status) &&
+      !(was && sets.built.statuses.has(was)) &&
       !builtAt.has(event.card_id)
     )
       builtAt.set(event.card_id, event.at);
     if (
-      outcomes.shipped.has(status) &&
-      !(was && outcomes.shipped.has(was)) &&
+      sets.shipped.statuses.has(status) &&
+      !(was && sets.shipped.statuses.has(was)) &&
       !deliveredAt.has(event.card_id)
     )
       deliveredAt.set(event.card_id, event.at);
@@ -179,20 +181,14 @@ export function timelineMilestones(
   }
 
   // A newly imported card may have no lane or status in its history. When it
-  // still sits in an outcome lane — or wears an outcome status — its
-  // creation is the best known crossing.
+  // currently matches a built or shipped gate, creation is the best known
+  // crossing.
   for (const card of cards) {
-    const lane = laneById.get(card.lane_id ?? "");
     const created = createdAt.get(card.id) ?? card.created_at;
-    if (
-      (lane?.kind === "built" || outcomes.built.has(card.status)) &&
-      !builtAt.has(card.id)
-    )
+    const gate = cardGate(card, gates);
+    if (gate?.outcome === "built" && !builtAt.has(card.id))
       builtAt.set(card.id, created);
-    if (
-      (lane?.kind === "done" || outcomes.shipped.has(card.status)) &&
-      !deliveredAt.has(card.id)
-    )
+    if (gate?.outcome === "shipped" && !deliveredAt.has(card.id))
       deliveredAt.set(card.id, created);
   }
 
@@ -240,24 +236,18 @@ export function forgottenAfterDays(
  * A forgotten card is still active, was raised at least the project's watch
  * window ago, and has neither a calendar target nor a rough target. The rule
  * deliberately stays objective: changing lanes alone does not hide old,
- * unplanned work.
+ * unplanned work. Delivered is a ship date or a shipped-outcome gate.
  */
 export function timelineSignal(
   card: Pick<
     Card,
     "raised_on" | "shipped_on" | "status" | "target_date" | "target_label"
   >,
-  lane: Pick<Lane, "kind"> | undefined,
   today: string | Date,
   watchDays: number,
+  gate: BoardGate | null,
 ): TimelineSignal {
-  if (
-    lane?.kind === "done" ||
-    card.status === "done" ||
-    card.status === "shipped" ||
-    !!card.shipped_on
-  )
-    return "delivered";
+  if (card.shipped_on || gate?.outcome === "shipped") return "delivered";
 
   const todayKey = timelineToday(
     typeof today === "string" ? new Date(`${today}T00:00:00Z`) : today,
@@ -272,6 +262,64 @@ export function timelineSignal(
     return "forgotten";
   if (card.target_date || card.target_label) return "planned";
   return "active";
+}
+
+const DIAGNOSTIC_DATE = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function formatDiagnosticDate(value: string) {
+  return DIAGNOSTIC_DATE.format(utcDay(value));
+}
+
+/**
+ * Date-line copy: diagnostic word, then the rail's remaining/target phrasing.
+ */
+export function timelineDiagnosticLine(
+  item: {
+    signal: TimelineSignal;
+    raisedOn: string;
+    targetDate: string | null;
+    targetLabel: string | null;
+    deliveredAt: string | null;
+  },
+  today: string,
+  watchDays: number,
+): string {
+  switch (item.signal) {
+    case "planned": {
+      if (item.targetDate) {
+        const remaining = daysSince(today, item.targetDate);
+        return `Planned · Target ${formatDiagnosticDate(item.targetDate)}${
+          remaining ? ` · in ${remaining} days` : " · today"
+        }`;
+      }
+      if (item.targetLabel)
+        return `Planned · Rough target · ${item.targetLabel}`;
+      return "Planned";
+    }
+    case "overdue":
+      return item.targetDate
+        ? `Overdue · Target was ${formatDiagnosticDate(item.targetDate)}`
+        : "Overdue";
+    case "forgotten": {
+      const beyond = daysSince(item.raisedOn, today) - watchDays;
+      return beyond > 0
+        ? `Forgotten · No target · ${beyond} days past the watch window`
+        : `Forgotten · No target · reached the ${watchDays}-day watch window`;
+    }
+    case "delivered":
+      return item.deliveredAt
+        ? `Delivered · Shipped ${formatDiagnosticDate(item.deliveredAt)}`
+        : "Delivered";
+    case "active":
+      return item.targetLabel
+        ? `Open · Rough target · ${item.targetLabel}`
+        : "Open · No target yet";
+  }
 }
 
 export function addTimelineDays(date: string, days: number): string {

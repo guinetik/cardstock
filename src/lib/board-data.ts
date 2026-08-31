@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { resolveBoardGates } from "@/lib/gates";
 import { supabaseServer } from "@/lib/supabase/server";
-import { timelineMilestones, timelineOutcomeStatuses } from "@/lib/timeline";
+import { timelineMilestones } from "@/lib/timeline";
 import type { BoardData, Card, Epic, Lane, TagGroup } from "@/lib/types";
 
 /** Everything the board page needs, in one round-trip set. RLS scopes it to the member's projects. */
@@ -74,11 +75,15 @@ export async function loadBoard(
     list.push(ct.tag_id);
     tagsByCard.set(ct.card_id, list);
   }
+  const gates = resolveBoardGates(
+    (board.settings ?? {}) as Record<string, unknown>,
+    (lanes ?? []) as Lane[],
+  );
   const { enteredAt, builtAt, deliveredAt } = timelineMilestones(
     (cards ?? []) as Pick<Card, "id" | "lane_id" | "created_at" | "status">[],
     (lanes ?? []) as Lane[],
     (moves ?? []) as unknown as Parameters<typeof timelineMilestones>[2],
-    timelineOutcomeStatuses((board.settings ?? {}) as Record<string, unknown>),
+    gates,
   );
 
   return {

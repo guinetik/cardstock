@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { type BoardGate, resolveBoardGates } from "./gates";
 import {
   addTimelineDays,
   DEFAULT_BUILT_STATUSES,
@@ -8,6 +9,7 @@ import {
   daysSince,
   forgottenAfterDays,
   isInTimelineWindow,
+  timelineDiagnosticLine,
   timelineMilestones,
   timelineOutcomeStatuses,
   timelineSignal,
@@ -55,59 +57,74 @@ describe("timelineSignal", () => {
 
   test("marks unplanned work at the watch boundary as forgotten", () => {
     expect(
-      timelineSignal(
-        card({ raised_on: "2026-08-17" }),
-        { kind: "work" },
-        today,
-        14,
-      ),
+      timelineSignal(card({ raised_on: "2026-08-17" }), today, 14, null),
     ).toBe("forgotten");
     expect(
-      timelineSignal(
-        card({ raised_on: "2026-08-18" }),
-        { kind: "inbox" },
-        today,
-        14,
-      ),
+      timelineSignal(card({ raised_on: "2026-08-18" }), today, 14, null),
     ).toBe("active");
   });
 
   test("does not call rough or calendar-planned work forgotten", () => {
     expect(
-      timelineSignal(
-        card({ target_label: "September" }),
-        { kind: "work" },
-        today,
-        14,
-      ),
+      timelineSignal(card({ target_label: "September" }), today, 14, null),
     ).toBe("planned");
     expect(
-      timelineSignal(
-        card({ target_date: "2026-09-15" }),
-        { kind: "work" },
-        today,
-        14,
-      ),
+      timelineSignal(card({ target_date: "2026-09-15" }), today, 14, null),
     ).toBe("planned");
   });
 
   test("uses delivered and overdue before the forgotten rule", () => {
     expect(
-      timelineSignal(
-        card({ target_date: "2026-08-20" }),
-        { kind: "work" },
-        today,
-        14,
-      ),
+      timelineSignal(card({ target_date: "2026-08-20" }), today, 14, null),
     ).toBe("overdue");
+    const shippedGate: BoardGate = {
+      id: "g-ship",
+      name: "Done",
+      statuses: ["done"],
+      lane_ids: [],
+      outcome: "shipped",
+    };
     expect(
       timelineSignal(
         card({ target_date: "2026-08-20" }),
-        { kind: "done" },
         today,
         14,
+        shippedGate,
       ),
     ).toBe("delivered");
+  });
+
+  test("delivered is shipped_on or a shipped-outcome gate, not raw done status", () => {
+    const today = "2026-08-31";
+    expect(timelineSignal(card({ status: "done" }), today, 14, null)).not.toBe(
+      "delivered",
+    );
+    expect(
+      timelineSignal(card({ shipped_on: "2026-08-20" }), today, 14, null),
+    ).toBe("delivered");
+    const shippedGate: BoardGate = {
+      id: "g-ship",
+      name: "Done",
+      statuses: ["done"],
+      lane_ids: [],
+      outcome: "shipped",
+    };
+    expect(
+      timelineSignal(card({ status: "done" }), today, 14, shippedGate),
+    ).toBe("delivered");
+  });
+
+  test("planned / forgotten / overdue still follow the date rules", () => {
+    const today = "2026-08-31";
+    expect(
+      timelineSignal(card({ target_date: "2026-09-15" }), today, 14, null),
+    ).toBe("planned");
+    expect(
+      timelineSignal(card({ target_date: "2026-08-20" }), today, 14, null),
+    ).toBe("overdue");
+    expect(
+      timelineSignal(card({ raised_on: "2026-08-17" }), today, 14, null),
+    ).toBe("forgotten");
   });
 });
 
@@ -200,6 +217,51 @@ describe("timelineMilestones", () => {
     expect(milestones.builtAt.get("import")).toBe("2026-08-17T09:00:00Z");
     expect(milestones.builtAt.get("direct")).toBe("2026-08-16T09:00:00Z");
     expect(milestones.enteredAt.get("ui")).toBe("2026-08-20T09:00:00Z");
+  });
+
+  test("milestones follow saved gate lanes, not raw lane kinds", () => {
+    const lanes = [
+      { id: "gate-2", key: "gate-2", kind: "work" as const },
+      { id: "built-id", key: "built", kind: "built" as const },
+    ];
+    const gates: BoardGate[] = [
+      {
+        id: "g-await",
+        name: "Awaiting delivery",
+        statuses: ["built"],
+        lane_ids: ["gate-2"],
+        outcome: "built",
+      },
+    ];
+    const cards = [
+      {
+        id: "in-gate",
+        lane_id: "gate-2",
+        created_at: "2026-08-01T00:00:00Z",
+        status: "backlog",
+      },
+      {
+        id: "kind-built",
+        lane_id: "built-id",
+        created_at: "2026-08-02T00:00:00Z",
+        status: "backlog",
+      },
+    ];
+    const milestones = timelineMilestones(
+      cards,
+      lanes,
+      [
+        {
+          card_id: "in-gate",
+          kind: "moved",
+          at: "2026-08-20T09:00:00Z",
+          payload: { to_lane: "gate-2" },
+        },
+      ],
+      gates,
+    );
+    expect(milestones.builtAt.get("in-gate")).toBe("2026-08-20T09:00:00Z");
+    expect(milestones.builtAt.has("kind-built")).toBe(false);
   });
 });
 
@@ -332,8 +394,51 @@ describe("timelineMilestones from status evidence", () => {
       cards,
       lanes,
       [],
-      timelineOutcomeStatuses({ timeline_built_statuses: ["handed"] }),
+      resolveBoardGates({ timeline_built_statuses: ["handed"] }, lanes),
     );
     expect(milestones.builtAt.has("quiet")).toBe(false);
+  });
+});
+
+describe("timelineDiagnosticLine", () => {
+  test("diagnostic line prefixes the date word", () => {
+    const today = "2026-08-31";
+    const base = {
+      raisedOn: "2026-08-27",
+      targetDate: null as string | null,
+      targetLabel: null as string | null,
+      deliveredAt: null as string | null,
+    };
+    expect(
+      timelineDiagnosticLine(
+        { ...base, signal: "planned", targetDate: "2026-08-31" },
+        today,
+        14,
+      ),
+    ).toBe("Planned · Target Aug 31, 2026 · today");
+    expect(
+      timelineDiagnosticLine(
+        { ...base, signal: "overdue", targetDate: "2026-08-20" },
+        today,
+        14,
+      ),
+    ).toBe("Overdue · Target was Aug 20, 2026");
+    expect(
+      timelineDiagnosticLine(
+        { ...base, signal: "delivered", deliveredAt: "2026-08-27" },
+        today,
+        14,
+      ),
+    ).toBe("Delivered · Shipped Aug 27, 2026");
+    expect(
+      timelineDiagnosticLine({ ...base, signal: "active" }, today, 14),
+    ).toBe("Open · No target yet");
+    expect(
+      timelineDiagnosticLine(
+        { ...base, signal: "planned", targetLabel: "September" },
+        today,
+        14,
+      ),
+    ).toBe("Planned · Rough target · September");
   });
 });

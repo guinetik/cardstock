@@ -7,6 +7,7 @@ import {
 import { TimelineExplorer } from "@/components/timeline-explorer";
 import type { TimelineRailItem } from "@/components/timeline-rail";
 import { loadBoard } from "@/lib/board-data";
+import { cardGate, resolveBoardGates } from "@/lib/gates";
 import { currentMember } from "@/lib/supabase/server";
 import {
   addTimelineDays,
@@ -59,6 +60,10 @@ export default async function TimelinePage(
 
   const data = await loadBoard(project, board);
   const laneById = new Map(data.lanes.map((lane) => [lane.id, lane]));
+  const gates = resolveBoardGates(
+    data.board.settings as Record<string, unknown>,
+    data.lanes,
+  );
   const today = timelineToday();
   const watchDays = forgottenAfterDays(data.project.settings);
   const pulseDays = timelineWindowDays((await props.searchParams).window);
@@ -70,7 +75,7 @@ export default async function TimelinePage(
   const signals = new Map(
     visible.map((card) => [
       card.id,
-      timelineSignal(card, laneById.get(card.lane_id ?? ""), today, watchDays),
+      timelineSignal(card, today, watchDays, cardGate(card, gates)),
     ]),
   );
   const raised = visible
