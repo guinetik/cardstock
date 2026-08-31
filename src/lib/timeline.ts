@@ -1,5 +1,18 @@
-import { CARD_STATUSES, type CardStatus } from "./card-status";
 import type { Card, Lane } from "./types";
+import {
+  DEFAULT_BUILT_STATUSES,
+  DEFAULT_SHIPPED_STATUSES,
+  statusList,
+  TIMELINE_BUILT_STATUSES_SETTING,
+  TIMELINE_SHIPPED_STATUSES_SETTING,
+} from "./gates";
+
+export {
+  TIMELINE_BUILT_STATUSES_SETTING,
+  TIMELINE_SHIPPED_STATUSES_SETTING,
+  DEFAULT_BUILT_STATUSES,
+  DEFAULT_SHIPPED_STATUSES,
+} from "./gates";
 
 const DAY = 86_400_000;
 
@@ -23,41 +36,9 @@ export function timelineWindowDays(value: unknown): number {
     : DEFAULT_TIMELINE_WINDOW_DAYS;
 }
 
-/**
- * What "built" and "shipped" mean is the board's call, not the app's: a
- * board maps its own statuses onto the two outcomes, stored in board
- * settings so a future screen can edit the assignment. Lane kinds remain a
- * second, independent source of the same evidence.
- */
-export const TIMELINE_BUILT_STATUSES_SETTING = "timeline_built_statuses";
-export const TIMELINE_SHIPPED_STATUSES_SETTING = "timeline_shipped_statuses";
-export const DEFAULT_BUILT_STATUSES: readonly CardStatus[] = [
-  "built",
-  "handed",
-];
-export const DEFAULT_SHIPPED_STATUSES: readonly CardStatus[] = [
-  "shipped",
-  "done",
-];
-
 export interface TimelineOutcomeStatuses {
   built: ReadonlySet<string>;
   shipped: ReadonlySet<string>;
-}
-
-function statusList(
-  value: unknown,
-  fallback: readonly CardStatus[],
-): ReadonlySet<string> {
-  const valid =
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.every(
-      (status) =>
-        typeof status === "string" &&
-        (CARD_STATUSES as readonly string[]).includes(status),
-    );
-  return new Set(valid ? (value as string[]) : fallback);
 }
 
 /** Read the board's outcome mapping; anything malformed falls back whole. */
