@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { currentAccess } from "@/lib/access-server";
 import { cleanName, keyFromName } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
+import {
+  MAX_FORGOTTEN_AFTER_DAYS,
+  MIN_FORGOTTEN_AFTER_DAYS,
+  TIMELINE_FORGOTTEN_SETTING,
+} from "@/lib/timeline";
 
 export type CreateBoardResult = { error?: string } | null;
 
@@ -231,4 +236,56 @@ export async function deleteTag(
   if (error) return { error: error.message };
   revalidatePath("/p/[project]", "page");
   return null;
+}
+
+/* --------------------------------------------------------- project timeline */
+
+export type TimelineSettingsResult = {
+  error?: string;
+  message?: string;
+} | null;
+
+export async function updateTimelineSettings(
+  _previous: TimelineSettingsResult,
+  form: FormData,
+): Promise<TimelineSettingsResult> {
+  const projectId = String(form.get("projectId") ?? "");
+  const projectSlug = String(form.get("projectSlug") ?? "");
+  const days = Number(form.get("forgottenAfterDays"));
+  if (!projectId || !projectSlug) return { error: "Project not found." };
+  if (
+    !Number.isInteger(days) ||
+    days < MIN_FORGOTTEN_AFTER_DAYS ||
+    days > MAX_FORGOTTEN_AFTER_DAYS
+  )
+    return {
+      error: `Choose a whole number from ${MIN_FORGOTTEN_AFTER_DAYS} to ${MAX_FORGOTTEN_AFTER_DAYS} days.`,
+    };
+
+  const access = await currentAccess(projectId);
+  if (!access?.canManage)
+    return {
+      error: "Only an owner or project admin can change timeline settings.",
+    };
+
+  const db = await supabaseServer();
+  const { data: project, error: readError } = await db
+    .from("projects")
+    .select("settings")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (readError || !project)
+    return { error: readError?.message ?? "Project not found." };
+
+  const settings = (project.settings ?? {}) as Record<string, unknown>;
+  const { error } = await db
+    .from("projects")
+    .update({
+      settings: { ...settings, [TIMELINE_FORGOTTEN_SETTING]: days },
+    })
+    .eq("id", projectId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/p/${projectSlug}`);
+  return { message: `Timeline will flag unplanned work after ${days} days.` };
 }

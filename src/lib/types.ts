@@ -64,6 +64,10 @@ export interface Card {
   created_at: string;
   tag_ids: string[];
   lane_entered_at: string | null;
+  /** Most recent known entry into a built lane. */
+  built_at?: string | null;
+  /** Explicit shipped date or most recent known entry into a done lane. */
+  delivered_at?: string | null;
   /** Frontmatter-owned pastel tint, or null for the neutral paper surface. */
   color: CardColor | null;
 }
@@ -96,7 +100,12 @@ export interface EpicSnapshot {
 }
 
 export interface BoardData {
-  project: { id: string; slug: string; name: string };
+  project: {
+    id: string;
+    slug: string;
+    name: string;
+    settings: Record<string, unknown>;
+  };
   board: {
     id: string;
     slug: string;

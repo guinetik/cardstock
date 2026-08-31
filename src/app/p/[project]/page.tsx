@@ -5,11 +5,13 @@ import { canManageProject, isSiteOwner } from "@/lib/access";
 import { laneMicrocosm } from "@/lib/lane-map";
 import { oneRelated } from "@/lib/related";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
+import { forgottenAfterDays } from "@/lib/timeline";
 import { markHue } from "@/lib/types";
 import { CreateBoardDialog } from "./create-board-dialog";
 import { ProjectPeople, type ProjectPerson } from "./project-people";
 import { ProjectSection } from "./project-section";
 import { TaxonomyEditor, type TaxonomyGroup } from "./taxonomy-editor";
+import { TimelineSettings } from "./timeline-settings";
 
 /** The shapes the nested select comes back in. */
 interface LaneRow {
@@ -41,6 +43,7 @@ interface ProjectRow {
   slug: string;
   name: string;
   description: string | null;
+  settings: Record<string, unknown> | null;
   boards: BoardRow[] | null;
 }
 interface MemberEmbed {
@@ -66,7 +69,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
   const { data } = await db
     .from("projects")
     .select(
-      "id, slug, name, description, boards(id, slug, name, lanes(id, name, kind, position, color), cards(lane_id, archived_at, source_path, color, rank, status, needs, target_date))",
+      "id, slug, name, description, settings, boards(id, slug, name, lanes(id, name, kind, position, color), cards(lane_id, archived_at, source_path, color, rank, status, needs, target_date))",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -117,6 +120,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
   const cardCount = allCards.length;
   const onFile = allCards.filter((c) => c.source_path).length;
   const href = `/p/${project.slug}`;
+  const timelineWatchDays = forgottenAfterDays(project.settings);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
@@ -294,6 +298,26 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
       )}
 
       <ProjectSection id="settings-heading" title="settings">
+        {canManage ? (
+          <TimelineSettings
+            projectId={project.id}
+            projectSlug={project.slug}
+            initialDays={timelineWatchDays}
+          />
+        ) : (
+          <section className="cta" aria-labelledby="timeline-settings-heading">
+            <div className="min-w-0">
+              <h2 id="timeline-settings-heading" className="cta-title">
+                Forgotten work window
+              </h2>
+              <p className="cta-body">
+                The timeline highlights unplanned work after {timelineWatchDays}
+                days. An owner or project admin can change this setting.
+              </p>
+            </div>
+            <span className="cta-note">Project setting</span>
+          </section>
+        )}
         <section className="cta" aria-labelledby="download-heading">
           <div className="min-w-0">
             <h2 id="download-heading" className="cta-title">

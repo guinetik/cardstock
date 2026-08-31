@@ -54,12 +54,11 @@ test("priority, difficulty and target persist", async ({ page }) => {
     "true",
   );
   await expect(again.locator('input[type="date"]')).toHaveValue("2026-10-15");
-  // and the timeline shows it under October 2026
+  // and the raised-date rail carries the target through to October 2026
   await page.goto(`${BOARD}/timeline`);
-  await expect(
-    page.getByRole("heading", { name: /October 2026/ }),
-  ).toBeVisible();
-  await expect(page.locator(`a[href$="/c/${id}"]`)).toBeVisible();
+  const timelineCard = page.locator(`[data-timeline-id="${id}"]`);
+  await expect(timelineCard).toBeVisible();
+  await expect(timelineCard).toContainText("Target Oct 15, 2026");
 });
 
 test("sets, persists, and clears a card color", async ({ page }) => {

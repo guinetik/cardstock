@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { timelineMilestones, timelineOutcomeStatuses } from "@/lib/timeline";
 import type { BoardData, Card, Epic, Lane, TagGroup } from "@/lib/types";
 
 /** Everything the board page needs, in one round-trip set. RLS scopes it to the member's projects. */
@@ -10,7 +11,7 @@ export async function loadBoard(
   const db = await supabaseServer();
   const { data: project } = await db
     .from("projects")
-    .select("id, slug, name")
+    .select("id, slug, name, settings")
     .eq("slug", projectSlug)
     .maybeSingle();
   if (!project) notFound();
@@ -53,12 +54,12 @@ export async function loadBoard(
       .from("card_tags")
       .select("card_id, tag_id, cards!inner(board_id)")
       .eq("cards.board_id", board.id),
-    // last lane change per card, for the waiting-lane age badge
+    // Lifecycle events use several payload shapes across UI and import paths.
     db
       .from("card_events")
-      .select("card_id, at, cards!inner(board_id)")
+      .select("card_id, at, kind, payload, cards!inner(board_id)")
       .eq("cards.board_id", board.id)
-      .eq("kind", "moved")
+      .in("kind", ["moved", "created", "imported"])
       .order("at", { ascending: false }),
     db
       .from("epics")
@@ -73,12 +74,18 @@ export async function loadBoard(
     list.push(ct.tag_id);
     tagsByCard.set(ct.card_id, list);
   }
-  const enteredAt = new Map<string, string>();
-  for (const m of moves ?? [])
-    if (!enteredAt.has(m.card_id)) enteredAt.set(m.card_id, m.at);
+  const { enteredAt, builtAt, deliveredAt } = timelineMilestones(
+    (cards ?? []) as Pick<Card, "id" | "lane_id" | "created_at" | "status">[],
+    (lanes ?? []) as Lane[],
+    (moves ?? []) as unknown as Parameters<typeof timelineMilestones>[2],
+    timelineOutcomeStatuses((board.settings ?? {}) as Record<string, unknown>),
+  );
 
   return {
-    project,
+    project: {
+      ...project,
+      settings: (project.settings ?? {}) as Record<string, unknown>,
+    },
     board: {
       ...board,
       settings: (board.settings ?? {}) as Record<string, unknown>,
@@ -90,6 +97,8 @@ export async function loadBoard(
       ...c,
       tag_ids: tagsByCard.get(c.id) ?? [],
       lane_entered_at: enteredAt.get(c.id) ?? null,
+      built_at: builtAt.get(c.id) ?? null,
+      delivered_at: c.shipped_on ?? deliveredAt.get(c.id) ?? null,
     })) as Card[],
   };
 }
