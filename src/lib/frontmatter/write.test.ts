@@ -187,3 +187,48 @@ describe("cardToMarkdown", () => {
     expect(writeSheet(out, s)).toBe(out);
   });
 });
+
+describe("writeSheet: relates is the file's", () => {
+  // The board can only hold links to cards it has; a relation to an item
+  // that lives in the frozen table (or a link the import never carried)
+  // must survive an export. The board may add, never remove.
+  test("a board that knows fewer relations changes nothing", () => {
+    const out = writeSheet(FILE, { ...sheetOf(FILE), relates: [63] });
+    expect(out).toBe(FILE);
+  });
+  test("a board that knows none changes nothing", () => {
+    expect(writeSheet(FILE, { ...sheetOf(FILE), relates: [] })).toBe(FILE);
+  });
+  test("a relation the board adds is appended, in the file's inline form", () => {
+    const out = writeSheet(FILE, { ...sheetOf(FILE), relates: [78, 99] });
+    expect(out).toContain("relates: [63, 78, 99]\n");
+    expect(out).not.toContain("relates:\n");
+  });
+  test("a block-form list stays a block", () => {
+    const file = FILE.replace("relates: [63, 78]", "relates:\n  - 63\n  - 78");
+    const out = writeSheet(file, { ...sheetOf(file), relates: [99] });
+    expect(out).toContain("relates:\n  - 63\n  - 78\n  - 99\n");
+  });
+  test("a file with no relates gains the board's", () => {
+    const file = FILE.replace("relates: [63, 78]\n", "");
+    const out = writeSheet(file, { ...sheetOf(file), relates: [99] });
+    expect(out).toContain("relates:\n  - 99\n");
+  });
+});
+
+describe("writeSheet: an aliased tag group", () => {
+  test("int:x compares equal to the board's area:x and is left alone", () => {
+    const file = FILE.replace(
+      "tags:\n  - designer\n  - wizard\n",
+      "tags:\n  - int:validation-tables\n  - designer\n",
+    );
+    const tagRef = (t: string) =>
+      t.startsWith("int:") ? `area:${t.slice(4)}` : null;
+    const out = writeSheet(
+      file,
+      { ...sheetOf(file), tags: ["area:validation-tables"] },
+      { tagRef },
+    );
+    expect(out).toBe(file);
+  });
+});

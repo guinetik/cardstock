@@ -135,12 +135,31 @@ export function writeSheet(
   let lines = [...fm];
   const append: string[] = [];
   for (const key of SHEET_KEY_ORDER) {
-    const want = SHEET_KEYS[key].get(sheet) as Value;
+    let want = SHEET_KEYS[key].get(sheet) as Value;
+    if (key === "relates") {
+      // The file owns its relations. The board can only hold links to cards
+      // it has, so a relation to an item outside the board (or one an import
+      // never carried) must not vanish on the way down: the board may add
+      // to the list, never take from it.
+      const mine = (have(key) as number[]) ?? [];
+      const theirs = (want as number[]) ?? [];
+      want = [...mine, ...theirs.filter((n) => !mine.includes(n))];
+    }
     if (norm(want) === norm(have(key))) continue;
     const at = locate(lines, key);
     if (at) {
       let replacement: string[];
-      if (key === "tags") {
+      if (
+        key !== "tags" &&
+        Array.isArray(want) &&
+        at.end === at.start + 1 &&
+        /^[^:]+:\s*\[/.test(lines[at.start])
+      ) {
+        // An inline `key: [a, b]` stays inline.
+        replacement = want.length
+          ? [`${key}: [${want.map(formatScalar).join(", ")}]`]
+          : [];
+      } else if (key === "tags") {
         // keep the file's own lines for tags that survive, append the new refs
         const wanted = new Set((want as string[]) ?? []);
         const block = lines.slice(at.start + 1, at.end);

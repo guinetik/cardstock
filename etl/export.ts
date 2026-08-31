@@ -1,14 +1,22 @@
 /**
  * Board → markdown tracker, from the command line.
  *
- *   bun run etl:export --project <slug> --board <slug> --source <dir> [--dry-run]
+ *   bun run etl:export --project <slug> --board <slug> --source <dir> [--mapping <file>] [--dry-run]
+ *
+ * Pass the same --mapping the import uses: a tracker that writes `int:x` for
+ * the group the board calls `area` needs the alias on the way down too, or
+ * every `int:` line is dropped and rewritten as `area:`.
  *
  * The same writer the download uses: a file that exists under --source and has a
  * stored sheet is line-edited; a card with no file is written from scratch.
  */
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { buildVocabulary, tagRef } from "../src/lib/frontmatter/mapping";
+import {
+  buildVocabulary,
+  type Mapping,
+  tagRef,
+} from "../src/lib/frontmatter/mapping";
 import { cardToMarkdown, writeSheet } from "../src/lib/frontmatter/write";
 import { loadBoardState } from "../src/lib/import/board-state";
 import { sheetFromCard } from "../src/lib/import/plan";
@@ -18,6 +26,10 @@ const projectSlug = arg("project");
 const boardSlug = arg("board");
 const source = arg("source");
 const dryRun = flag("dry-run");
+const mappingPath = arg("mapping", "");
+const mapping: Mapping = mappingPath
+  ? JSON.parse(await readFile(mappingPath, "utf8"))
+  : {};
 
 const db = serviceClient();
 const ctx = await loadBoard(db, projectSlug, boardSlug);
@@ -37,7 +49,7 @@ const vocab = buildVocabulary(
   state.groups.flatMap((g) => g.tags.map((t) => `${g.key}:${t.key}`)),
 );
 const resolve = (t: string) => {
-  const r = tagRef(t, vocab);
+  const r = tagRef(t, vocab, mapping.group_aliases);
   return r && "ref" in r ? r.ref : null;
 };
 
