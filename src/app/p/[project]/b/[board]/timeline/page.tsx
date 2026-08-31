@@ -5,6 +5,7 @@ import {
   type RecentOutcomeItem,
 } from "@/components/recent-delivery-pulse";
 import { TimelineExplorer } from "@/components/timeline-explorer";
+import { TimelineMarks } from "@/components/timeline-mark";
 import type { TimelineRailItem } from "@/components/timeline-rail";
 import { loadBoard } from "@/lib/board-data";
 import { cardGate, pulseHeading, resolveBoardGates } from "@/lib/gates";
@@ -29,22 +30,6 @@ const DATE = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   timeZone: "UTC",
 });
-
-const SIGNAL_LABEL: Record<TimelineSignal, string> = {
-  forgotten: "Forgotten",
-  overdue: "Overdue",
-  planned: "Planned",
-  active: "Open",
-  delivered: "Delivered",
-};
-
-const SIGNAL_CLASS: Record<TimelineSignal, string> = {
-  forgotten: "text-[var(--pen-red)] border-[var(--pen-red)]",
-  overdue: "text-[var(--pen-amber)] border-[var(--pen-amber)]",
-  planned: "text-[var(--pen-blue)] border-[var(--pen-blue)]",
-  active: "text-[var(--color-grey)] border-[var(--border-strong)]",
-  delivered: "text-[var(--pen-green)] border-[var(--pen-green)]",
-};
 
 function prettyDate(value: string) {
   return DATE.format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
@@ -169,16 +154,17 @@ export default async function TimelinePage(
           : card.target_date
             ? `Target ${prettyDate(card.target_date)}`
             : (card.target_label ?? "No target");
+    const gate = cardGate(card, gates);
     return (
       <li
         key={card.id}
-        className="grid grid-cols-[5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1 border-b border-[var(--border-hairline)] py-3 text-sm sm:flex sm:flex-wrap sm:items-center"
+        className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1 border-b border-[var(--border-hairline)] py-3 text-sm sm:flex sm:flex-wrap sm:items-center"
       >
-        <span
-          className={`w-20 shrink-0 border-l-2 pl-2 text-[9px] font-semibold uppercase tracking-[0.1em] ${SIGNAL_CLASS[signal]}`}
-        >
-          {SIGNAL_LABEL[signal]}
-        </span>
+        <TimelineMarks
+          signal={signal}
+          gateName={gate?.name ?? null}
+          gateOutcome={gate?.outcome ?? null}
+        />
         <Link
           href={`${back}/c/${card.external_id}`}
           className="min-w-0 break-words hover:underline sm:flex-1"
@@ -203,7 +189,7 @@ export default async function TimelinePage(
             </span>
           )}
           <span className="w-20 text-right text-[9px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
-            {cardGate(card, gates)?.name ?? lane?.name ?? "No lane"}
+            {lane?.name ?? "No lane"}
           </span>
         </span>
       </li>
