@@ -38,3 +38,17 @@ const STATUS_CHIP: Record<string, string> = {
 export function statusChipClass(status: string): string {
   return STATUS_CHIP[status] ?? "stat stat--muted";
 }
+
+/**
+ * Tidy a blocker note — the free-text "waiting on" a card carries. Any
+ * non-empty value marks the card blocked, so a stray space must not count as
+ * one; blank input clears the note.
+ *
+ * @param value - Raw text from the editor, or nothing.
+ * @returns The trimmed note, or null when there is no blocker.
+ */
+export function normalizeNeeds(
+  value: string | null | undefined,
+): string | null {
+  return value?.trim() || null;
+}

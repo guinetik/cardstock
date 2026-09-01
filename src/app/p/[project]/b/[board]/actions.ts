@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { loadBoard } from "@/lib/board-data";
 import { type CardColor, isCardColor } from "@/lib/card-color";
-import { isCardStatus } from "@/lib/card-status";
+import { isCardStatus, normalizeNeeds } from "@/lib/card-status";
 import {
   formatCommentAt,
   joinIssueBody,
@@ -462,6 +462,8 @@ export interface CardPatch {
   color?: CardColor | null;
   /** Tracker status word; validated with `isCardStatus` when present. */
   status?: string;
+  /** Free-text blocker note; any value marks the card blocked, null clears it. */
+  needs?: string | null;
 }
 
 export async function updateCard(
@@ -483,6 +485,10 @@ export async function updateCard(
   }
   if (Object.hasOwn(clean, "status") && !isCardStatus(clean.status)) {
     return { ok: false, error: "Invalid status." };
+  }
+  // A blank note is no blocker: trim so a stray space cannot hold a card blocked.
+  if (Object.hasOwn(clean, "needs")) {
+    clean.needs = normalizeNeeds(clean.needs as string | null);
   }
   // Hand ownership of the summary to the app: the next import must not replace
   // these words with the frontmatter's. The exporter writes it back out.

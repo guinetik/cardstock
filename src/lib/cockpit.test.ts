@@ -79,6 +79,19 @@ describe("taskSignal", () => {
     );
     expect(taskSignal(card(), lane("work"), now)).toBe("queued");
   });
+
+  test("a blocker note blocks the card; clearing it returns the status signal", () => {
+    const now = new Date("2026-03-01T12:00:00Z");
+    expect(
+      taskSignal(card({ status: "wip", needs: "hap" }), lane("work"), now),
+    ).toBe("blocked");
+    expect(
+      taskSignal(card({ status: "wip", needs: null }), lane("work"), now),
+    ).toBe("moving");
+    expect(
+      taskSignal(card({ status: "wip", needs: "   " }), lane("work"), now),
+    ).toBe("moving");
+  });
 });
 
 describe("buildCockpitModel", () => {

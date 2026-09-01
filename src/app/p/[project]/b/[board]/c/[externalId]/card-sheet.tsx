@@ -143,6 +143,7 @@ export async function CardSheet({
           planned_start_date: card.planned_start_date,
           target_date: card.target_date,
           target_label: card.target_label,
+          needs: card.needs,
           audience: card.audience,
           archived_at: card.archived_at,
           external_id: card.external_id,

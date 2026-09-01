@@ -9,7 +9,7 @@ import {
 import { CardColorPicker } from "@/components/board/card-color-picker";
 import { Button } from "@/components/ui/button";
 import { type CardColor, parseCardColor } from "@/lib/card-color";
-import { CARD_STATUSES } from "@/lib/card-status";
+import { CARD_STATUSES, normalizeNeeds } from "@/lib/card-status";
 import { markHue } from "@/lib/types";
 
 interface CardLite {
@@ -22,6 +22,8 @@ interface CardLite {
   planned_start_date: string | null;
   target_date: string | null;
   target_label: string | null;
+  /** Free-text blocker note; anything here marks the card blocked. */
+  needs: string | null;
   audience: string;
   archived_at: string | null;
   /** Pastel tint, or null for the neutral paper surface. */
@@ -34,7 +36,8 @@ const fieldLabel =
   "mb-1 block text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]";
 
 /**
- * Inline editor for summary, status, ratings, dates, audience, color, and tags.
+ * Inline editor for summary, status, ratings, dates, the blocker note,
+ * audience, color, and tags.
  * Saves on blur/change; lives on the card page as part of the one sheet.
  * Tag groups rest as marked tags only; Edit tags opens the catalog.
  *
@@ -57,6 +60,7 @@ export function CardEditor({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [summary, setSummary] = useState(card.summary ?? "");
+  const [needs, setNeeds] = useState(card.needs ?? "");
   const [tags, setTags] = useState(new Set(tagIds));
   const [editingTags, setEditingTags] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -189,7 +193,7 @@ export function CardEditor({
             onChange={(e) => save({ target_date: e.target.value || null })}
           />
         </label>
-        <label className="sm:col-span-2 lg:col-span-2">
+        <label>
           <span className={fieldLabel}>Rough date</span>
           <input
             type="text"
@@ -201,6 +205,29 @@ export function CardEditor({
               save({ target_label: e.target.value || null })
             }
           />
+        </label>
+        <label className="sm:col-span-2 lg:col-span-2">
+          <span className={fieldLabel}>Waiting on</span>
+          <input
+            type="text"
+            className={field}
+            value={needs}
+            placeholder="a person, a decision, another team"
+            aria-describedby="needs-hint"
+            onChange={(e) => setNeeds(e.target.value)}
+            onBlur={() => {
+              // Show what is actually stored: a note of only spaces is none.
+              const next = normalizeNeeds(needs);
+              setNeeds(next ?? "");
+              if (next !== card.needs) save({ needs: next });
+            }}
+          />
+          <span
+            id="needs-hint"
+            className="mt-1 block text-[11px] text-[var(--color-grey)]"
+          >
+            Anything here marks the card blocked. Clear it to unblock.
+          </span>
         </label>
       </div>
       <div>

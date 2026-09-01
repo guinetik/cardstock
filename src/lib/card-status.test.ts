@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { CARD_STATUSES, isCardStatus, statusChipClass } from "./card-status";
+import {
+  CARD_STATUSES,
+  isCardStatus,
+  normalizeNeeds,
+  statusChipClass,
+} from "./card-status";
 
 describe("statusChipClass", () => {
   test("maps the tracker vocabulary to paper pens", () => {
@@ -39,5 +44,19 @@ describe("isCardStatus", () => {
     expect(isCardStatus("mystery")).toBe(false);
     expect(isCardStatus(null)).toBe(false);
     expect(isCardStatus("")).toBe(false);
+  });
+});
+
+describe("normalizeNeeds", () => {
+  test("keeps a trimmed blocker note", () => {
+    expect(normalizeNeeds("hap")).toBe("hap");
+    expect(normalizeNeeds("  legal review  ")).toBe("legal review");
+  });
+
+  test("treats empty and blank input as no blocker", () => {
+    expect(normalizeNeeds("")).toBe(null);
+    expect(normalizeNeeds("   ")).toBe(null);
+    expect(normalizeNeeds(null)).toBe(null);
+    expect(normalizeNeeds(undefined)).toBe(null);
   });
 });
