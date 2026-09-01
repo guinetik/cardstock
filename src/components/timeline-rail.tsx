@@ -1,5 +1,6 @@
-import { BookIcon, Columns3Icon, FlagIcon } from "lucide-react";
+import { Columns3Icon, FlagIcon } from "lucide-react";
 import Link from "next/link";
+import { EpicLabel } from "@/components/epic-label";
 import { TimelineMarks } from "@/components/timeline-mark";
 import { statusChipClass } from "@/lib/card-status";
 import type { GateOutcome } from "@/lib/gates";
@@ -165,14 +166,7 @@ export function TimelineRail({
                         </span>
                       )}
                       {item.epicName && (
-                        <span className="flex max-w-52 items-center gap-1 truncate text-[9px] uppercase tracking-[0.08em] text-[var(--color-grey)]">
-                          <BookIcon
-                            className="size-3 shrink-0"
-                            aria-hidden="true"
-                          />
-                          <span className="sr-only">Epic </span>
-                          {item.epicName}
-                        </span>
+                        <EpicLabel name={item.epicName} compact />
                       )}
                       <span className="ml-auto flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
                         <Columns3Icon

@@ -682,6 +682,9 @@
   gap: 0.2rem;
   color: var(--color-grey);
 }
+.card-age__icon {
+  opacity: 0.75;
+}
 .card-age-date {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 9.5px;
@@ -706,12 +709,21 @@
 .card-age[data-signal="active"] .card-age-ring__fill {
   stroke: var(--color-grey);
 }
+.card-age[data-signal="active"] .card-age__icon {
+  color: var(--color-grey);
+}
 .card-age[data-signal="planned"] .card-age-ring__fill {
   stroke: var(--pen-blue);
+}
+.card-age[data-signal="planned"] .card-age__icon {
+  color: var(--pen-blue);
 }
 .card-age[data-signal="overdue"] .card-age-ring__fill,
 .card-age[data-signal="overdue"] .card-age-ring__overrun {
   stroke: var(--pen-amber);
+}
+.card-age[data-signal="overdue"] .card-age__icon {
+  color: var(--pen-amber);
 }
 .card-age[data-signal="forgotten"] .card-age-ring__fill,
 .card-age[data-signal="forgotten"] .card-age-ring__overrun {
@@ -721,8 +733,15 @@
   color: var(--pen-red);
   font-weight: 600;
 }
+.card-age[data-signal="forgotten"] .card-age__icon {
+  color: var(--pen-red);
+  opacity: 1;
+}
 .card-age[data-signal="delivered"] .card-age-ring__fill {
   stroke: var(--pen-green);
+}
+.card-age[data-signal="delivered"] .card-age__icon {
+  color: var(--pen-green);
 }
 .paper-card[data-timeline-signal="forgotten"]:not(.paper-card--overlay) {
   box-shadow:
@@ -733,6 +752,27 @@
   box-shadow:
     inset 3px 0 0 var(--pen-amber),
     var(--shadow-card);
+}
+
+/* Epic name with the book icon — timeline compact, board card default. */
+.epic-label {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--color-grey);
+}
+.epic-label--compact {
+  max-width: 13rem;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.epic-label__icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.card-meta {
+  min-height: 1.125rem;
 }
 
 @media (hover: none) {

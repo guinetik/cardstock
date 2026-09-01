@@ -4,6 +4,7 @@ import { PaperclipIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createCard } from "@/app/p/[project]/b/[board]/actions";
+import { EpicLabel } from "@/components/epic-label";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -105,7 +106,7 @@ export function ClipTaskDialog({
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-grey)]">
               <span>New task</span>
               <span aria-hidden="true">/</span>
-              <span>{epic.source_name}</span>
+              <EpicLabel name={epic.source_name} compact />
             </div>
             <DialogTitle className="text-xl">Plan the work</DialogTitle>
             <DialogDescription>

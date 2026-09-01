@@ -2,6 +2,7 @@ import { marked } from "marked";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CardHistory } from "@/components/board/card-history";
+import { EpicLabel } from "@/components/epic-label";
 import { parseCardColor } from "@/lib/card-color";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
@@ -162,7 +163,7 @@ export async function CardSheet({
 
       <dl className="mt-6 grid grid-cols-[6.5rem_1fr] gap-x-4 border-t border-[var(--border-hairline)] pt-5 text-sm [&>dd]:border-b [&>dd]:border-[var(--border-hairline)] [&>dd]:py-2 [&>dt]:border-b [&>dt]:border-[var(--border-hairline)] [&>dt]:py-2 [&>dt]:text-[10px] [&>dt]:font-semibold [&>dt]:uppercase [&>dt]:tracking-[0.11em] [&>dt]:text-[var(--color-grey-faint)]">
         <dt>Epic</dt>
-        <dd>{card.epic}</dd>
+        <dd>{card.epic ? <EpicLabel name={card.epic} /> : "—"}</dd>
         <dt>Area</dt>
         <dd>{card.area}</dd>
         {card.raised_by && (

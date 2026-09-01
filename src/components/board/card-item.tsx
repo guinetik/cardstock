@@ -18,6 +18,7 @@ import {
 } from "@/lib/types";
 import { CardAge, cardAgeState } from "./card-age";
 import { CardColorMenu } from "./card-color-menu";
+import { EpicLabel } from "@/components/epic-label";
 import { Ratings } from "./ratings";
 
 /**
@@ -116,6 +117,15 @@ export function CardItem(props: {
           props.gates,
         )
       : null;
+  const ageProps =
+    props.watchDays != null && props.gates
+      ? {
+          card,
+          today: props.today ?? new Date().toISOString().slice(0, 10),
+          watchDays: props.watchDays,
+          gates: props.gates,
+        }
+      : null;
 
   return (
     <article
@@ -163,18 +173,8 @@ export function CardItem(props: {
         </div>
       )}
       <div className="flex items-baseline gap-2 pr-6">
-        <span className="flex shrink-0 items-center gap-1.5">
-          <span className="font-mono text-[11.5px] text-[var(--color-grey-faint)]">
-            #{card.external_id}
-          </span>
-          {props.watchDays != null && props.gates && (
-            <CardAge
-              card={card}
-              today={props.today ?? new Date().toISOString().slice(0, 10)}
-              watchDays={props.watchDays}
-              gates={props.gates}
-            />
-          )}
+        <span className="shrink-0 font-mono text-[11.5px] text-[var(--color-grey-faint)]">
+          #{card.external_id}
         </span>
         <p className="min-w-0 text-[18px] font-medium leading-snug">
           {props.projectSlug ? (
@@ -191,47 +191,54 @@ export function CardItem(props: {
 
       <div className="card-rest">
         <div className="card-rest-inner">
-          <div className="mt-1 flex items-center gap-2">
-            {card.epic && (
-              <p className="truncate text-[11px] text-[var(--color-grey)]">
-                {card.epic}
-              </p>
-            )}
-            {card.status !== "backlog" && (
-              <span className={statusChipClass(card.status)}>
-                {card.status}
-              </span>
-            )}
-            {age?.signal === "forgotten" && (
-              <span className="stat stat--blocked" title="No target past the watch window">
-                forgotten
-              </span>
-            )}
-            {age?.signal === "overdue" && (
-              <span className="stat stat--blocked" title="Target date has passed">
-                overdue
-              </span>
-            )}
-            {(card.priority || card.effort) && (
-              <span className="ml-auto flex shrink-0 gap-1">
-                {card.priority && (
-                  <span
-                    className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
-                    title={`Priority ${card.priority}`}
-                  >
-                    P{card.priority}
-                  </span>
-                )}
-                {card.effort && (
-                  <span
-                    className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
-                    title="Effort"
-                  >
-                    {card.effort}
-                  </span>
-                )}
-              </span>
-            )}
+          <div className="card-meta mt-1 flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {card.epic && <EpicLabel name={card.epic} />}
+              {card.status !== "backlog" && (
+                <span className={statusChipClass(card.status)}>
+                  {card.status}
+                </span>
+              )}
+              {age?.signal === "forgotten" && (
+                <span
+                  className="stat stat--blocked"
+                  title="No target past the watch window"
+                >
+                  forgotten
+                </span>
+              )}
+              {age?.signal === "overdue" && (
+                <span
+                  className="stat stat--blocked"
+                  title="Target date has passed"
+                >
+                  overdue
+                </span>
+              )}
+            </div>
+            <span className="ml-auto flex shrink-0 items-center gap-2">
+              {ageProps && <CardAge {...ageProps} />}
+              {(card.priority || card.effort) && (
+                <span className="flex gap-1">
+                  {card.priority && (
+                    <span
+                      className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
+                      title={`Priority ${card.priority}`}
+                    >
+                      P{card.priority}
+                    </span>
+                  )}
+                  {card.effort && (
+                    <span
+                      className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
+                      title="Effort"
+                    >
+                      {card.effort}
+                    </span>
+                  )}
+                </span>
+              )}
+            </span>
           </div>
         </div>
       </div>
@@ -239,12 +246,8 @@ export function CardItem(props: {
       <div className="card-peek">
         <div className="card-peek-inner">
           {/* Epic, state and the two actions share one line above the form. */}
-          <div className="card-peek-actions mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            {card.epic && (
-              <span className="truncate text-[11px] text-[var(--color-grey)]">
-                {card.epic}
-              </span>
-            )}
+          <div className="card-peek-actions card-meta mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {card.epic && <EpicLabel name={card.epic} />}
             <span className={statusChipClass(card.status)}>{card.status}</span>
             {card.audience === "internal" && (
               <span className="stat stat--flat">internal</span>
@@ -258,35 +261,44 @@ export function CardItem(props: {
               </span>
             )}
             {age?.signal === "forgotten" && (
-              <span className="stat stat--blocked" title="No target past the watch window">
+              <span
+                className="stat stat--blocked"
+                title="No target past the watch window"
+              >
                 forgotten
               </span>
             )}
             {age?.signal === "overdue" && (
-              <span className="stat stat--blocked" title="Target date has passed">
+              <span
+                className="stat stat--blocked"
+                title="Target date has passed"
+              >
                 overdue
               </span>
             )}
-            {props.projectSlug && !props.overlay && (
-              <a
-                href={detail}
-                className="paper-link ml-auto text-[11.5px]"
-                onPointerDown={(e) => e.stopPropagation()}
-                data-testid="open-issue"
-              >
-                Open issue
-              </a>
-            )}
-            {props.onArchive && (
-              <button
-                type="button"
-                className="paper-link text-[11.5px]"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => props.onArchive?.(card.id, !card.archived_at)}
-              >
-                {card.archived_at ? "Restore" : "Archive"}
-              </button>
-            )}
+            <span className="ml-auto flex shrink-0 items-center gap-x-3">
+              {ageProps && <CardAge {...ageProps} />}
+              {props.projectSlug && !props.overlay && (
+                <a
+                  href={detail}
+                  className="paper-link text-[11.5px]"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  data-testid="open-issue"
+                >
+                  Open issue
+                </a>
+              )}
+              {props.onArchive && (
+                <button
+                  type="button"
+                  className="paper-link text-[11.5px]"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => props.onArchive?.(card.id, !card.archived_at)}
+                >
+                  {card.archived_at ? "Restore" : "Archive"}
+                </button>
+              )}
+            </span>
           </div>
 
           {/* The back of the card: a filled-in form, one labelled row each. */}

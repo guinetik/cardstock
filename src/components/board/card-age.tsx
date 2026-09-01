@@ -1,6 +1,7 @@
 import type { BoardGate } from "@/lib/gates";
 import { cardGate } from "@/lib/gates";
 import type { Card } from "@/lib/types";
+import { CalendarClock } from "lucide-react";
 import {
   daysSince,
   type TimelineSignal,
@@ -97,6 +98,12 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
 
   return (
     <span className="card-age" data-signal={signal} title={title}>
+      <CalendarClock
+        className="card-age__icon shrink-0"
+        size={11}
+        strokeWidth={2.2}
+        aria-hidden="true"
+      />
       <svg
         className="card-age-ring"
         width="14"
