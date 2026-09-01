@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -23,6 +24,7 @@ import {
 import { EFFORT_PEN, PRIORITY_LABEL, PRIORITY_PEN } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Timeline" };
 
 const DATE = new Intl.DateTimeFormat("en-US", {
   month: "short",

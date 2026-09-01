@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Binder, type BinderProject } from "@/components/binder";
@@ -6,6 +7,8 @@ import { memberLabel } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { PortraitEditor } from "./portrait-editor";
 import { ProfileForm } from "./profile-form";
+
+export const metadata: Metadata = { title: "Profile" };
 
 interface ProjectRow {
   id: string;

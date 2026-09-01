@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
 import Link from "next/link";
 import { UserMenu } from "@/components/user-menu";
+import { CARDSTOCK_TITLE } from "@/lib/site-title";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -25,7 +26,10 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "cardstock",
+  title: {
+    default: CARDSTOCK_TITLE,
+    template: `%s - ${CARDSTOCK_TITLE}`,
+  },
   description: "Hosted kanban over markdown trackers",
 };
 

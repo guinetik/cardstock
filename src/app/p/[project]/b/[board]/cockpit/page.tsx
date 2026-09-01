@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CockpitView } from "@/components/cockpit/cockpit-view";
@@ -6,6 +7,7 @@ import { loadCockpit } from "@/lib/cockpit-data";
 import { currentMember } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Cockpit" };
 
 export default async function CockpitPage(props: {
   params: Promise<{ project: string; board: string }>;

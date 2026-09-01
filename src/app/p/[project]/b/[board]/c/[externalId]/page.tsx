@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import { CardSheet } from "./card-sheet";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(
+  props: PageProps<"/p/[project]/b/[board]/c/[externalId]">,
+): Promise<Metadata> {
+  const { externalId } = await props.params;
+  return { title: `Card #${externalId}` };
+}
 
 /**
  * The issue page: the card sheet on its own.

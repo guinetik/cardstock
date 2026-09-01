@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LaneMap } from "@/components/lane-map";
@@ -62,6 +63,19 @@ interface MembershipRow {
 
 function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
+}
+
+export async function generateMetadata(
+  props: PageProps<"/p/[project]">,
+): Promise<Metadata> {
+  const { project: slug } = await props.params;
+  const db = await supabaseServer();
+  const { data: project } = await db
+    .from("projects")
+    .select("name")
+    .eq("slug", slug)
+    .maybeSingle();
+  return { title: project?.name ?? "Project" };
 }
 
 export default async function ProjectPage(props: PageProps<"/p/[project]">) {

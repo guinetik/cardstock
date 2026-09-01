@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Portrait } from "@/components/portrait";
@@ -6,6 +7,8 @@ import { memberLabel } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { removeMembership } from "./actions";
 import { InviteUserForm } from "./invite-user-form";
+
+export const metadata: Metadata = { title: "Users" };
 
 type Membership = {
   member_id: string;

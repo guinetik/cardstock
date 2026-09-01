@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { EpicDetail } from "@/components/cockpit/epic-detail";
 import { buildCockpitModel } from "@/lib/cockpit";
@@ -6,6 +7,7 @@ import { laneMicrocosm } from "@/lib/lane-map";
 import { currentMember } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Epic cockpit" };
 
 export default async function EpicCockpitPage(props: {
   params: Promise<{ project: string; board: string; epic: string }>;
