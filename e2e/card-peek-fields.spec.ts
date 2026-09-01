@@ -33,13 +33,11 @@ test("the rail's colour menu tints the card", async ({ page }) => {
   await palette.getByRole("button", { name: "Green" }).click();
 
   await expect(card).toHaveClass(/card-color--green/);
-
-  // The palette stays open after a pick, so the next choice is one click away.
-  // Back to the neutral stock: the menu must not be a one-way door.
-  await palette.getByRole("button", { name: "No color" }).click();
-  await expect(card).not.toHaveClass(/card-color--green/);
-  await page.keyboard.press("Escape");
+  // A completed pick dismisses the palette instead of leaving a detached
+  // menu over the board after the card loses hover/focus.
   await expect(palette).toHaveCount(0);
+  await page.locator("h1").hover();
+  await expect(card.locator(".card-rest")).toBeVisible();
 });
 
 /**

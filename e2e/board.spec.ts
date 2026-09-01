@@ -69,6 +69,9 @@ test("sets, persists, and clears a card color", async ({ page }) => {
   await card.getByLabel(/^Color for card #/).click();
   await page.getByRole("button", { name: "Blue" }).click();
   await expect(card.locator("article")).toHaveClass(/card-color--blue/);
+  await expect(
+    page.getByRole("group", { name: /^Color for card #/ }),
+  ).toHaveCount(0);
 
   await page.reload();
   const persisted = page.locator(`[data-id="${id}"]`);

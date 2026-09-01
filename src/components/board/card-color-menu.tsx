@@ -1,5 +1,7 @@
 "use client";
 
+import { Palette } from "lucide-react";
+import { useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -33,37 +35,45 @@ export function CardColorMenu({
   onChange,
   externalId,
 }: CardColorMenuProps) {
+  const [open, setOpen] = useState(false);
   const label = value ? CARD_COLOR_LABELS[value] : "No color";
+
+  function selectColor(color: CardColor | null) {
+    onChange(color);
+    setOpen(false);
+  }
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        className="card-color-trigger"
         aria-label={`Color for card #${externalId}`}
         title={`Color — ${label}`}
         // The rail sits inside the drag handle; a press here is a press, not
         // the start of picking the card up.
         onPointerDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
+        style={
+          value
+            ? { background: `var(${cardColorSurfaceToken(value)})` }
+            : undefined
+        }
       >
-        <span
-          aria-hidden="true"
-          className={`card-rail-swatch${value ? "" : " card-rail-swatch--none"}`}
-          style={
-            value
-              ? { background: `var(${cardColorSurfaceToken(value)})` }
-              : undefined
-          }
-        />
+        <Palette aria-hidden="true" size={14} strokeWidth={2.2} />
       </PopoverTrigger>
       <PopoverContent
         align="end"
         className="w-auto"
+        // A mouse pick should release the card as the palette closes. Keyboard
+        // users return to the trigger so they keep a predictable tab stop.
+        finalFocus={(interactionType) => interactionType === "keyboard"}
         onPointerDown={(e) => e.stopPropagation()}
       >
         {/* Five to a row: the palette reads as a paint box, not a ruler. */}
         <div className="w-[9.75rem]">
           <CardColorPicker
             value={value}
-            onChange={onChange}
+            onChange={selectColor}
             label={`Color for card #${externalId}`}
           />
         </div>

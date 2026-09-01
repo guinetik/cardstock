@@ -632,32 +632,18 @@
 .card-rail > [data-on="true"] {
   color: var(--color-ink);
 }
-/* The tint control wears the card's own colour, so the rail says what the
-   card is before you open the palette. */
-.card-rail-swatch {
-  display: block;
-  width: 0.85rem;
-  height: 0.85rem;
-  border-radius: 999px;
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.24);
+/* Unlike the old bare dot, the palette glyph reads as an action. The button
+   still wears the selected tint, so its current value remains visible. */
+.card-rail > .card-color-trigger {
+  color: var(--color-ink2);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
 }
-.card-rail-swatch--none {
-  position: relative;
-  overflow: hidden;
-}
-.card-rail-swatch--none::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0.05rem;
-  right: 0.05rem;
-  height: 0.09rem;
-  border-radius: 999px;
-  background: var(--pen-red);
-  transform: translateY(-50%) rotate(-45deg);
-  transform-origin: center;
+.card-rail > .card-color-trigger:is(:hover, :focus-visible, [data-popup-open]) {
+  color: var(--color-ink);
+  border-color: var(--color-grey);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
 }
 
 @media (hover: none) {
