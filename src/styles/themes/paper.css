@@ -74,7 +74,7 @@
   --motion-duration-hover: 320ms;
   --motion-duration-ui: 420ms;
   /* A card waits this long before opening, so brushing past does not pop it. */
-  --motion-dwell: 180ms;
+  --motion-dwell: 450ms;
   --motion-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   /* For things that change size or place: --motion-ease-out puts most of the
      distance in the first fifth of the time, which reads as a jump. */
