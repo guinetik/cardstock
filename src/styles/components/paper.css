@@ -703,8 +703,11 @@
 /* A new issue is written on one filed sheet: content at left, filing notes in
    the ruled margin, and highlighter marks collected along the foot. */
 .card-create-sheet[data-slot="dialog-content"] {
+  display: flex;
+  flex-direction: column;
   gap: 0;
   padding: 0;
+  max-height: calc(100vh - 2rem);
   overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-card);
@@ -712,6 +715,7 @@
   box-shadow: var(--shadow-lift);
 }
 .card-create-masthead {
+  flex-shrink: 0;
   gap: 0.35rem;
   padding: 1.15rem 1.5rem 1rem;
   border-bottom: 1px solid var(--border-divider);
@@ -786,6 +790,14 @@
 .card-create-tags {
   border-top: 1px solid var(--border-divider);
   background: var(--surface-card);
+}
+.card-create-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.card-create-sheet [data-slot="dialog-footer"] {
+  flex-shrink: 0;
 }
 .card-create-sheet .issue-editor .mdxeditor-root-contenteditable {
   min-height: 18rem;

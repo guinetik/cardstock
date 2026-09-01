@@ -126,7 +126,7 @@ function CardCreateForm(
   const selectedEpic = props.epics.find((item) => item.id === epicId);
 
   return (
-    <DialogContent className="card-create-sheet max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-4xl">
+    <DialogContent className="card-create-sheet sm:max-w-4xl">
       <form onSubmit={submit} className="contents">
         <DialogHeader className="card-create-masthead">
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-grey)]">
@@ -141,6 +141,7 @@ function CardCreateForm(
           </DialogDescription>
         </DialogHeader>
 
+        <div className="card-create-body">
         <div className="card-create-main grid lg:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="card-create-writing grid gap-5 p-5 sm:p-6">
             <label htmlFor="new-card-title">
@@ -354,6 +355,7 @@ function CardCreateForm(
             {error}
           </p>
         )}
+        </div>
         <DialogFooter className="m-0 rounded-none border-[var(--border-divider)] bg-[var(--surface-panel)]">
           <Button type="submit" disabled={busy || !title.trim()}>
             {busy ? "Creating…" : `Create in ${props.lane.name}`}
