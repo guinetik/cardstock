@@ -564,6 +564,26 @@
     text-transform: uppercase;
     color: var(--color-grey);
   }
+  /*
+   * The two calendar fields share one Dates row; column captions say which
+   * day is which without another margin label.
+   */
+  .card-dates {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .card-dates-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 0.25rem;
+    row-gap: 0.1rem;
+  }
+  .card-date-col-label {
+    font-size: 10px;
+    line-height: 1.3;
+    color: var(--color-grey);
+  }
 }
 
 /* The peek opens on pointer or keyboard; the resting summary steps aside. */

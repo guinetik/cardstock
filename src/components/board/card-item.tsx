@@ -275,11 +275,10 @@ export function CardItem(props: {
             {!props.overlay && props.onPatch && (
               <>
                 <span className="field-label">Dates</span>
-                <div className="flex flex-col gap-1">
-                  {/* The two days the timeline draws a bar between, side by
-                      side; the rough date is what you write when there is
-                      neither. */}
-                  <div className="grid grid-cols-2 gap-1">
+                <div className="card-dates">
+                  <div className="card-dates-grid">
+                    <span className="card-date-col-label">started</span>
+                    <span className="card-date-col-label">target</span>
                     <input
                       type="date"
                       onPointerDown={(e) => e.stopPropagation()}
