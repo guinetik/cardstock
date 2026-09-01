@@ -202,7 +202,7 @@ export function CardItem(props: {
       <div className="card-peek">
         <div className="card-peek-inner">
           {/* Epic, state and the two actions share one line above the form. */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="card-peek-actions mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             {card.epic && (
               <span className="truncate text-[11px] text-[var(--color-grey)]">
                 {card.epic}
