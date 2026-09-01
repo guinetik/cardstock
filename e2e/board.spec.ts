@@ -41,7 +41,7 @@ test("priority, difficulty and target persist", async ({ page }) => {
   await card.hover();
   await card.locator('[data-priority="1"]').click();
   await card.locator('[data-effort="M"]').click();
-  await card.locator('input[type="date"]').fill("2026-10-15");
+  await card.getByLabel("Target date").fill("2026-10-15");
   await page.waitForTimeout(600);
   await page.reload();
   const again = page.locator(`[data-id="${id}"]`);
@@ -53,7 +53,7 @@ test("priority, difficulty and target persist", async ({ page }) => {
     "data-on",
     "true",
   );
-  await expect(again.locator('input[type="date"]')).toHaveValue("2026-10-15");
+  await expect(again.getByLabel("Target date")).toHaveValue("2026-10-15");
   // and the raised-date rail carries the target through to October 2026
   await page.goto(`${BOARD}/timeline`);
   const timelineCard = page.locator(`[data-timeline-id="${id}"]`);
@@ -65,7 +65,9 @@ test("sets, persists, and clears a card color", async ({ page }) => {
   const card = page.locator('[data-lane="unsorted"] [data-id]').first();
   const id = await card.getAttribute("data-id");
   await card.hover();
-  await card.getByRole("button", { name: "Blue" }).click();
+  // The palette lives behind the rail's colour dot now, not on the form.
+  await card.getByLabel(/^Color for card #/).click();
+  await page.getByRole("button", { name: "Blue" }).click();
   await expect(card.locator("article")).toHaveClass(/card-color--blue/);
 
   await page.reload();
@@ -73,7 +75,8 @@ test("sets, persists, and clears a card color", async ({ page }) => {
   await expect(persisted.locator("article")).toHaveClass(/card-color--blue/);
 
   await persisted.hover();
-  await persisted.getByRole("button", { name: "No color" }).click();
+  await persisted.getByLabel(/^Color for card #/).click();
+  await page.getByRole("button", { name: "No color" }).click();
   await expect(persisted.locator("article")).not.toHaveClass(/card-color--/);
 });
 

@@ -632,6 +632,33 @@
 .card-rail > [data-on="true"] {
   color: var(--color-ink);
 }
+/* The tint control wears the card's own colour, so the rail says what the
+   card is before you open the palette. */
+.card-rail-swatch {
+  display: block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.24);
+}
+.card-rail-swatch--none {
+  position: relative;
+  overflow: hidden;
+}
+.card-rail-swatch--none::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0.05rem;
+  right: 0.05rem;
+  height: 0.09rem;
+  border-radius: 999px;
+  background: var(--pen-red);
+  transform: translateY(-50%) rotate(-45deg);
+  transform-origin: center;
+}
 
 @media (hover: none) {
   .paper-card:focus-within:not(.paper-card--overlay) .card-peek {

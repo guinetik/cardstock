@@ -84,7 +84,9 @@ test("an open card can be picked up by its form, not only its title", async ({
     .poll(async () => (await card.boundingBox())?.height, { timeout: 3000 })
     .toBeGreaterThan(200);
   await page.waitForTimeout(400);
-  const field = card.locator(".card-form input[type=text]");
+  // The rough date and the blocker note are both text fields; either proves
+  // the rule, so take the first.
+  const field = card.locator(".card-form input[type=text]").first();
   const input = (await field.boundingBox())!;
   const ix = input.x + 20;
   const iy = input.y + input.height / 2;

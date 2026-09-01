@@ -15,7 +15,7 @@ import {
   PRIORITY_PEN,
   type TagGroup,
 } from "@/lib/types";
-import { CardColorPicker } from "./card-color-picker";
+import { CardColorMenu } from "./card-color-menu";
 import { Ratings } from "./ratings";
 
 /**
@@ -136,6 +136,13 @@ export function CardItem(props: {
               <Maximize2 size={13} />
             </Link>
           )}
+          {props.onPatch && (
+            <CardColorMenu
+              value={color}
+              onChange={(next) => props.onPatch?.(card.id, { color: next })}
+              externalId={card.external_id}
+            />
+          )}
         </div>
       )}
       <div className="flex items-baseline gap-2 pr-6">
@@ -202,14 +209,6 @@ export function CardItem(props: {
               </span>
             )}
             <span className={statusChipClass(card.status)}>{card.status}</span>
-            {card.needs && (
-              <span
-                className="stat stat--attention"
-                title={`Waiting on ${card.needs}`}
-              >
-                needs {card.needs}
-              </span>
-            )}
             {card.audience === "internal" && (
               <span className="stat stat--flat">internal</span>
             )}
@@ -275,21 +274,39 @@ export function CardItem(props: {
 
             {!props.overlay && props.onPatch && (
               <>
-                <span className="field-label">Target</span>
+                <span className="field-label">Dates</span>
                 <div className="flex flex-col gap-1">
-                  <input
-                    type="date"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="paper-field h-6 w-full font-mono text-[11.5px]"
-                    value={card.target_date ?? ""}
-                    onChange={(e) =>
-                      props.onPatch?.(card.id, {
-                        target_date: e.target.value || null,
-                      })
-                    }
-                    aria-label="Target date"
-                    title="A day this is promised for"
-                  />
+                  {/* The two days the timeline draws a bar between, side by
+                      side; the rough date is what you write when there is
+                      neither. */}
+                  <div className="grid grid-cols-2 gap-1">
+                    <input
+                      type="date"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="paper-field h-6 w-full font-mono text-[11.5px]"
+                      value={card.planned_start_date ?? ""}
+                      onChange={(e) =>
+                        props.onPatch?.(card.id, {
+                          planned_start_date: e.target.value || null,
+                        })
+                      }
+                      aria-label="Planned start"
+                      title="The day work is meant to begin"
+                    />
+                    <input
+                      type="date"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="paper-field h-6 w-full font-mono text-[11.5px]"
+                      value={card.target_date ?? ""}
+                      onChange={(e) =>
+                        props.onPatch?.(card.id, {
+                          target_date: e.target.value || null,
+                        })
+                      }
+                      aria-label="Target date"
+                      title="A day this is promised for"
+                    />
+                  </div>
                   <input
                     type="text"
                     onPointerDown={(e) => e.stopPropagation()}
@@ -306,14 +323,21 @@ export function CardItem(props: {
                   />
                 </div>
 
-                <Ratings card={card} onPatch={props.onPatch} />
-
-                <span className="field-label">Color</span>
-                <CardColorPicker
-                  value={color}
-                  onChange={(next) => props.onPatch?.(card.id, { color: next })}
-                  label={`Color for card #${card.external_id}`}
+                <span className="field-label">Waiting</span>
+                <input
+                  type="text"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="paper-field h-6 w-full text-[11.5px]"
+                  placeholder="a person, a decision, another team"
+                  value={card.needs ?? ""}
+                  onChange={(e) =>
+                    props.onPatch?.(card.id, { needs: e.target.value })
+                  }
+                  aria-label="Waiting on"
+                  title="Anything here marks the card blocked"
                 />
+
+                <Ratings card={card} onPatch={props.onPatch} />
               </>
             )}
 
