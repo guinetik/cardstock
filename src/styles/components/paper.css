@@ -671,6 +671,70 @@
   padding-right: calc(0.45rem + 1.35rem);
 }
 
+/*
+ * Raised date and age ring beside the card number. The inner ring fills toward
+ * the project's forgotten watch window; an outer ring appears once work is past
+ * it. Signal colours match the timeline assessment marks.
+ */
+.card-age {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--color-grey);
+}
+.card-age-date {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.card-age-ring {
+  flex-shrink: 0;
+}
+.card-age-ring__track {
+  stroke: var(--color-grey-faint);
+  opacity: 0.45;
+}
+.card-age-ring__fill {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s var(--motion-ease-settle);
+}
+.card-age-ring__overrun {
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+.card-age[data-signal="active"] .card-age-ring__fill {
+  stroke: var(--color-grey);
+}
+.card-age[data-signal="planned"] .card-age-ring__fill {
+  stroke: var(--pen-blue);
+}
+.card-age[data-signal="overdue"] .card-age-ring__fill,
+.card-age[data-signal="overdue"] .card-age-ring__overrun {
+  stroke: var(--pen-amber);
+}
+.card-age[data-signal="forgotten"] .card-age-ring__fill,
+.card-age[data-signal="forgotten"] .card-age-ring__overrun {
+  stroke: var(--pen-red);
+}
+.card-age[data-signal="forgotten"] .card-age-date {
+  color: var(--pen-red);
+  font-weight: 600;
+}
+.card-age[data-signal="delivered"] .card-age-ring__fill {
+  stroke: var(--pen-green);
+}
+.paper-card[data-timeline-signal="forgotten"]:not(.paper-card--overlay) {
+  box-shadow:
+    inset 3px 0 0 var(--pen-red),
+    var(--shadow-card);
+}
+.paper-card[data-timeline-signal="overdue"]:not(.paper-card--overlay) {
+  box-shadow:
+    inset 3px 0 0 var(--pen-amber),
+    var(--shadow-card);
+}
+
 @media (hover: none) {
   .paper-card:focus-within:not(.paper-card--overlay) .card-peek {
     grid-template-rows: 1fr;

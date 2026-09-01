@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { laneColorModifier } from "@/lib/card-color";
+import type { BoardGate } from "@/lib/gates";
 import type { Card, Lane, TagGroup } from "@/lib/types";
 import { CardItem, SortableCard } from "./card-item";
 
@@ -68,6 +69,9 @@ export function LaneColumn(props: {
   onPin: (id: string, on: boolean) => void;
   projectSlug: string;
   boardSlug: string;
+  today: string;
+  watchDays: number;
+  gates: readonly BoardGate[];
   hiddenByDefault: boolean;
   onAddCard: () => void;
   manage?: {
@@ -287,6 +291,9 @@ export function LaneColumn(props: {
                 onPin={props.onPin}
                 projectSlug={props.projectSlug}
                 boardSlug={props.boardSlug}
+                today={props.today}
+                watchDays={props.watchDays}
+                gates={props.gates}
               />
             </SortableCard>
           ))}

@@ -56,6 +56,8 @@ import {
   type StoredBoardLaneViews,
 } from "@/lib/lane-view";
 import { rankBetween } from "@/lib/rank";
+import { resolveBoardGates } from "@/lib/gates";
+import { forgottenAfterDays, timelineToday } from "@/lib/timeline";
 import type { BoardData, Card, Lane } from "@/lib/types";
 import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
@@ -134,6 +136,15 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [cardLane, setCardLane] = useState<Lane | null>(null);
   // Cards left open on the desk. Per tab, on purpose: a pin is a reading aid.
   const [pinned, setPinned] = useState<ReadonlySet<string>>(() => new Set());
+  const watchDays = useMemo(
+    () => forgottenAfterDays(data.project.settings),
+    [data.project.settings],
+  );
+  const gates = useMemo(
+    () => resolveBoardGates(data.board.settings, lanes),
+    [data.board.settings, lanes],
+  );
+  const today = useMemo(() => timelineToday(), []);
   const pin = useCallback((id: string, on: boolean) => {
     setPinned((prev) => {
       const next = new Set(prev);
@@ -662,6 +673,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               onPin={pin}
               projectSlug={data.project.slug}
               boardSlug={data.board.slug}
+              today={today}
+              watchDays={watchDays}
+              gates={gates}
               hiddenByDefault={lane.kind === "archive" && !filters.showArchived}
               onAddCard={() => setCardLane(lane)}
               manage={
@@ -725,6 +739,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               card={active}
               groups={data.groups}
               lane={lanes.find((l) => l.id === active.lane_id)}
+              today={today}
+              watchDays={watchDays}
+              gates={gates}
               overlay
             />
           ) : null}

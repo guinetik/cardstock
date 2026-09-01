@@ -7,6 +7,7 @@ import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
 import { statusChipClass } from "@/lib/card-status";
 import { daysInLane } from "@/lib/filters";
+import type { BoardGate } from "@/lib/gates";
 import {
   type Card,
   EFFORT_PEN,
@@ -15,6 +16,7 @@ import {
   PRIORITY_PEN,
   type TagGroup,
 } from "@/lib/types";
+import { CardAge, cardAgeState } from "./card-age";
 import { CardColorMenu } from "./card-color-menu";
 import { Ratings } from "./ratings";
 
@@ -79,6 +81,11 @@ export function CardItem(props: {
   onPin?: (id: string, on: boolean) => void;
   projectSlug?: string;
   boardSlug?: string;
+  /** UTC day key for timeline age; defaults to today in the browser. */
+  today?: string;
+  /** Project watch window before unplanned work reads as forgotten. */
+  watchDays?: number;
+  gates?: readonly BoardGate[];
 }) {
   const { card, lane } = props;
   const color = parseCardColor(card.color);
@@ -100,11 +107,21 @@ export function CardItem(props: {
   const detail = props.projectSlug
     ? `/p/${props.projectSlug}/b/${props.boardSlug}/c/${card.external_id}`
     : "#";
+  const age =
+    props.watchDays != null && props.gates
+      ? cardAgeState(
+          card,
+          props.today ?? new Date().toISOString().slice(0, 10),
+          props.watchDays,
+          props.gates,
+        )
+      : null;
 
   return (
     <article
       className={`group relative paper-card p-2.5 ${props.overlay ? "paper-card--overlay" : ""} ${props.flat && !props.overlay ? "paper-card--flat" : ""} ${card.archived_at ? "opacity-60" : ""} ${colorClass}`}
       data-pinned={pinned ? "true" : undefined}
+      data-timeline-signal={age?.signal}
     >
       {/* The rail sits opposite the card number: pin, then maximize. */}
       {!props.overlay && (props.onPin || props.projectSlug) && (
@@ -146,8 +163,18 @@ export function CardItem(props: {
         </div>
       )}
       <div className="flex items-baseline gap-2 pr-6">
-        <span className="shrink-0 font-mono text-[11.5px] text-[var(--color-grey-faint)]">
-          #{card.external_id}
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span className="font-mono text-[11.5px] text-[var(--color-grey-faint)]">
+            #{card.external_id}
+          </span>
+          {props.watchDays != null && props.gates && (
+            <CardAge
+              card={card}
+              today={props.today ?? new Date().toISOString().slice(0, 10)}
+              watchDays={props.watchDays}
+              gates={props.gates}
+            />
+          )}
         </span>
         <p className="min-w-0 text-[18px] font-medium leading-snug">
           {props.projectSlug ? (
@@ -173,6 +200,16 @@ export function CardItem(props: {
             {card.status !== "backlog" && (
               <span className={statusChipClass(card.status)}>
                 {card.status}
+              </span>
+            )}
+            {age?.signal === "forgotten" && (
+              <span className="stat stat--blocked" title="No target past the watch window">
+                forgotten
+              </span>
+            )}
+            {age?.signal === "overdue" && (
+              <span className="stat stat--blocked" title="Target date has passed">
+                overdue
               </span>
             )}
             {(card.priority || card.effort) && (
@@ -218,6 +255,16 @@ export function CardItem(props: {
                 title="Days in this lane"
               >
                 {days}d
+              </span>
+            )}
+            {age?.signal === "forgotten" && (
+              <span className="stat stat--blocked" title="No target past the watch window">
+                forgotten
+              </span>
+            )}
+            {age?.signal === "overdue" && (
+              <span className="stat stat--blocked" title="Target date has passed">
+                overdue
               </span>
             )}
             {props.projectSlug && !props.overlay && (
