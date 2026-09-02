@@ -168,17 +168,19 @@ function CalendarDayCell(props: {
             <PopoverTrigger className="calendar-more">
               +{overflow} more
             </PopoverTrigger>
-            <PopoverContent className="calendar-day-popover rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
-              {props.slips.map((slip) => (
-                <CalendarSlip
-                  key={slipKey(slip)}
-                  slip={slip}
-                  projectSlug={props.projectSlug}
-                  showBoard={props.showBoard}
-                  today={props.today}
-                  watchDays={props.watchDays}
-                />
-              ))}
+            <PopoverContent className="rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
+              <div className="calendar-day-popover">
+                {props.slips.map((slip) => (
+                  <CalendarSlip
+                    key={slipKey(slip)}
+                    slip={slip}
+                    projectSlug={props.projectSlug}
+                    showBoard={props.showBoard}
+                    today={props.today}
+                    watchDays={props.watchDays}
+                  />
+                ))}
+              </div>
             </PopoverContent>
           </Popover>
         )}
