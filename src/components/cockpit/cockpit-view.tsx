@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { LaneMap } from "@/components/lane-map";
 import type { CockpitEpic, CockpitModel, EpicOutlook } from "@/lib/cockpit";
 import { OUTLOOK_LABEL } from "@/lib/cockpit";
+import type { LaneMicrocosmRow } from "@/lib/lane-map";
 import { TaskLegend, TaskMap } from "./task-map";
 
 const outlookClass: Record<EpicOutlook, string> = {
@@ -114,10 +116,16 @@ export function CockpitView({
   model,
   cockpitBase,
   cardBase,
+  boardHref,
+  laneRows,
+  cardCount,
 }: {
   model: CockpitModel;
   cockpitBase: string;
   cardBase: string;
+  boardHref: string;
+  laneRows: LaneMicrocosmRow[];
+  cardCount: number;
 }) {
   const [query, setQuery] = useState("");
   const [outlook, setOutlook] = useState<"all" | EpicOutlook>("all");
@@ -195,6 +203,29 @@ export function CockpitView({
             note="By committed date"
             tone="success"
           />
+        </div>
+      </section>
+
+      <section className="mt-6" aria-label="Board at a glance">
+        <div className="mb-2 flex items-baseline justify-between gap-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-grey)]">
+            On the board
+          </h2>
+          <Link href={boardHref} className="paper-link text-xs">
+            Open board →
+          </Link>
+        </div>
+        <div className="paper-card paper-card--static p-3">
+          {cardCount > 0 ? (
+            <>
+              <LaneMap href={boardHref} rows={laneRows} />
+              <p className="binder-count mt-2">
+                {cardCount} card{cardCount === 1 ? "" : "s"}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-[var(--color-grey)]">No cards yet</p>
+          )}
         </div>
       </section>
 

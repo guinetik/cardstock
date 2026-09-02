@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { CockpitView } from "@/components/cockpit/cockpit-view";
 import { buildCockpitModel } from "@/lib/cockpit";
 import { loadCockpit } from "@/lib/cockpit-data";
+import { laneMicrocosm } from "@/lib/lane-map";
 import { currentMember } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function CockpitPage(props: {
   const data = await loadCockpit(project, board);
   const model = buildCockpitModel(data);
   const boardBase = `/p/${project}/b/${board}`;
+  const laneRows = laneMicrocosm(data.lanes, data.cards);
   return (
     <main className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6">
       <header className="mb-8">
@@ -47,6 +49,9 @@ export default async function CockpitPage(props: {
         model={model}
         cockpitBase={`${boardBase}/cockpit`}
         cardBase={`${boardBase}/c`}
+        boardHref={boardBase}
+        laneRows={laneRows}
+        cardCount={data.cards.length}
       />
     </main>
   );

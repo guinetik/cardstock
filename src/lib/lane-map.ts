@@ -22,6 +22,9 @@ export type LaneMicrocosmInput = {
 /** Occupancy wraps this many cards to a row inside each lane column. */
 export const LANE_MAP_SPAN = 3;
 
+/** Default row cap before the pack reserves its last row for a “+N more” label. */
+export const LANE_MAP_MAX_ROWS = 8;
+
 /** One card as occupancy: tint, cockpit signal inputs, and board order. */
 export type LaneMicrocosmCard = {
   lane_id: string | null;
@@ -118,6 +121,21 @@ export function laneMicrocosm(
     });
   }
   return rows;
+}
+
+/**
+ * Trims a lane's slips to fit the microcosm row cap. When overflow exists, the
+ * last row is left for a “+N more” label instead of partial slips.
+ */
+export function laneMapVisibleSlips(
+  slips: LaneMicrocosmSlip[],
+  maxRows: number = LANE_MAP_MAX_ROWS,
+): { slips: LaneMicrocosmSlip[]; overflow: number } {
+  const rows = Math.max(1, maxRows);
+  const full = rows * LANE_MAP_SPAN;
+  if (slips.length <= full) return { slips, overflow: 0 };
+  const visible = (rows - 1) * LANE_MAP_SPAN;
+  return { slips: slips.slice(0, visible), overflow: slips.length - visible };
 }
 
 /**

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { laneMicrocosm } from "@/lib/lane-map";
+import { laneMicrocosm, LANE_MAP_MAX_ROWS, LANE_MAP_SPAN } from "@/lib/lane-map";
 import { LaneMap } from "./lane-map";
 
 test("tinted slips use the card colour; untinted slips use the cockpit signal", () => {
@@ -46,4 +46,29 @@ test("tinted slips use the card colour; untinted slips use the cockpit signal", 
   expect(html).toContain("lane-color--blue");
   expect(html).not.toContain("lane-map-col--work");
   expect(html).not.toContain('class="stat');
+});
+
+test("overflow lanes show a final +N more row", () => {
+  const slips = Array.from({ length: (LANE_MAP_MAX_ROWS - 1) * LANE_MAP_SPAN + 7 }, () => ({
+    color: null,
+    signal: "queued" as const,
+  }));
+  const html = renderToStaticMarkup(
+    <LaneMap
+      href="/p/x/b/y"
+      rows={[
+        {
+          id: "n",
+          name: "Now",
+          kind: "work",
+          color: null,
+          count: slips.length,
+          vacant: false,
+          slips,
+        },
+      ]}
+    />,
+  );
+  expect(html).toContain("lane-map-cell--more");
+  expect(html).toContain("+7 more");
 });

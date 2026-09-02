@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { TaskSignal } from "./cockpit";
-import { LANE_MAP_MARK, LANE_MAP_SPAN, laneMicrocosm } from "./lane-map";
+import { LANE_MAP_MARK, LANE_MAP_MAX_ROWS, LANE_MAP_SPAN, laneMapVisibleSlips, laneMicrocosm } from "./lane-map";
 
 const lanes = [
   {
@@ -104,6 +104,22 @@ describe("laneMicrocosm", () => {
   test("omits archived when nothing is filed away", () => {
     const rows = laneMicrocosm(lanes, []);
     expect(rows.some((r) => r.kind === "archive")).toBe(false);
+  });
+});
+
+describe("laneMapVisibleSlips", () => {
+  const slip = { color: null, signal: "queued" as const };
+
+  test("keeps every slip when the pack fits", () => {
+    const slips = Array.from({ length: LANE_MAP_MAX_ROWS * LANE_MAP_SPAN }, () => slip);
+    expect(laneMapVisibleSlips(slips)).toEqual({ slips, overflow: 0 });
+  });
+
+  test("reserves the last row for overflow", () => {
+    const slips = Array.from({ length: (LANE_MAP_MAX_ROWS - 1) * LANE_MAP_SPAN + 4 }, () => slip);
+    const packed = laneMapVisibleSlips(slips);
+    expect(packed.slips).toHaveLength((LANE_MAP_MAX_ROWS - 1) * LANE_MAP_SPAN);
+    expect(packed.overflow).toBe(4);
   });
 });
 

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { cardColorModifier, laneColorModifier } from "@/lib/card-color";
 import {
   LANE_MAP_MARK,
+  LANE_MAP_MAX_ROWS,
   LANE_MAP_SIGNAL,
+  laneMapVisibleSlips,
   type LaneMicrocosmRow,
 } from "@/lib/lane-map";
 
@@ -19,10 +21,13 @@ export function LaneMap({
   href,
   rows,
   marks = false,
+  maxRows = LANE_MAP_MAX_ROWS,
 }: {
   href: string;
   rows: LaneMicrocosmRow[];
   marks?: boolean;
+  /** Row cap per lane; overflow becomes a final “+N more” row. */
+  maxRows?: number;
 }) {
   if (rows.length === 0) return null;
   const summary = rows.map((row) => `${row.name} ${row.count}`).join(", ");
@@ -46,22 +51,39 @@ export function LaneMap({
             {row.vacant ? (
               <i className="lane-map-cell lane-map-cell--vacant" />
             ) : (
-              row.slips.map((slip, i) => {
-                const tint = slip.color ? cardColorModifier(slip.color) : null;
+              (() => {
+                const packed = laneMapVisibleSlips(row.slips, maxRows);
                 return (
-                  <i
-                    // biome-ignore lint/suspicious/noArrayIndexKey: occupancy ticks have no identity
-                    key={i}
-                    className={
-                      tint
-                        ? `lane-map-cell ${tint}`
-                        : `lane-map-cell ${LANE_MAP_SIGNAL[slip.signal]}`
-                    }
-                  >
-                    {marks ? LANE_MAP_MARK[slip.signal] : null}
-                  </i>
+                  <>
+                    {packed.slips.map((slip, i) => {
+                      const tint = slip.color
+                        ? cardColorModifier(slip.color)
+                        : null;
+                      return (
+                        <i
+                          // biome-ignore lint/suspicious/noArrayIndexKey: occupancy ticks have no identity
+                          key={i}
+                          className={
+                            tint
+                              ? `lane-map-cell ${tint}`
+                              : `lane-map-cell ${LANE_MAP_SIGNAL[slip.signal]}`
+                          }
+                        >
+                          {marks ? LANE_MAP_MARK[slip.signal] : null}
+                        </i>
+                      );
+                    })}
+                    {packed.overflow > 0 && (
+                      <span
+                        className="lane-map-cell lane-map-cell--more"
+                        aria-label={`${packed.overflow} more cards`}
+                      >
+                        +{packed.overflow} more
+                      </span>
+                    )}
+                  </>
                 );
-              })
+              })()
             )}
           </span>
         </span>
