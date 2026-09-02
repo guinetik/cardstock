@@ -665,7 +665,7 @@
   border-color: var(--color-grey);
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
 }
-/* Open issue / Archive sit on the same right edge as the rail; keep them left
+/* Archive sits on the same right edge as the rail; keep it left
    of the stacked buttons so the colour picker does not cover Archive. */
 .card-peek-actions {
   padding-right: calc(0.45rem + 1.35rem);

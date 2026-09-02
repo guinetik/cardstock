@@ -273,16 +273,6 @@ export function CardItem(props: {
               </span>
             )}
             {ageProps && <CardAge {...ageProps} />}
-            {props.projectSlug && !props.overlay && (
-              <a
-                href={detail}
-                className="paper-link text-[11.5px]"
-                onPointerDown={(e) => e.stopPropagation()}
-                data-testid="open-issue"
-              >
-                Open issue
-              </a>
-            )}
             {props.onArchive && (
               <button
                 type="button"

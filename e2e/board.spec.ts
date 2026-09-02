@@ -170,13 +170,12 @@ test("archive from the card page hides it and shows it under 'archived'", async 
   ).toHaveCount(0);
 });
 
-test("card title and hover pill open the card page with the full body", async ({
+test("card title opens the card page with the full body", async ({
   page,
 }) => {
   const card = page.locator('[data-lane="now"] [data-id]').first();
   const id = await card.getAttribute("data-id");
-  await card.hover();
-  await card.getByTestId("open-issue").click();
+  await card.locator("p a").click();
   await expect(page).toHaveURL(new RegExp(`/c/${id}$`));
   await expect(page.getByRole("heading", { level: 1 })).toContainText(`#${id}`);
   await expect(page.getByRole("heading", { name: /^Ask$/ })).toBeVisible();
