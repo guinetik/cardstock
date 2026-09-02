@@ -18,8 +18,10 @@ import {
   assignCardEpic,
   createEpic,
 } from "@/app/p/[project]/b/[board]/cockpit/actions";
+import { PaperTooltip, PaperTooltipLines } from "@/components/paper-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Card } from "@/lib/types";
 
 type SeedEpic = { id: string; source_name: string };
@@ -62,8 +64,47 @@ function DraggableTaskSlip({ task }: { task: Task }) {
   );
 }
 
-function EpicDropTarget({ epic, count }: { epic: SeedEpic; count: number }) {
+/**
+ * One inked battery cell per filed task: hover names the card, and the cell
+ * itself is a drag handle so a misfiled task can leave for the pool or
+ * another epic.
+ */
+function BatteryCell({ task }: { task: Task }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+  });
+  return (
+    <PaperTooltip
+      content={
+        <PaperTooltipLines
+          lines={[task.title, `#${task.external_id}`, "Drag to move or unfile"]}
+        />
+      }
+      triggerClassName="min-w-1 flex-1 cursor-grab"
+    >
+      <span
+        ref={setNodeRef}
+        className={`block h-3 w-full animate-in zoom-in-75 bg-[var(--color-ink)] ${
+          isDragging ? "opacity-40" : ""
+        }`}
+        {...attributes}
+        {...listeners}
+      />
+    </PaperTooltip>
+  );
+}
+
+function EpicDropTarget({
+  epic,
+  tasks,
+  capacity,
+}: {
+  epic: SeedEpic;
+  tasks: Task[];
+  capacity: number;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: `epic:${epic.id}` });
+  const vacant = Math.max(0, capacity - tasks.length);
   return (
     <div
       ref={setNodeRef}
@@ -73,18 +114,61 @@ function EpicDropTarget({ epic, count }: { epic: SeedEpic; count: number }) {
     >
       <p className="truncate text-sm font-medium">{epic.source_name}</p>
       <p className="text-xs text-[var(--color-grey)]">
-        {count
-          ? `${count} task${count === 1 ? "" : "s"} filed`
+        {tasks.length
+          ? `${tasks.length} task${tasks.length === 1 ? "" : "s"} filed`
           : "Drop tasks here"}
       </p>
+      {capacity > 0 && (
+        <div className="mt-1 flex gap-[3px] overflow-hidden">
+          {tasks.map((task) => (
+            <BatteryCell key={task.id} task={task} />
+          ))}
+          {Array.from({ length: vacant }, (_, index) => (
+            <span
+              // Vacant charge slots are interchangeable; the index is the identity.
+              // biome-ignore lint/suspicious/noArrayIndexKey: see above
+              key={index}
+              aria-hidden="true"
+              className="h-3 min-w-1 flex-1 border border-[var(--border-hairline)] bg-[var(--surface-raised)]"
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The unfiled pile: draggable slips, and a drop target to unfile a task. */
+function TaskPool({ pool }: { pool: Task[] }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "pool" });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`mt-4 border-t border-[var(--border-hairline)] pt-3 ${
+        isOver ? "outline-2 outline-dashed outline-[var(--pen-amber)]" : ""
+      }`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
+        {pool.length
+          ? "Drag existing tasks onto an epic"
+          : "All tasks filed — drop one back here to unfile it"}
+      </p>
+      {pool.length > 0 && (
+        <ul className="mt-2 flex max-h-48 flex-wrap gap-2 overflow-y-auto">
+          {pool.map((task) => (
+            <DraggableTaskSlip key={task.id} task={task} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
 /**
  * First-run flow for a cockpit with no epics: name a few epics, then — when
- * the board already has tasks — drag them onto the new epics. Every step
- * persists immediately; Done simply hands back the refreshed cockpit.
+ * the board already has tasks — drag them onto the new epics, which charge up
+ * like batteries. A misfiled cell drags back to the pool or another epic.
+ * Every step persists immediately; Done hands back the refreshed cockpit.
  */
 export function EpicOnboarding({
   boardId,
@@ -132,11 +216,17 @@ export function EpicOnboarding({
   async function onDragEnd(event: DragEndEvent) {
     setActiveId(null);
     if (!event.over) return;
-    const epicId = String(event.over.id).replace(/^epic:/, "");
+    const overId = String(event.over.id);
+    const epicId = overId === "pool" ? null : overId.replace(/^epic:/, "");
     const cardId = String(event.active.id);
     const previous = assigned.get(cardId);
-    if (previous === epicId) return;
-    setAssigned((map) => new Map(map).set(cardId, epicId));
+    if ((previous ?? null) === epicId) return;
+    setAssigned((map) => {
+      const next = new Map(map);
+      if (epicId) next.set(cardId, epicId);
+      else next.delete(cardId);
+      return next;
+    });
     const result = await assignCardEpic(cardId, epicId);
     if (!result.ok) {
       setAssigned((map) => {
@@ -147,12 +237,6 @@ export function EpicOnboarding({
       });
       setError(result.error);
     }
-  }
-
-  function counted(epicId: string) {
-    let count = 0;
-    for (const value of assigned.values()) if (value === epicId) count += 1;
-    return count;
   }
 
   return (
@@ -198,46 +282,36 @@ export function EpicOnboarding({
         )}
 
         {epics.length > 0 && (
-          <DndContext
-            id="epic-onboarding-dnd"
-            sensors={sensors}
-            collisionDetection={pointerWithin}
-            onDragStart={(event) => {
-              setActiveId(String(event.active.id));
-              setError(null);
-            }}
-            onDragEnd={onDragEnd}
-            onDragCancel={() => setActiveId(null)}
-          >
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {epics.map((epic) => (
-                <EpicDropTarget
-                  key={epic.id}
-                  epic={epic}
-                  count={counted(epic.id)}
-                />
-              ))}
-            </div>
-            {unassigned.length > 0 && (
-              <div className="mt-4 border-t border-[var(--border-hairline)] pt-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
-                  {pool.length
-                    ? "Drag existing tasks onto an epic"
-                    : "All tasks filed"}
-                </p>
-                {pool.length > 0 && (
-                  <ul className="mt-2 flex max-h-48 flex-wrap gap-2 overflow-y-auto">
-                    {pool.map((task) => (
-                      <DraggableTaskSlip key={task.id} task={task} />
-                    ))}
-                  </ul>
-                )}
+          <TooltipProvider>
+            <DndContext
+              id="epic-onboarding-dnd"
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragStart={(event) => {
+                setActiveId(String(event.active.id));
+                setError(null);
+              }}
+              onDragEnd={onDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {epics.map((epic) => (
+                  <EpicDropTarget
+                    key={epic.id}
+                    epic={epic}
+                    tasks={unassigned.filter(
+                      (task) => assigned.get(task.id) === epic.id,
+                    )}
+                    capacity={unassigned.length}
+                  />
+                ))}
               </div>
-            )}
-            <DragOverlay>
-              {overlayTask ? <TaskSlip task={overlayTask} overlay /> : null}
-            </DragOverlay>
-          </DndContext>
+              {unassigned.length > 0 && <TaskPool pool={pool} />}
+              <DragOverlay>
+                {overlayTask ? <TaskSlip task={overlayTask} overlay /> : null}
+              </DragOverlay>
+            </DndContext>
+          </TooltipProvider>
         )}
 
         {epics.length > 0 && (
