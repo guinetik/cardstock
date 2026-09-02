@@ -1,7 +1,13 @@
+"use client";
+
 import type { BoardGate } from "@/lib/gates";
 import { cardGate } from "@/lib/gates";
 import type { Card } from "@/lib/types";
 import { CalendarClock } from "lucide-react";
+import {
+  PaperTooltip,
+  PaperTooltipLines,
+} from "@/components/paper-tooltip";
 import {
   daysSince,
   type TimelineSignal,
@@ -88,16 +94,22 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
   const fill = RING_C * (1 - progress);
   const overrun = Math.min(pastWindow, 1) * RING_C;
 
-  const title = [
-    `Raised ${formatRaisedShort(card.raised_on)}`,
-    ageDays != null ? `${ageDays}d ago` : null,
-    SIGNAL_HINT[signal],
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
   return (
-    <span className="card-age" data-signal={signal} title={title}>
+    <PaperTooltip
+      side="top"
+      align="end"
+      triggerClassName="card-age inline-flex items-center"
+      triggerProps={{ "data-signal": signal }}
+      content={
+        <PaperTooltipLines
+          lines={[
+            `Raised ${formatRaisedShort(card.raised_on)}`,
+            ageDays != null ? `${ageDays} days ago` : null,
+            SIGNAL_HINT[signal],
+          ]}
+        />
+      }
+    >
       <CalendarClock
         className="card-age__icon shrink-0"
         size={11}
@@ -151,6 +163,6 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
       >
         {formatRaisedShort(card.raised_on)}
       </time>
-    </span>
+    </PaperTooltip>
   );
 }

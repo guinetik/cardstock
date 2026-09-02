@@ -3,8 +3,10 @@
 import type { GateOutcome } from "@/lib/gates";
 import type { TimelineSignal } from "@/lib/timeline";
 import {
+  PaperTooltipContent,
+} from "@/components/paper-tooltip";
+import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -78,7 +80,7 @@ function Mark({
           {value}
         </span>
       </TooltipTrigger>
-      <TooltipContent side="left">{hint}</TooltipContent>
+      <PaperTooltipContent side="left">{hint}</PaperTooltipContent>
     </Tooltip>
   );
 }

@@ -62,6 +62,7 @@ import type { BoardData, Card, Lane } from "@/lib/types";
 import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
 import { FilterBar } from "./filter-bar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { LaneActionDialog, type LaneActionMode } from "./lane-action-dialog";
 import { LaneColumn } from "./lane-column";
 import { LaneCrudDialog, type LaneDialogMode } from "./lane-crud-dialog";
@@ -642,6 +643,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         onClose={() => setCardLane(null)}
         onCreate={addCard}
       />
+      <TooltipProvider delay={300}>
       <DndContext
         id="board-dnd"
         sensors={sensors}
@@ -747,6 +749,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
           ) : null}
         </DragOverlay>
       </DndContext>
+      </TooltipProvider>
     </div>
   );
 }

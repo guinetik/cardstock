@@ -775,6 +775,38 @@
   min-height: 1.125rem;
 }
 
+/* Theme-aware hints — not the OS tooltip or the inverted UI default. */
+.paper-tooltip[data-slot="tooltip-content"] {
+  width: max-content;
+  max-width: 17rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  background: var(--surface-raised);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-lift);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.paper-tooltip[data-slot="tooltip-content"] > svg {
+  display: none;
+}
+.paper-tooltip__stack {
+  display: grid;
+  gap: 0.2rem;
+}
+.paper-tooltip__lead {
+  font-weight: 500;
+  color: var(--color-ink);
+}
+.paper-tooltip__meta {
+  font-size: 12px;
+  color: var(--color-grey);
+}
+.paper-tooltip__hint {
+  color: var(--color-ink2);
+}
+
 @media (hover: none) {
   .paper-card:focus-within:not(.paper-card--overlay) .card-peek {
     grid-template-rows: 1fr;
