@@ -1,0 +1,11 @@
+{
+  "$comment": "cardstock tag mapping for the Cardstock dev board. Tags resolve against the board's own tag groups; this file only adds group aliases, overrides and the audience rule. The cardstock scheme uses bare tags in two groups, so there is nothing to alias.",
+  "group_aliases": {},
+  "by_tag": {},
+  "by_epic": {},
+  "by_area": {},
+  "audience_internal_when": {
+    "tags": ["internal"],
+    "epics": []
+  }
+}
