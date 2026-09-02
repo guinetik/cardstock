@@ -168,7 +168,7 @@ function CalendarDayCell(props: {
             <PopoverTrigger className="calendar-more">
               +{overflow} more
             </PopoverTrigger>
-            <PopoverContent className="calendar-day-popover">
+            <PopoverContent className="calendar-day-popover rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
               {props.slips.map((slip) => (
                 <CalendarSlip
                   key={slipKey(slip)}
