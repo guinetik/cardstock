@@ -12,12 +12,16 @@ import { cardColorModifier, parseCardColor } from "@/lib/card-color";
 /**
  * Mini post-it for a calendar day or the unscheduled tray.
  *
+ * Resting chrome is `#id` + title (and the board name on the project page).
+ * Hover / focus opens the same peek pattern as a board card and reveals
+ * {@link CardAge}. Does not lift or swell — that would paint into the next week.
+ *
  * @param props.slip - Card plus board identity and gates.
  * @param props.projectSlug - Project URL slug.
  * @param props.showBoard - Print the board name (project calendar).
  * @param props.today - UTC day key.
  * @param props.watchDays - Forgotten watch window.
- * @param props.drag - Optional dnd-kit listeners/attributes from Task 4.
+ * @param props.drag - Optional dnd-kit listeners from the day/tray.
  * @param props.dragging - Dim while this slip is the overlay source.
  */
 export function CalendarSlip(props: {
@@ -43,25 +47,31 @@ export function CalendarSlip(props: {
       {...props.drag?.attributes}
       {...props.drag?.listeners}
       data-id={card.external_id}
-      className={`paper-card calendar-slip ${colorClass} ${props.dragging ? "opacity-40" : ""}`}
+      className={`paper-card paper-card--static calendar-slip ${colorClass} ${props.dragging ? "opacity-40" : ""}`}
     >
-      <span className="calendar-slip-id">#{card.external_id}</span>
-      <Link
-        href={href}
-        className="calendar-slip-title hover:underline"
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        {card.title}
-      </Link>
+      <div className="calendar-slip-rest">
+        <span className="calendar-slip-id">#{card.external_id}</span>
+        <Link
+          href={href}
+          className="calendar-slip-title hover:underline"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {card.title}
+        </Link>
+      </div>
       {props.showBoard && (
         <p className="calendar-slip-board">{props.slip.boardName}</p>
       )}
-      <CardAge
-        card={card}
-        today={props.today}
-        watchDays={props.watchDays}
-        gates={props.slip.gates}
-      />
+      <div className="card-peek">
+        <div className="card-peek-inner">
+          <CardAge
+            card={card}
+            today={props.today}
+            watchDays={props.watchDays}
+            gates={props.slip.gates}
+          />
+        </div>
+      </div>
     </article>
   );
 }
