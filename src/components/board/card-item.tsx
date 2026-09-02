@@ -191,54 +191,50 @@ export function CardItem(props: {
 
       <div className="card-rest">
         <div className="card-rest-inner">
-          <div className="card-meta mt-1 flex items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              {card.epic && <EpicLabel name={card.epic} />}
-              {card.status !== "backlog" && (
-                <span className={statusChipClass(card.status)}>
-                  {card.status}
-                </span>
-              )}
-              {age?.signal === "forgotten" && (
-                <span
-                  className="stat stat--blocked"
-                  title="No target past the watch window"
-                >
-                  forgotten
-                </span>
-              )}
-              {age?.signal === "overdue" && (
-                <span
-                  className="stat stat--blocked"
-                  title="Target date has passed"
-                >
-                  overdue
-                </span>
-              )}
-            </div>
-            <span className="ml-auto flex shrink-0 items-center gap-2">
-              {ageProps && <CardAge {...ageProps} />}
-              {(card.priority || card.effort) && (
-                <span className="flex gap-1">
-                  {card.priority && (
-                    <span
-                      className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
-                      title={`Priority ${card.priority}`}
-                    >
-                      P{card.priority}
-                    </span>
-                  )}
-                  {card.effort && (
-                    <span
-                      className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
-                      title="Effort"
-                    >
-                      {card.effort}
-                    </span>
-                  )}
-                </span>
-              )}
-            </span>
+          <div className="card-meta mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {card.epic && <EpicLabel name={card.epic} />}
+            {card.status !== "backlog" && (
+              <span className={statusChipClass(card.status)}>
+                {card.status}
+              </span>
+            )}
+            {age?.signal === "forgotten" && (
+              <span
+                className="stat stat--blocked"
+                title="No target past the watch window"
+              >
+                forgotten
+              </span>
+            )}
+            {age?.signal === "overdue" && (
+              <span
+                className="stat stat--blocked"
+                title="Target date has passed"
+              >
+                overdue
+              </span>
+            )}
+            {ageProps && <CardAge {...ageProps} />}
+            {(card.priority || card.effort) && (
+              <span className="flex gap-1">
+                {card.priority && (
+                  <span
+                    className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
+                    title={`Priority ${card.priority}`}
+                  >
+                    P{card.priority}
+                  </span>
+                )}
+                {card.effort && (
+                  <span
+                    className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
+                    title="Effort"
+                  >
+                    {card.effort}
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -246,7 +242,7 @@ export function CardItem(props: {
       <div className="card-peek">
         <div className="card-peek-inner">
           {/* Epic, state and the two actions share one line above the form. */}
-          <div className="card-peek-actions card-meta mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="card-peek-actions card-meta mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             {card.epic && <EpicLabel name={card.epic} />}
             <span className={statusChipClass(card.status)}>{card.status}</span>
             {card.audience === "internal" && (
@@ -276,29 +272,27 @@ export function CardItem(props: {
                 overdue
               </span>
             )}
-            <span className="ml-auto flex shrink-0 items-center gap-x-3">
-              {ageProps && <CardAge {...ageProps} />}
-              {props.projectSlug && !props.overlay && (
-                <a
-                  href={detail}
-                  className="paper-link text-[11.5px]"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  data-testid="open-issue"
-                >
-                  Open issue
-                </a>
-              )}
-              {props.onArchive && (
-                <button
-                  type="button"
-                  className="paper-link text-[11.5px]"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => props.onArchive?.(card.id, !card.archived_at)}
-                >
-                  {card.archived_at ? "Restore" : "Archive"}
-                </button>
-              )}
-            </span>
+            {ageProps && <CardAge {...ageProps} />}
+            {props.projectSlug && !props.overlay && (
+              <a
+                href={detail}
+                className="paper-link text-[11.5px]"
+                onPointerDown={(e) => e.stopPropagation()}
+                data-testid="open-issue"
+              >
+                Open issue
+              </a>
+            )}
+            {props.onArchive && (
+              <button
+                type="button"
+                className="paper-link text-[11.5px]"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => props.onArchive?.(card.id, !card.archived_at)}
+              >
+                {card.archived_at ? "Restore" : "Archive"}
+              </button>
+            )}
           </div>
 
           {/* The back of the card: a filled-in form, one labelled row each. */}
