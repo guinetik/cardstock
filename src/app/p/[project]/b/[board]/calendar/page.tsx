@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { updateCard } from "@/app/p/[project]/b/[board]/actions";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { loadBoard } from "@/lib/board-data";
 import { type CalendarSlip, calendarMonth } from "@/lib/calendar";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Calendar" };
 
 /**
- * Board month of target dates. Drag-to-schedule lands in Task 4.
+ * Board month of target dates. Drops persist `target_date` via `updateCard`.
  */
 export default async function BoardCalendarPage(
   props: PageProps<"/p/[project]/b/[board]/calendar">,
@@ -56,6 +57,9 @@ export default async function BoardCalendarPage(
         boards={[]}
         selectedBoards={null}
         path={path}
+        onPatch={async (cardId, targetDate) =>
+          updateCard(cardId, { target_date: targetDate })
+        }
       />
     </main>
   );

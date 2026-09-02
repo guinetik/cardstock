@@ -1,8 +1,22 @@
 "use client";
 
+import {
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+  KeyboardSensor,
+  MeasuringStrategy,
+  PointerSensor,
+  pointerWithin,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarSlip } from "@/components/calendar/calendar-slip";
+import { DraggableCalendarSlip } from "@/components/calendar/draggable-calendar-slip";
 import {
   Popover,
   PopoverContent,
@@ -23,6 +37,8 @@ const MONTH_HEADING = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   timeZone: "UTC",
 });
+
+const OVER_INK = { boxShadow: "inset 0 0 0 1px var(--color-ink)" } as const;
 
 function boardsHref(
   path: string,
@@ -61,7 +77,6 @@ function slipKey(slip: CalendarSlipData): string {
 
 /**
  * Month grid of target-date slips plus the unscheduled tray.
- * Task 4 wraps this in DndContext; this export is the layout shell.
  *
  * @param props.projectSlug - Project URL slug for card links.
  * @param props.today - UTC day key.
@@ -102,31 +117,56 @@ export function CalendarDesk(props: {
           />
         ))}
       </div>
-      <aside className="calendar-tray" data-calendar-tray="">
-        <h2>
-          Unscheduled{" "}
-          <span className="font-mono text-[10px] text-[var(--color-grey)]">
-            {props.tray.length}
-          </span>
-        </h2>
-        <div className="calendar-tray-list">
-          {props.tray.length === 0 ? (
-            <p className="text-xs text-[var(--color-grey)]">Nothing undated</p>
-          ) : (
-            props.tray.map((slip) => (
-              <CalendarSlip
-                key={slipKey(slip)}
-                slip={slip}
-                projectSlug={props.projectSlug}
-                showBoard={props.showBoard}
-                today={props.today}
-                watchDays={props.watchDays}
-              />
-            ))
-          )}
-        </div>
-      </aside>
+      <CalendarTray
+        slips={props.tray}
+        projectSlug={props.projectSlug}
+        showBoard={props.showBoard}
+        today={props.today}
+        watchDays={props.watchDays}
+      />
     </div>
+  );
+}
+
+function CalendarTray(props: {
+  slips: CalendarSlipData[];
+  projectSlug: string;
+  showBoard: boolean;
+  today: string;
+  watchDays: number;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: "calendar-tray" });
+  return (
+    <aside
+      ref={setNodeRef}
+      className="calendar-tray"
+      data-calendar-tray=""
+      data-over={isOver ? "" : undefined}
+      style={isOver ? OVER_INK : undefined}
+    >
+      <h2>
+        Unscheduled{" "}
+        <span className="font-mono text-[10px] text-[var(--color-grey)]">
+          {props.slips.length}
+        </span>
+      </h2>
+      <div className="calendar-tray-list">
+        {props.slips.length === 0 ? (
+          <p className="text-xs text-[var(--color-grey)]">Nothing undated</p>
+        ) : (
+          props.slips.map((slip) => (
+            <DraggableCalendarSlip
+              key={slipKey(slip)}
+              slip={slip}
+              projectSlug={props.projectSlug}
+              showBoard={props.showBoard}
+              today={props.today}
+              watchDays={props.watchDays}
+            />
+          ))
+        )}
+      </div>
+    </aside>
   );
 }
 
@@ -141,20 +181,26 @@ function CalendarDayCell(props: {
   watchDays: number;
 }) {
   const [open, setOpen] = useState(false);
+  const { setNodeRef, isOver } = useDroppable({
+    id: `calendar-day:${props.date}`,
+  });
   const { visible, overflow } = calendarDayOverflow(props.slips);
   const dayNum = Number(props.date.slice(8));
   return (
     <div
+      ref={setNodeRef}
       className="calendar-day"
       data-calendar-day={props.date}
       data-in-month={props.inMonth ? "true" : "false"}
       data-today={props.isToday ? "true" : "false"}
+      data-over={isOver ? "" : undefined}
+      style={isOver ? OVER_INK : undefined}
     >
       <span className="calendar-day-num">{dayNum}</span>
       <div className="calendar-pack">
         {!open &&
           visible.map((slip) => (
-            <CalendarSlip
+            <DraggableCalendarSlip
               key={slipKey(slip)}
               slip={slip}
               projectSlug={props.projectSlug}
@@ -171,7 +217,7 @@ function CalendarDayCell(props: {
             <PopoverContent className="rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
               <div className="calendar-day-popover">
                 {props.slips.map((slip) => (
-                  <CalendarSlip
+                  <DraggableCalendarSlip
                     key={slipKey(slip)}
                     slip={slip}
                     projectSlug={props.projectSlug}
@@ -190,7 +236,7 @@ function CalendarDayCell(props: {
 }
 
 /**
- * Read-only month of target dates. Pass `onPatch` in Task 4 to enable drag.
+ * Month of target dates. With `onPatch`, slips drag onto days or the tray.
  *
  * @param props.projectSlug - Project URL slug.
  * @param props.projectName - Mono eyebrow.
@@ -203,7 +249,7 @@ function CalendarDayCell(props: {
  * @param props.boards - Known boards for filter chips.
  * @param props.selectedBoards - Chip filter, or null for all.
  * @param props.path - Page path for month and chip links.
- * @param props.onPatch - Optional date write; unused until Task 4.
+ * @param props.onPatch - Persist `target_date` only; leave labels and start dates.
  */
 export function CalendarView(props: {
   projectSlug: string;
@@ -222,18 +268,68 @@ export function CalendarView(props: {
     targetDate: string | null,
   ) => Promise<{ ok: true } | { ok: false; error: string }>;
 }) {
+  const [items, setItems] = useState(props.slips);
+  const [error, setError] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  useEffect(() => setItems(props.slips), [props.slips]);
+
   const days = useMemo(
     () => monthMatrix(props.month, props.today),
     [props.month, props.today],
   );
   const { byDate, tray } = useMemo(
-    () => calendarGroups(props.slips, days),
-    [props.slips, days],
+    () => calendarGroups(items, days),
+    [items, days],
   );
   const monthLabel = MONTH_HEADING.format(new Date(`${props.month}-01`));
   const prevMonth = addCalendarMonths(props.month, -1);
   const nextMonth = addCalendarMonths(props.month, 1);
   const showBoard = props.boardSlug === null;
+  const overlay = items.find((slip) => slip.card.id === activeId);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  function applyTarget(cardId: string, targetDate: string | null) {
+    setItems((prev) =>
+      prev.map((slip) =>
+        slip.card.id === cardId
+          ? { ...slip, card: { ...slip.card, target_date: targetDate } }
+          : slip,
+      ),
+    );
+  }
+
+  function onDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+    setError(null);
+  }
+
+  async function onDragEnd(event: DragEndEvent) {
+    setActiveId(null);
+    const over = event.over?.id;
+    const cardId = String(event.active.id);
+    if (!over || !props.onPatch) return;
+    const previous = items.find((slip) => slip.card.id === cardId);
+    if (!previous) return;
+    let next: string | null | undefined;
+    if (over === "calendar-tray") next = null;
+    else {
+      const key = String(over);
+      if (key.startsWith("calendar-day:"))
+        next = key.slice("calendar-day:".length);
+    }
+    if (next === undefined) return;
+    if (next === previous.card.target_date) return;
+    applyTarget(cardId, next);
+    const result = await props.onPatch(cardId, next);
+    if (!result.ok) {
+      applyTarget(cardId, previous.card.target_date);
+      setError(result.error);
+    }
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -285,17 +381,45 @@ export function CalendarView(props: {
           })}
         </div>
       )}
-      <p role="alert" className="min-h-0 text-sm text-[var(--pen-red)]" />
+      {error && (
+        <p
+          role="alert"
+          className="basis-full border-l-2 border-[var(--pen-red)] bg-[var(--surface-card)] px-3 py-2 text-sm"
+        >
+          {error}
+        </p>
+      )}
       <TooltipProvider>
-        <CalendarDesk
-          projectSlug={props.projectSlug}
-          today={props.today}
-          watchDays={props.watchDays}
-          showBoard={showBoard}
-          days={days}
-          byDate={byDate}
-          tray={tray}
-        />
+        <DndContext
+          id="calendar-dnd"
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setActiveId(null)}
+        >
+          <CalendarDesk
+            projectSlug={props.projectSlug}
+            today={props.today}
+            watchDays={props.watchDays}
+            showBoard={showBoard}
+            days={days}
+            byDate={byDate}
+            tray={tray}
+          />
+          <DragOverlay>
+            {overlay ? (
+              <CalendarSlip
+                slip={overlay}
+                projectSlug={props.projectSlug}
+                showBoard={showBoard}
+                today={props.today}
+                watchDays={props.watchDays}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </TooltipProvider>
     </div>
   );

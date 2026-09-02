@@ -1,7 +1,10 @@
 "use client";
 
+import type {
+  DraggableAttributes,
+  DraggableSyntheticListeners,
+} from "@dnd-kit/core";
 import Link from "next/link";
-import type { HTMLAttributes } from "react";
 import { CardAge } from "@/components/board/card-age";
 import type { CalendarSlip as CalendarSlipData } from "@/lib/calendar";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
@@ -24,8 +27,8 @@ export function CalendarSlip(props: {
   today: string;
   watchDays: number;
   drag?: {
-    attributes: HTMLAttributes<HTMLElement>;
-    listeners: Record<string, (...args: unknown[]) => unknown> | undefined;
+    attributes: DraggableAttributes;
+    listeners: DraggableSyntheticListeners;
     setNodeRef: (node: HTMLElement | null) => void;
   };
   dragging?: boolean;
