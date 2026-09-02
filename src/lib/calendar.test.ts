@@ -132,15 +132,17 @@ describe("calendarGroups", () => {
 });
 
 describe("calendarDayOverflow", () => {
-  test("caps at four visible slips", () => {
-    expect(calendarDayOverflow([1, 2, 3, 4])).toEqual({
-      visible: [1, 2, 3, 4],
+  test("caps at eight visible slips", () => {
+    expect(calendarDayOverflow([1, 2, 3, 4, 5, 6, 7, 8])).toEqual({
+      visible: [1, 2, 3, 4, 5, 6, 7, 8],
       overflow: 0,
     });
-    expect(calendarDayOverflow([1, 2, 3, 4, 5, 6]).overflow).toBe(2);
-    expect(calendarDayOverflow([1, 2, 3, 4, 5, 6]).visible).toEqual([
-      1, 2, 3, 4,
-    ]);
+    expect(calendarDayOverflow([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).overflow).toBe(
+      2,
+    );
+    expect(
+      calendarDayOverflow([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).visible,
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 });
 

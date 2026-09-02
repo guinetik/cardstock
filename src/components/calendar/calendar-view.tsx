@@ -40,8 +40,6 @@ const MONTH_HEADING = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
-const OVER_INK = { boxShadow: "inset 0 0 0 1px var(--color-ink)" } as const;
-
 const POPOVER_DAY = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
   month: "short",
@@ -152,7 +150,6 @@ function CalendarTray(props: {
       className="calendar-tray"
       data-calendar-tray=""
       data-over={isOver ? "" : undefined}
-      style={isOver ? OVER_INK : undefined}
     >
       <h2>
         Unscheduled{" "}
@@ -208,51 +205,52 @@ function CalendarDayCell(props: {
       data-today={props.isToday ? "true" : "false"}
       data-overflow={overflow > 0 ? "true" : undefined}
       data-over={isOver ? "" : undefined}
-      style={isOver ? OVER_INK : undefined}
     >
-      <span className="calendar-day-num">{dayNum}</span>
-      <div className="calendar-pack">
-        {!open &&
-          visible.map((slip) => (
-            <DraggableCalendarSlip
-              key={slipKey(slip)}
-              slip={slip}
-              projectSlug={props.projectSlug}
-              showBoard={props.showBoard}
-              today={props.today}
-              watchDays={props.watchDays}
-            />
-          ))}
+      <div className="calendar-day-body">
+        <span className="calendar-day-num">{dayNum}</span>
+        <div className="calendar-pack">
+          {!open &&
+            visible.map((slip) => (
+              <DraggableCalendarSlip
+                key={slipKey(slip)}
+                slip={slip}
+                projectSlug={props.projectSlug}
+                showBoard={props.showBoard}
+                today={props.today}
+                watchDays={props.watchDays}
+                stub
+              />
+            ))}
+          {overflow > 0 && (
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger className="calendar-more">
+                +{overflow}
+              </PopoverTrigger>
+              <PopoverContent className="rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
+                <div
+                  ref={setPopoverRef}
+                  className="calendar-day-popover"
+                  data-over={popoverOver ? "" : undefined}
+                >
+                  <h3 className="calendar-day-popover-title">
+                    {POPOVER_DAY.format(new Date(`${props.date}T00:00:00Z`))}
+                  </h3>
+                  {props.slips.map((slip) => (
+                    <DraggableCalendarSlip
+                      key={slipKey(slip)}
+                      slip={slip}
+                      projectSlug={props.projectSlug}
+                      showBoard={props.showBoard}
+                      today={props.today}
+                      watchDays={props.watchDays}
+                    />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
       </div>
-      {overflow > 0 && (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger className="calendar-more">
-            +{overflow} more
-          </PopoverTrigger>
-          <PopoverContent className="rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
-            <div
-              ref={setPopoverRef}
-              className="calendar-day-popover"
-              data-over={popoverOver ? "" : undefined}
-              style={popoverOver ? OVER_INK : undefined}
-            >
-              <h3 className="calendar-day-popover-title">
-                {POPOVER_DAY.format(new Date(`${props.date}T00:00:00Z`))}
-              </h3>
-              {props.slips.map((slip) => (
-                <DraggableCalendarSlip
-                  key={slipKey(slip)}
-                  slip={slip}
-                  projectSlug={props.projectSlug}
-                  showBoard={props.showBoard}
-                  today={props.today}
-                  watchDays={props.watchDays}
-                />
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
     </div>
   );
 }
@@ -305,7 +303,7 @@ export function CalendarView(props: {
   const overlay = items.find((slip) => slip.card.id === activeId);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
     useSensor(KeyboardSensor),
   );
 
@@ -432,6 +430,8 @@ export function CalendarView(props: {
                 showBoard={showBoard}
                 today={props.today}
                 watchDays={props.watchDays}
+                stub={overlay.card.target_date !== null}
+                overlay
               />
             ) : null}
           </DragOverlay>

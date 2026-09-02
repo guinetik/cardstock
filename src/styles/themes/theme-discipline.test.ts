@@ -204,6 +204,17 @@ describe("paper components", () => {
     expect(css).toContain(".paper-card--static:is(:hover, :focus-within)");
   });
 
+  test("calendar slips expand a float on hover without stretching the day", () => {
+    expect(css).toContain(".calendar-slip[data-float]");
+    expect(css).toMatch(/\.calendar-day \{[^}]*overflow:\s*hidden/);
+    expect(css).not.toMatch(
+      /\.calendar-day:is\(:hover, :focus-within\) \{[^}]*overflow:\s*visible/,
+    );
+    expect(css).toContain(
+      ".calendar-slip.paper-card--static:is(:hover, :focus-within)",
+    );
+  });
+
   test("dialogs drop the frosted overlay", () => {
     expect(css).toContain('[data-slot="dialog-overlay"]');
     expect(css).toContain("backdrop-filter: none");

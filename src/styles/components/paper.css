@@ -2242,7 +2242,7 @@
     color: var(--color-grey-faint);
   }
 
-  /* Month of target dates — square days, two-up slips, unscheduled tray. */
+  /* Month of target dates — square days, stacked slips, unscheduled tray. */
   .calendar-page {
     display: flex;
     flex: 1;
@@ -2255,7 +2255,7 @@
     min-width: 0;
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    align-items: start;
+    align-items: stretch;
     gap: 0.5rem;
   }
   .calendar-dow {
@@ -2269,22 +2269,23 @@
   .calendar-day {
     aspect-ratio: 1;
     width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
     display: flex;
+    flex-direction: column;
+    background: var(--surface-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+  }
+  .calendar-day-body {
+    display: flex;
+    flex: 1;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
     padding: 0.28rem;
-    background: var(--surface-card);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-card);
-  }
-  .calendar-day:is(:hover, :focus-within) {
-    overflow: visible;
-    z-index: 4;
-  }
-  .calendar-day:is(:hover, :focus-within) .calendar-pack {
-    overflow: visible;
   }
   .calendar-day[data-today="true"] {
     outline: 1px solid var(--color-ink);
@@ -2306,27 +2307,37 @@
     color: var(--color-grey-faint);
   }
   .calendar-pack {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.2rem;
+    display: flex;
+    flex-flow: row wrap;
+    gap: 0.25rem;
     align-content: start;
+    align-items: start;
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    pointer-events: none;
+  }
+  .calendar-pack .calendar-slip {
+    pointer-events: auto;
   }
   .calendar-more {
+    position: relative;
+    z-index: 2;
     flex-shrink: 0;
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 10px;
+    line-height: 1;
     color: var(--color-ink2);
-    text-align: left;
     background: transparent;
-    border: 0;
-    padding: 0.1rem 0.15rem;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-card);
+    padding: 0.22rem 0.3rem;
+    pointer-events: auto;
     cursor: pointer;
   }
   .calendar-more:hover {
     color: var(--color-ink);
+    border-color: var(--color-ink);
   }
   .calendar-tray {
     width: 14rem;
@@ -2351,19 +2362,45 @@
     min-height: 0;
   }
   .calendar-slip {
+    position: relative;
+    z-index: 0;
+    align-self: start;
+    height: max-content;
+    min-width: 0;
+    overflow: visible;
     padding: 0.22rem 0.3rem 0.24rem;
+  }
+  .calendar-slip-anchor {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
   }
-  .calendar-slip:is(:hover, :focus-within) {
-    z-index: 2;
-    box-shadow: var(--shadow-lift);
-    border-color: var(--border-strong);
-  }
-  .calendar-slip-rest {
+  .calendar-slip-slot {
     display: flex;
     gap: 0.28rem;
     align-items: baseline;
     min-width: 0;
+  }
+  .calendar-slip-open {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    min-width: 0;
+  }
+  /* No `transform: none` here: Lightning CSS would fold these individual
+   * properties into it and drop them, letting the layered hover `scale: 1`
+   * win — a scaled slip becomes the containing block for the fixed float. */
+  .calendar-slip.paper-card--static:is(:hover, :focus-within) {
+    box-shadow: var(--shadow-card);
+    border-color: var(--border-hairline);
+    translate: none;
+    scale: none;
+  }
+  .calendar-slip.paper-card--static:is(:hover, :focus-within)::after {
+    content: none;
+  }
+  .calendar-slip:is(:hover, :focus-within):not(.opacity-40) {
+    z-index: 6;
   }
   .calendar-slip .calendar-slip-id {
     flex-shrink: 0;
@@ -2371,30 +2408,110 @@
     font-size: 10px;
     color: var(--color-grey);
   }
+  /* Day-grid post-it stub: bare number on a tilted square of stock. */
+  /* No rotate transition: while rotate animates, the article is a containing
+   * block and the fixed float pins against it instead of the viewport. */
+  .calendar-slip--stub {
+    rotate: var(--slip-tilt, 0deg);
+    padding: 0.24rem 0.28rem;
+    cursor: grab;
+  }
+  .calendar-slip--stub .calendar-slip-id-link {
+    text-decoration: none;
+  }
+  .calendar-slip--stub .calendar-slip-id {
+    font-size: 10.5px;
+    line-height: 1;
+    color: var(--color-ink2);
+  }
+  .calendar-slip--stub:is(:hover, :focus-within) .calendar-slip-id {
+    color: var(--color-ink);
+  }
+  /* `rotate` would make the fixed float position against the stub, so the
+   * post-it straightens while its float is pinned. */
+  .calendar-slip--stub[data-float] {
+    rotate: none;
+  }
+  /* In hand: the drag ghost lifts clear of the grid. */
+  .calendar-slip.paper-card--static.calendar-slip--lift {
+    rotate: -3deg;
+    scale: 1.08;
+    box-shadow: var(--shadow-hand);
+    cursor: grabbing;
+  }
   .calendar-slip .calendar-slip-title {
     display: -webkit-box;
-    -webkit-line-clamp: 1;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     min-width: 0;
+    margin: 0;
     font-size: 12px;
     line-height: 1.25;
     font-weight: 500;
+  }
+  .calendar-slip .calendar-slip-title--full {
+    -webkit-line-clamp: unset;
+    display: block;
+    overflow: visible;
   }
   .calendar-slip .calendar-slip-board {
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 9px;
     color: var(--color-grey);
-    margin-top: 0.1rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin: 0.15rem 0 0;
   }
-  .calendar-slip .card-peek-inner {
-    padding-top: 0.2rem;
+  .calendar-slip-float {
+    position: fixed;
+    top: var(--calendar-float-top, 0);
+    left: var(--calendar-float-left, 0);
+    z-index: 40;
+    box-sizing: border-box;
+    width: var(--calendar-float-width, 12.5rem);
+    min-height: var(--calendar-float-min-height, 0);
+    padding: 0.35rem 0.45rem 0.4rem;
+    background: inherit;
+    color: inherit;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-lift);
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+    scale: 0.95;
+    transform-origin: top left;
+    transition:
+      opacity 90ms ease-out,
+      scale 90ms ease-out;
   }
-  .calendar-day-popover .calendar-slip .card-peek {
-    grid-template-rows: 1fr;
+  .calendar-slip[data-float] .calendar-slip-float {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    scale: 1;
+  }
+  /* Where the slip lands: an unmistakable pen-drawn frame plus a tint. */
+  .calendar-day[data-over],
+  .calendar-tray[data-over],
+  .calendar-day-popover[data-over] {
+    outline: 2px dashed var(--color-ink);
+    outline-offset: -2px;
+    background-image: linear-gradient(var(--fill-subtle), var(--fill-subtle));
+  }
+  .calendar-day-popover .calendar-slip-anchor {
+    display: none;
+  }
+  .calendar-day-popover .calendar-slip-float {
+    position: static;
+    width: auto;
+    visibility: visible;
+    pointer-events: auto;
+    box-shadow: none;
+    border: 0;
+    padding: 0;
+    opacity: 1;
+    scale: none;
+    transition: none;
   }
   .calendar-day-popover {
     display: flex;

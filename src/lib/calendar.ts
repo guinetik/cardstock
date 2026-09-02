@@ -6,7 +6,7 @@ const MONTH = /^(\d{4})-(0[1-9]|1[0-2])$/;
 const DAY_DROP = /^calendar-day:(\d{4}-\d{2}-\d{2})(?::popover)?$/;
 
 /** Visible slips in a day cell before "+N more". */
-export const CALENDAR_DAY_CAP = 4;
+export const CALENDAR_DAY_CAP = 8;
 
 /** Sunday-first weekday labels for the month grid header. */
 export const CALENDAR_WEEKDAYS = [
