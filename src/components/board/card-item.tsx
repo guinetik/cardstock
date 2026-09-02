@@ -189,62 +189,63 @@ export function CardItem(props: {
         </p>
       </div>
 
-      <div className="card-rest">
-        <div className="card-rest-inner">
-          <div className="card-meta mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {card.epic && <EpicLabel name={card.epic} />}
-            {card.status !== "backlog" && (
-              <span className={statusChipClass(card.status)}>
-                {card.status}
-              </span>
-            )}
-            {age?.signal === "forgotten" && (
-              <span
-                className="stat stat--blocked"
-                title="No target past the watch window"
-              >
-                forgotten
-              </span>
-            )}
-            {age?.signal === "overdue" && (
-              <span
-                className="stat stat--blocked"
-                title="Target date has passed"
-              >
-                overdue
-              </span>
-            )}
-            {ageProps && <CardAge {...ageProps} />}
-            {(card.priority || card.effort) && (
-              <span className="flex gap-1">
-                {card.priority && (
-                  <span
-                    className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
-                    title={`Priority ${card.priority}`}
-                  >
-                    P{card.priority}
-                  </span>
-                )}
-                {card.effort && (
-                  <span
-                    className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
-                    title="Effort"
-                  >
-                    {card.effort}
-                  </span>
-                )}
-              </span>
-            )}
+      <div className="card-meta card-meta--chrome mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        {card.epic && <EpicLabel name={card.epic} />}
+        {card.status !== "backlog" && (
+          <span className={statusChipClass(card.status)}>{card.status}</span>
+        )}
+        {age?.signal === "forgotten" && (
+          <span
+            className="stat stat--blocked"
+            title="No target past the watch window"
+          >
+            forgotten
+          </span>
+        )}
+        {age?.signal === "overdue" && (
+          <span
+            className="stat stat--blocked"
+            title="Target date has passed"
+          >
+            overdue
+          </span>
+        )}
+      </div>
+
+      {(ageProps || card.priority || card.effort) && (
+        <div className="card-rest">
+          <div className="card-rest-inner">
+            <div className="card-meta card-meta--summary mt-1 flex items-center gap-2">
+              {ageProps && <CardAge {...ageProps} />}
+              {(card.priority || card.effort) && (
+                <span className="card-meta-chips flex shrink-0 gap-1">
+                  {card.priority && (
+                    <span
+                      className={`sq sq--on ${PRIORITY_PEN[card.priority]}`}
+                      title={`Priority ${card.priority}`}
+                    >
+                      P{card.priority}
+                    </span>
+                  )}
+                  {card.effort && (
+                    <span
+                      className={`sq sq--on ${EFFORT_PEN[card.effort]}`}
+                      title="Effort"
+                    >
+                      {card.effort}
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="card-peek">
         <div className="card-peek-inner">
           {/* Epic, state and the two actions share one line above the form. */}
           <div className="card-peek-actions card-meta mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {card.epic && <EpicLabel name={card.epic} />}
-            <span className={statusChipClass(card.status)}>{card.status}</span>
             {card.audience === "internal" && (
               <span className="stat stat--flat">internal</span>
             )}
@@ -254,22 +255,6 @@ export function CardItem(props: {
                 title="Days in this lane"
               >
                 {days}d
-              </span>
-            )}
-            {age?.signal === "forgotten" && (
-              <span
-                className="stat stat--blocked"
-                title="No target past the watch window"
-              >
-                forgotten
-              </span>
-            )}
-            {age?.signal === "overdue" && (
-              <span
-                className="stat stat--blocked"
-                title="Target date has passed"
-              >
-                overdue
               </span>
             )}
             {ageProps && <CardAge {...ageProps} />}

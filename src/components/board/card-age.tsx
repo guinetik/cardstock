@@ -20,8 +20,14 @@ const RAISED_SHORT = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
-const RING_R = 5.5;
-const RING_C = 2 * Math.PI * RING_R;
+const GAUGE_R = 6;
+const GAUGE_CX = 8;
+const GAUGE_CY = 8;
+const GAUGE_ARC = Math.PI * GAUGE_R;
+const GAUGE_PATH = `M ${GAUGE_CX - GAUGE_R} ${GAUGE_CY} A ${GAUGE_R} ${GAUGE_R} 0 0 1 ${GAUGE_CX + GAUGE_R} ${GAUGE_CY}`;
+const GAUGE_OUTER_R = GAUGE_R + 2;
+const GAUGE_OUTER_PATH = `M ${GAUGE_CX - GAUGE_OUTER_R} ${GAUGE_CY} A ${GAUGE_OUTER_R} ${GAUGE_OUTER_R} 0 0 1 ${GAUGE_CX + GAUGE_OUTER_R} ${GAUGE_CY}`;
+const GAUGE_OUTER_ARC = Math.PI * GAUGE_OUTER_R;
 
 const SIGNAL_HINT: Record<TimelineSignal, string> = {
   forgotten: "Past the watch window with no target — give it a date or close it.",
@@ -77,9 +83,9 @@ export function cardAgeState(
 }
 
 /**
- * Read-only raised date with a ring that fills toward the forgotten watch
- * window. Forgotten and overdue cards wear the same assessment colours as the
- * timeline view.
+ * Read-only raised date with a speedometer arc that fills toward the
+ * forgotten watch window. Forgotten and overdue cards wear the same assessment
+ * colours as the timeline view.
  */
 export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
   if (!card.raised_on) return null;
@@ -90,8 +96,8 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
     watchDays,
     gates,
   );
-  const fill = RING_C * (1 - progress);
-  const overrun = Math.min(pastWindow, 1) * RING_C;
+  const fillOffset = GAUGE_ARC * (1 - progress);
+  const overrun = Math.min(pastWindow, 1) * GAUGE_OUTER_ARC;
 
   return (
     <PaperTooltip
@@ -109,59 +115,54 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
       }
     >
       <span data-signal={signal} className="card-age inline-flex items-center">
-      <CalendarClock
-        className="card-age__icon shrink-0"
-        size={11}
-        strokeWidth={2.2}
-        aria-hidden="true"
-      />
-      <svg
-        className="card-age-ring"
-        width="14"
-        height="14"
-        viewBox="0 0 14 14"
-        aria-hidden="true"
-      >
-        <circle
-          className="card-age-ring__track"
-          cx="7"
-          cy="7"
-          r={RING_R}
-          fill="none"
-          strokeWidth="1.5"
+        <CalendarClock
+          className="card-age__icon shrink-0"
+          size={13}
+          strokeWidth={2}
+          aria-hidden="true"
         />
-        <circle
-          className="card-age-ring__fill"
-          cx="7"
-          cy="7"
-          r={RING_R}
-          fill="none"
-          strokeWidth="1.5"
-          strokeDasharray={RING_C}
-          strokeDashoffset={fill}
-          transform="rotate(-90 7 7)"
-        />
-        {pastWindow > 0 && (
-          <circle
-            className="card-age-ring__overrun"
-            cx="7"
-            cy="7"
-            r={RING_R + 2}
+        <svg
+          className="card-age-gauge"
+          width="16"
+          height="10"
+          viewBox="0 0 16 10"
+          aria-hidden="true"
+        >
+          <path
+            className="card-age-gauge__track"
+            d={GAUGE_PATH}
             fill="none"
-            strokeWidth="1"
-            strokeDasharray={RING_C + 12.57}
-            strokeDashoffset={RING_C + 12.57 - overrun}
-            transform="rotate(-90 7 7)"
+            strokeWidth="1.6"
+            pathLength={GAUGE_ARC}
           />
-        )}
-      </svg>
-      <time
-        className="card-age-date"
-        dateTime={card.raised_on}
-        aria-label={`Raised ${formatRaisedShort(card.raised_on)}`}
-      >
-        {formatRaisedShort(card.raised_on)}
-      </time>
+          <path
+            className="card-age-gauge__fill"
+            d={GAUGE_PATH}
+            fill="none"
+            strokeWidth="1.6"
+            pathLength={GAUGE_ARC}
+            strokeDasharray={GAUGE_ARC}
+            strokeDashoffset={fillOffset}
+          />
+          {pastWindow > 0 && (
+            <path
+              className="card-age-gauge__overrun"
+              d={GAUGE_OUTER_PATH}
+              fill="none"
+              strokeWidth="1.1"
+              pathLength={GAUGE_OUTER_ARC}
+              strokeDasharray={GAUGE_OUTER_ARC}
+              strokeDashoffset={GAUGE_OUTER_ARC - overrun}
+            />
+          )}
+        </svg>
+        <time
+          className="card-age-date"
+          dateTime={card.raised_on}
+          aria-label={`Raised ${formatRaisedShort(card.raised_on)}`}
+        >
+          {formatRaisedShort(card.raised_on)}
+        </time>
       </span>
     </PaperTooltip>
   );

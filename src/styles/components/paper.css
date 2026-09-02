@@ -672,61 +672,63 @@
 }
 
 /*
- * Raised date and age ring beside the card number. The inner ring fills toward
- * the project's forgotten watch window; an outer ring appears once work is past
- * it. Signal colours match the timeline assessment marks.
+ * Raised date and age gauge on the summary row. The semicircle fills toward
+ * the forgotten watch window; an outer arc appears once work is past it.
+ * Signal colours match the timeline assessment marks.
  */
 .card-age {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
   color: var(--color-grey);
 }
 .card-age__icon {
-  opacity: 0.75;
+  width: 0.8125rem;
+  height: 0.8125rem;
+  opacity: 0.85;
 }
 .card-age-date {
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 9.5px;
+  font-size: 11px;
   line-height: 1;
   letter-spacing: -0.01em;
 }
-.card-age-ring {
+.card-age-gauge {
   flex-shrink: 0;
 }
-.card-age-ring__track {
+.card-age-gauge__track {
   stroke: var(--color-grey-faint);
   opacity: 0.45;
 }
-.card-age-ring__fill {
+.card-age-gauge__fill {
   stroke-linecap: round;
   transition: stroke-dashoffset 0.4s var(--motion-ease-settle);
 }
-.card-age-ring__overrun {
+.card-age-gauge__overrun {
   stroke-linecap: round;
   opacity: 0.85;
 }
-.card-age[data-signal="active"] .card-age-ring__fill {
+.card-age[data-signal="active"] .card-age-gauge__fill {
   stroke: var(--color-grey);
 }
 .card-age[data-signal="active"] .card-age__icon {
   color: var(--color-grey);
 }
-.card-age[data-signal="planned"] .card-age-ring__fill {
+.card-age[data-signal="planned"] .card-age-gauge__fill {
   stroke: var(--pen-blue);
 }
 .card-age[data-signal="planned"] .card-age__icon {
   color: var(--pen-blue);
 }
-.card-age[data-signal="overdue"] .card-age-ring__fill,
-.card-age[data-signal="overdue"] .card-age-ring__overrun {
+.card-age[data-signal="overdue"] .card-age-gauge__fill,
+.card-age[data-signal="overdue"] .card-age-gauge__overrun {
   stroke: var(--pen-amber);
 }
 .card-age[data-signal="overdue"] .card-age__icon {
   color: var(--pen-amber);
 }
-.card-age[data-signal="forgotten"] .card-age-ring__fill,
-.card-age[data-signal="forgotten"] .card-age-ring__overrun {
+.card-age[data-signal="forgotten"] .card-age-gauge__fill,
+.card-age[data-signal="forgotten"] .card-age-gauge__overrun {
   stroke: var(--pen-red);
 }
 .card-age[data-signal="forgotten"] .card-age-date {
@@ -737,7 +739,7 @@
   color: var(--pen-red);
   opacity: 1;
 }
-.card-age[data-signal="delivered"] .card-age-ring__fill {
+.card-age[data-signal="delivered"] .card-age-gauge__fill {
   stroke: var(--pen-green);
 }
 .card-age[data-signal="delivered"] .card-age__icon {
@@ -768,11 +770,17 @@
   text-transform: uppercase;
 }
 .epic-label__icon {
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.8125rem;
+  height: 0.8125rem;
 }
 .card-meta {
   min-height: 1.125rem;
+}
+.card-meta--summary {
+  width: 100%;
+}
+.card-meta-chips {
+  margin-left: auto;
 }
 
 /* Clipped margin notes — not the OS tooltip or the inverted UI default. */
