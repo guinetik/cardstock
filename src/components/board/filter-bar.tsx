@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { EpicLabel } from "@/components/epic-label";
 import { statusChipClass } from "@/lib/card-status";
 import type { Filters, InboxSort } from "@/lib/filters";
-import { EFFORT_LABEL, markHue, type TagGroup } from "@/lib/types";
+import { EPIC_FILTER_NONE } from "@/lib/filters";
+import { EFFORT_LABEL, markHue, type Epic, type TagGroup } from "@/lib/types";
 
 const PEN = { 1: "sq--red", 2: "sq--blue", 3: "sq--violet" } as const;
 const EFF = { L: "sq--green", M: "sq--amber", H: "sq--red" } as const;
@@ -35,6 +37,8 @@ function Caret() {
 export function FilterBar(props: {
   groups: TagGroup[];
   statuses: string[];
+  epics: Pick<Epic, "id" | "source_name">[];
+  hasUnassignedEpics: boolean;
   filters: Filters;
   onChange: (f: Filters) => void;
   filtering: boolean;
@@ -43,6 +47,8 @@ export function FilterBar(props: {
   onShowInternal: (v: boolean) => void;
 }) {
   const { filters: f, onChange } = props;
+  const epicName = new Map(props.epics.map((e) => [e.id, e.source_name]));
+  const showEpicFilter = props.epics.length > 0 || props.hasUnassignedEpics;
   const toggle = <T,>(set: Set<T>, v: T) => {
     const n = new Set(set);
     n.has(v) ? n.delete(v) : n.add(v);
@@ -248,6 +254,79 @@ export function FilterBar(props: {
         </fieldset>
       )}
 
+      {showEpicFilter && (
+        <fieldset className="fieldset relative">
+          <legend>Epic</legend>
+          <details
+            name="filter-menu"
+            data-key="epic"
+            onToggle={(e) => {
+              if (e.currentTarget.open) setMenuOpen(true);
+            }}
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 pb-0.5 text-[13px]">
+              {f.epic === EPIC_FILTER_NONE ? (
+                <span className="stat stat--muted">unassigned</span>
+              ) : f.epic ? (
+                <EpicLabel name={epicName.get(f.epic) ?? "Epic"} />
+              ) : (
+                <span className="stat stat--muted">any</span>
+              )}
+              <Caret />
+            </summary>
+            <div className="absolute left-0 top-full z-20 mt-2 flex min-w-[10rem] max-w-[18rem] flex-col gap-1.5 rounded-[var(--radius-card)] border border-[var(--border-strong)] bg-[var(--surface-raised)] p-3 shadow-[var(--shadow-lift)]">
+              <button
+                type="button"
+                aria-pressed={f.epic === null}
+                className="stat stat--muted text-left"
+                onClick={(e) => {
+                  onChange({ ...f, epic: null });
+                  closeMenu(e.currentTarget);
+                }}
+              >
+                any
+              </button>
+              {props.hasUnassignedEpics && (
+                <button
+                  type="button"
+                  aria-pressed={f.epic === EPIC_FILTER_NONE}
+                  className="stat stat--muted text-left"
+                  onClick={(e) => {
+                    onChange({
+                      ...f,
+                      epic: f.epic === EPIC_FILTER_NONE ? null : EPIC_FILTER_NONE,
+                    });
+                    closeMenu(e.currentTarget);
+                  }}
+                >
+                  unassigned
+                </button>
+              )}
+              {props.epics.map((epic) => {
+                const on = f.epic === epic.id;
+                return (
+                  <button
+                    key={epic.id}
+                    type="button"
+                    aria-pressed={on}
+                    className="text-left"
+                    onClick={(e) => {
+                      onChange({
+                        ...f,
+                        epic: on ? null : epic.id,
+                      });
+                      closeMenu(e.currentTarget);
+                    }}
+                  >
+                    <EpicLabel name={epic.source_name} />
+                  </button>
+                );
+              })}
+            </div>
+          </details>
+        </fieldset>
+      )}
+
       <fieldset className="fieldset gap-3">
         <legend>Also show</legend>
         <label className={check}>
@@ -297,6 +376,7 @@ export function FilterBar(props: {
               priority: new Set(),
               effort: new Set(),
               status: null,
+              epic: null,
               showArchived: false,
             })
           }

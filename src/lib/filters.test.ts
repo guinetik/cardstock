@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   boardStatuses,
   emptyFilters,
+  EPIC_FILTER_NONE,
   isFiltering,
   matches,
   sortInbox,
@@ -157,6 +158,71 @@ describe("status filter", () => {
     ).toBe(false);
     expect(
       matches(task({ status: "backlog", priority: 1 }), f, groups, lanes),
+    ).toBe(false);
+  });
+});
+
+describe("epic filter", () => {
+  const lanes = [work];
+  const groups: TagGroup[] = [];
+
+  test("emptyFilters is not filtering by epic", () => {
+    const f = emptyFilters();
+    expect(f.epic).toBeNull();
+    expect(isFiltering(f)).toBe(false);
+  });
+
+  test("a selected epic counts as filtering", () => {
+    const f = { ...emptyFilters(), epic: "epic-1" };
+    expect(isFiltering(f)).toBe(true);
+  });
+
+  test("null keeps every epic", () => {
+    const f = emptyFilters();
+    expect(matches(task({ epic_id: "epic-1" }), f, groups, lanes)).toBe(true);
+    expect(matches(task({ epic_id: null }), f, groups, lanes)).toBe(true);
+  });
+
+  test("one epic keeps only cards on that epic", () => {
+    const f = { ...emptyFilters(), epic: "epic-1" };
+    expect(
+      matches(task({ epic_id: "epic-1", epic: "Onboarding" }), f, groups, lanes),
+    ).toBe(true);
+    expect(
+      matches(task({ epic_id: "epic-2", epic: "Billing" }), f, groups, lanes),
+    ).toBe(false);
+  });
+
+  test("unassigned keeps only cards without an epic", () => {
+    const f = { ...emptyFilters(), epic: EPIC_FILTER_NONE };
+    expect(matches(task({ epic_id: null, epic: null }), f, groups, lanes)).toBe(
+      true,
+    );
+    expect(
+      matches(task({ epic_id: "epic-1", epic: "Onboarding" }), f, groups, lanes),
+    ).toBe(false);
+    expect(
+      matches(task({ epic_id: null, epic: "Legacy name" }), f, groups, lanes),
+    ).toBe(false);
+  });
+
+  test("epic still combines with status", () => {
+    const f = { ...emptyFilters(), epic: "epic-1", status: "wip" };
+    expect(
+      matches(
+        task({ epic_id: "epic-1", status: "wip" }),
+        f,
+        groups,
+        lanes,
+      ),
+    ).toBe(true);
+    expect(
+      matches(
+        task({ epic_id: "epic-1", status: "backlog" }),
+        f,
+        groups,
+        lanes,
+      ),
     ).toBe(false);
   });
 });

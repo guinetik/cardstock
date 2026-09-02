@@ -550,6 +550,17 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     .filter((l) => l.kind === "inbox")
     .reduce((n, l) => n + (byLane.get(l.id)?.length ?? 0), 0);
   const open = cards.filter((c) => !c.archived_at).length;
+  const hasUnassignedEpics = useMemo(
+    () => cards.some((c) => !c.epic_id && !c.epic?.trim()),
+    [cards],
+  );
+  const boardEpics = useMemo(
+    () =>
+      [...data.epics].sort((a, b) =>
+        a.source_name.localeCompare(b.source_name),
+      ),
+    [data.epics],
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -605,6 +616,8 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       <FilterBar
         groups={data.groups}
         statuses={boardStatuses(cards)}
+        epics={boardEpics}
+        hasUnassignedEpics={hasUnassignedEpics}
         filters={filters}
         onChange={setFilters}
         filtering={isFiltering(filters)}

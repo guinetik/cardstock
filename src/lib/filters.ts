@@ -1,5 +1,8 @@
 import type { Card, Lane, TagGroup } from "./types";
 
+/** Filter value for cards with no epic assigned. */
+export const EPIC_FILTER_NONE = "__none__";
+
 export interface Filters {
   query: string;
   tags: Set<string>; // tag ids; OR within a group, AND across groups
@@ -7,6 +10,8 @@ export interface Filters {
   effort: Set<"L" | "M" | "H">;
   /** One tracker status, or null for every status. */
   status: string | null;
+  /** One epic id, {@link EPIC_FILTER_NONE} for unassigned, or null for every epic. */
+  epic: string | null;
   showInternal: boolean;
   showArchived: boolean;
 }
@@ -19,6 +24,7 @@ export function emptyFilters(showInternal = true): Filters {
     priority: new Set(),
     effort: new Set(),
     status: null,
+    epic: null,
     showInternal,
     showArchived: false,
   };
@@ -32,6 +38,7 @@ export function isFiltering(f: Filters): boolean {
     f.priority.size > 0 ||
     f.effort.size > 0 ||
     f.status != null ||
+    f.epic != null ||
     f.showArchived
   );
 }
@@ -94,6 +101,9 @@ export function matches(
   if (f.effort.size && !(card.effort && f.effort.has(card.effort)))
     return false;
   if (f.status && card.status !== f.status) return false;
+  if (f.epic === EPIC_FILTER_NONE) {
+    if (card.epic_id || card.epic?.trim()) return false;
+  } else if (f.epic && card.epic_id !== f.epic) return false;
   for (const [, wanted] of selectedByGroup(f, groups))
     if (!card.tag_ids.some((id) => wanted.has(id))) return false;
   return true;
