@@ -170,6 +170,9 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
                 {onFile} from .md files
               </span>
             )}
+            <Link className="paper-link" href={`${href}/calendar`}>
+              Calendar
+            </Link>
           </p>
         </div>
         <div className="letterhead-aside">

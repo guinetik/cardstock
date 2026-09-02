@@ -501,6 +501,8 @@ export async function updateCard(
     kind: "edited",
     payload: clean,
   });
+  revalidatePath("/p/[project]/b/[board]/calendar", "page");
+  revalidatePath("/p/[project]/calendar", "page");
   return { ok: true };
 }
 

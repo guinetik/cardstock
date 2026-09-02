@@ -215,12 +215,20 @@ export default async function TimelinePage(
             still unplanned after {watchDays} days.
           </p>
         </div>
-        <Link
-          href={`/p/${project}#settings-heading`}
-          className="paper-link text-xs"
-        >
-          {watchDays}-day project window
-        </Link>
+        <nav className="flex flex-col items-end gap-2">
+          <Link
+            className="paper-link"
+            href={`/p/${project}/b/${board}/calendar`}
+          >
+            Calendar
+          </Link>
+          <Link
+            href={`/p/${project}#settings-heading`}
+            className="paper-link text-xs"
+          >
+            {watchDays}-day project window
+          </Link>
+        </nav>
       </header>
 
       <div className="my-5 flex flex-wrap gap-x-6 gap-y-2 border-b border-[var(--border-hairline)] pb-5 text-xs text-[var(--color-grey)]">

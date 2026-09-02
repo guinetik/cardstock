@@ -35,6 +35,12 @@ export default async function CockpitPage(props: {
             <Link className="paper-link" href={`${boardBase}/timeline`}>
               Timeline
             </Link>
+            <Link
+              className="paper-link"
+              href={`/p/${project}/b/${board}/calendar`}
+            >
+              Calendar
+            </Link>
             <Link className="paper-link" href={`/p/${project}`}>
               Project
             </Link>

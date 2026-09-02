@@ -591,6 +591,12 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
           </a>
           <a
             className="paper-link ml-2"
+            href={`/p/${data.project.slug}/b/${data.board.slug}/calendar`}
+          >
+            Calendar
+          </a>
+          <a
+            className="paper-link ml-2"
             href={`/p/${data.project.slug}/b/${data.board.slug}/export?internal=${filters.showInternal ? 1 : 0}${filters.showArchived ? "&archived=1" : ""}${filters.tags.size ? `&tags=${[...filters.tags].join(",")}` : ""}${filters.query ? `&q=${encodeURIComponent(filters.query)}` : ""}`}
           >
             Export CSV

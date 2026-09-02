@@ -2241,6 +2241,173 @@
     text-transform: uppercase;
     color: var(--color-grey-faint);
   }
+
+  /* Month of target dates — square days, two-up slips, unscheduled tray. */
+  .calendar-page {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  .calendar-grid {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: start;
+    gap: 0.35rem;
+  }
+  .calendar-dow {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-grey-faint);
+    text-align: center;
+  }
+  .calendar-day {
+    aspect-ratio: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.28rem;
+    background: var(--surface-panel);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-card);
+  }
+  .calendar-day[data-overflow="true"] {
+    z-index: 1;
+  }
+  .calendar-day[data-today="true"] {
+    outline: 1px solid var(--color-ink);
+    outline-offset: -1px;
+  }
+  .calendar-day[data-in-month="false"] {
+    color: var(--color-grey-faint);
+  }
+  .calendar-day-num {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    line-height: 1;
+    color: var(--color-grey);
+    margin-bottom: 0.25rem;
+  }
+  .calendar-day[data-in-month="false"] .calendar-day-num {
+    color: var(--color-grey-faint);
+  }
+  .calendar-pack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.2rem;
+    align-content: start;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .calendar-more {
+    flex-shrink: 0;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 10px;
+    color: var(--color-grey);
+    text-align: left;
+    background: var(--surface-panel);
+    border: 0;
+    padding: 0.1rem 0.15rem;
+    cursor: pointer;
+  }
+  .calendar-more:hover {
+    color: var(--color-ink);
+  }
+  .calendar-tray {
+    width: 14rem;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0.6rem;
+    background: var(--surface-panel);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-card);
+  }
+  .calendar-tray h2 {
+    font-size: 0.95rem;
+    margin: 0 0 0.4rem;
+  }
+  .calendar-tray-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    overflow: auto;
+    min-height: 0;
+  }
+  .calendar-slip {
+    padding: 0.35rem 0.4rem 0.4rem;
+  }
+  .calendar-slip .calendar-slip-id {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 10px;
+    color: var(--color-grey-faint);
+  }
+  .calendar-slip .calendar-slip-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.25;
+    font-weight: 500;
+  }
+  .calendar-slip .calendar-slip-board {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 9px;
+    color: var(--color-grey);
+    margin-top: 0.15rem;
+  }
+  .calendar-day-popover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: min(18rem, 90vw);
+    max-height: 24rem;
+    overflow: auto;
+    padding: 0.6rem;
+    background: var(--surface-card);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-lift);
+  }
+  .calendar-day-popover-title {
+    margin: 0;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--color-grey);
+  }
+  .calendar-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .calendar-chip {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-btn);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  .calendar-chip[data-on="true"] {
+    background: var(--surface-card);
+  }
+  .calendar-chip:not([data-on="true"]) {
+    color: var(--color-grey);
+    border-style: dashed;
+  }
 }
 
 @media (max-width: 48rem) {
