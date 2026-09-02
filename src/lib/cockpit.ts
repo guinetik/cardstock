@@ -167,7 +167,6 @@ export function buildCockpitModel(args: {
 
   for (const epic of args.epics) {
     const source = openCards.filter((c) => c.epic_id === epic.id);
-    if (!source.length) continue;
     const tasks: CockpitTask[] = source.map((card) => ({
       ...card,
       signal: taskSignal(card, laneById.get(card.lane_id ?? ""), now),
@@ -251,6 +250,7 @@ export function buildCockpitModel(args: {
       reasons.push(
         `${late.length} task${late.length === 1 ? " is" : "s are"} late.`,
       );
+    if (!tasks.length) reasons.push("No tasks are attached to this epic yet.");
     if (!epic.target_date) reasons.push("A committed date has not been set.");
     if (epic.target_date && !likelyLanding && remaining.length)
       reasons.push(
@@ -259,13 +259,15 @@ export function buildCockpitModel(args: {
 
     const atRisk =
       targetPast || forecastLate || blockedP1Soon || blockedShare >= 0.25;
-    const outlook: EpicOutlook = atRisk
-      ? "at-risk"
-      : blocked.length || late.length
-        ? "attention"
-        : !epic.target_date || (!likelyLanding && remaining.length > 0)
-          ? "planning"
-          : "on-track";
+    const outlook: EpicOutlook = !tasks.length
+      ? "planning"
+      : atRisk
+        ? "at-risk"
+        : blocked.length || late.length
+          ? "attention"
+          : !epic.target_date || (!likelyLanding && remaining.length > 0)
+            ? "planning"
+            : "on-track";
     const confidenceMismatch =
       epic.confidence === "confident" &&
       (outlook === "at-risk" || outlook === "attention")
@@ -283,7 +285,7 @@ export function buildCockpitModel(args: {
       outlook,
       reasons,
       confidenceMismatch,
-      completed: delivered.length === tasks.length,
+      completed: tasks.length > 0 && delivered.length === tasks.length,
       metrics: {
         taskCount: tasks.length,
         deliveredCount: delivered.length,

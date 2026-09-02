@@ -1,0 +1,259 @@
+"use client";
+
+import {
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import {
+  assignCardEpic,
+  createEpic,
+} from "@/app/p/[project]/b/[board]/cockpit/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { Card } from "@/lib/types";
+
+type SeedEpic = { id: string; source_name: string };
+type Task = Pick<Card, "id" | "external_id" | "title">;
+
+function TaskSlip({
+  task,
+  overlay = false,
+}: {
+  task: Task;
+  overlay?: boolean;
+}) {
+  return (
+    <span
+      className={`inline-flex max-w-full items-baseline gap-1.5 border border-[var(--border-input)] bg-[var(--surface-raised)] px-2 py-1 text-xs ${
+        overlay ? "shadow-md" : "cursor-grab"
+      }`}
+    >
+      <span className="font-mono text-[10px] text-[var(--color-grey-faint)]">
+        #{task.external_id}
+      </span>
+      <span className="truncate">{task.title}</span>
+    </span>
+  );
+}
+
+function DraggableTaskSlip({ task }: { task: Task }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+  });
+  return (
+    <li
+      ref={setNodeRef}
+      className={isDragging ? "opacity-40" : undefined}
+      {...attributes}
+      {...listeners}
+    >
+      <TaskSlip task={task} />
+    </li>
+  );
+}
+
+function EpicDropTarget({ epic, count }: { epic: SeedEpic; count: number }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `epic:${epic.id}` });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`paper-card paper-card--static flex min-h-16 flex-col justify-center gap-1 p-3 ${
+        isOver ? "outline-2 outline-dashed outline-[var(--pen-amber)]" : ""
+      }`}
+    >
+      <p className="truncate text-sm font-medium">{epic.source_name}</p>
+      <p className="text-xs text-[var(--color-grey)]">
+        {count
+          ? `${count} task${count === 1 ? "" : "s"} filed`
+          : "Drop tasks here"}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * First-run flow for a cockpit with no epics: name a few epics, then — when
+ * the board already has tasks — drag them onto the new epics. Every step
+ * persists immediately; Done simply hands back the refreshed cockpit.
+ */
+export function EpicOnboarding({
+  boardId,
+  unassigned,
+  onDoneAction,
+}: {
+  boardId: string;
+  unassigned: Task[];
+  onDoneAction: () => void;
+}) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [epics, setEpics] = useState<SeedEpic[]>([]);
+  const [assigned, setAssigned] = useState<ReadonlyMap<string, string>>(
+    new Map(),
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const pool = unassigned.filter((task) => !assigned.has(task.id));
+  const overlayTask = unassigned.find((task) => task.id === activeId);
+
+  async function add() {
+    setBusy(true);
+    setError(null);
+    const result = await createEpic(boardId, { name });
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setEpics((list) =>
+      list.some((item) => item.id === result.epic.id)
+        ? list
+        : [...list, result.epic],
+    );
+    setName("");
+  }
+
+  async function onDragEnd(event: DragEndEvent) {
+    setActiveId(null);
+    if (!event.over) return;
+    const epicId = String(event.over.id).replace(/^epic:/, "");
+    const cardId = String(event.active.id);
+    const previous = assigned.get(cardId);
+    if (previous === epicId) return;
+    setAssigned((map) => new Map(map).set(cardId, epicId));
+    const result = await assignCardEpic(cardId, epicId);
+    if (!result.ok) {
+      setAssigned((map) => {
+        const next = new Map(map);
+        if (previous) next.set(cardId, previous);
+        else next.delete(cardId);
+        return next;
+      });
+      setError(result.error);
+    }
+  }
+
+  function counted(epicId: string) {
+    let count = 0;
+    for (const value of assigned.values()) if (value === epicId) count += 1;
+    return count;
+  }
+
+  return (
+    <section className="mt-8" aria-label="Set up epics">
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-grey)]">
+        Epics
+      </h2>
+      <div className="paper-lane p-4">
+        <p className="max-w-2xl text-sm text-[var(--color-grey)]">
+          This board has no epics yet. Name the big deliveries first — each one
+          becomes a signal on this cockpit.
+        </p>
+
+        <form
+          className="mt-3 flex max-w-xl gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void add();
+          }}
+        >
+          <Input
+            required
+            maxLength={200}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Epic name — what is being delivered?"
+            aria-label="Epic name"
+            disabled={busy}
+            autoFocus
+          />
+          <Button type="submit" disabled={busy || !name.trim()}>
+            {busy ? "Adding…" : "Add epic"}
+          </Button>
+        </form>
+
+        {error && (
+          <p
+            className="mt-3 border-l-2 border-[var(--pen-red)] px-3 py-2 text-sm text-destructive"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
+        {epics.length > 0 && (
+          <DndContext
+            id="epic-onboarding-dnd"
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragStart={(event) => {
+              setActiveId(String(event.active.id));
+              setError(null);
+            }}
+            onDragEnd={onDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {epics.map((epic) => (
+                <EpicDropTarget
+                  key={epic.id}
+                  epic={epic}
+                  count={counted(epic.id)}
+                />
+              ))}
+            </div>
+            {unassigned.length > 0 && (
+              <div className="mt-4 border-t border-[var(--border-hairline)] pt-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]">
+                  {pool.length
+                    ? "Drag existing tasks onto an epic"
+                    : "All tasks filed"}
+                </p>
+                {pool.length > 0 && (
+                  <ul className="mt-2 flex max-h-48 flex-wrap gap-2 overflow-y-auto">
+                    {pool.map((task) => (
+                      <DraggableTaskSlip key={task.id} task={task} />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <DragOverlay>
+              {overlayTask ? <TaskSlip task={overlayTask} overlay /> : null}
+            </DragOverlay>
+          </DndContext>
+        )}
+
+        {epics.length > 0 && (
+          <div className="mt-4 border-t border-[var(--border-hairline)] pt-3">
+            <Button
+              type="button"
+              onClick={() => {
+                onDoneAction();
+                router.refresh();
+              }}
+            >
+              Done — open the cockpit
+            </Button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

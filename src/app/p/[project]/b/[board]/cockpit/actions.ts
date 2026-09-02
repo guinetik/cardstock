@@ -17,6 +17,75 @@ const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Create an epic on a board, or return the existing one with the same name.
+ * The importer upserts on (board_id, source_name) the same way; this is the
+ * interactive counterpart for the cockpit's onboarding and add-epic flows.
+ */
+export async function createEpic(
+  boardId: string,
+  input: { name: string; outcome?: string },
+): Promise<
+  | { ok: true; epic: { id: string; source_name: string } }
+  | { ok: false; error: string }
+> {
+  const me = await currentMember();
+  if (!me) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(boardId)) return { ok: false, error: "Invalid board." };
+  const name = input.name.trim().slice(0, 200);
+  if (!name) return { ok: false, error: "Give the epic a name." };
+  const outcome = input.outcome?.trim().slice(0, 500) || null;
+  const db = await supabaseServer();
+  const { data, error } = await db
+    .from("epics")
+    .upsert(
+      { board_id: boardId, source_name: name, outcome },
+      { onConflict: "board_id,source_name", ignoreDuplicates: false },
+    )
+    .select("id, source_name")
+    .single();
+  if (error || !data) return { ok: false, error: error?.message ?? "Failed." };
+  revalidatePath("/p/[project]/b/[board]/cockpit", "page");
+  return { ok: true, epic: data };
+}
+
+/**
+ * Point a card at an epic (or clear it). Writes both the FK and the `epic`
+ * tracker text so exported frontmatter always mirrors the assignment.
+ */
+export async function assignCardEpic(
+  cardId: string,
+  epicId: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const me = await currentMember();
+  if (!me) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
+  if (epicId !== null && !UUID.test(epicId))
+    return { ok: false, error: "Invalid epic." };
+  const db = await supabaseServer();
+  let epicName: string | null = null;
+  if (epicId) {
+    const { data: target } = await db
+      .from("epics")
+      .select("source_name")
+      .eq("id", epicId)
+      .maybeSingle();
+    if (!target) return { ok: false, error: "Epic not found." };
+    epicName = target.source_name;
+  }
+  const patch = { epic_id: epicId, epic: epicName };
+  const { error } = await db.from("cards").update(patch).eq("id", cardId);
+  if (error) return { ok: false, error: error.message };
+  await db.from("card_events").insert({
+    card_id: cardId,
+    actor: me.email,
+    kind: "edited",
+    payload: patch,
+  });
+  revalidatePath("/p/[project]/b/[board]/cockpit", "page");
+  return { ok: true };
+}
+
 export async function updateEpic(
   epicId: string,
   patch: EpicPatch,

@@ -6,6 +6,8 @@ import { LaneMap } from "@/components/lane-map";
 import type { CockpitEpic, CockpitModel, EpicOutlook } from "@/lib/cockpit";
 import { OUTLOOK_LABEL } from "@/lib/cockpit";
 import type { LaneMicrocosmRow } from "@/lib/lane-map";
+import { CreateEpicDialog } from "./create-epic-dialog";
+import { EpicOnboarding } from "./epic-onboarding";
 import { TaskLegend, TaskMap } from "./task-map";
 
 const outlookClass: Record<EpicOutlook, string> = {
@@ -62,7 +64,14 @@ function EpicTile({
         </span>
       </header>
       <div className="mt-3">
-        <TaskMap tasks={view.tasks} cardBase={cardBase} />
+        {view.tasks.length ? (
+          <TaskMap tasks={view.tasks} cardBase={cardBase} />
+        ) : (
+          <p className="py-2 text-xs text-[var(--color-grey-faint)]">
+            No tasks yet — open the epic to clip tasks in, or assign them from
+            the board.
+          </p>
+        )}
       </div>
       <footer className="mt-3 flex flex-wrap items-end justify-between gap-2 border-t border-[var(--border-hairline)] pt-3 text-xs">
         <span>
@@ -114,6 +123,7 @@ function SummaryMetric({
 
 export function CockpitView({
   model,
+  boardId,
   cockpitBase,
   cardBase,
   boardHref,
@@ -121,6 +131,7 @@ export function CockpitView({
   cardCount,
 }: {
   model: CockpitModel;
+  boardId: string;
   cockpitBase: string;
   cardBase: string;
   boardHref: string;
@@ -129,6 +140,11 @@ export function CockpitView({
 }) {
   const [query, setQuery] = useState("");
   const [outlook, setOutlook] = useState<"all" | EpicOutlook>("all");
+  // Sticky for the visit: createEpic revalidates the page mid-flow, and the
+  // arriving epics must not yank the onboarding away before Done is clicked.
+  const [onboarding, setOnboarding] = useState(
+    model.active.length + model.completed.length === 0,
+  );
   const filtered = useMemo(
     () =>
       model.active.filter((view) => {
@@ -239,64 +255,53 @@ export function CockpitView({
         </p>
       )}
 
-      <section className="mt-8">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-grey)]">
-          Epics
-        </h2>
-        <div className="paper-lane p-3">
-          <div className="flex flex-wrap gap-2">
-            <input
-              className="paper-field h-8 min-w-64 flex-1 bg-[var(--surface-raised)]"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Find an epic, owner, outcome, or task"
-              aria-label="Search epics"
-            />
-            <select
-              className="paper-field h-8 bg-[var(--surface-raised)]"
-              value={outlook}
-              onChange={(event) =>
-                setOutlook(event.target.value as typeof outlook)
-              }
-              aria-label="Filter by outlook"
-            >
-              <option value="all">All outlooks</option>
-              <option value="at-risk">Date at risk</option>
-              <option value="attention">Needs attention</option>
-              <option value="planning">Planning needed</option>
-              <option value="on-track">On track</option>
-            </select>
-          </div>
-          <div className="mt-3 border-t border-[var(--border-hairline)] pt-2">
-            <TaskLegend />
-          </div>
-        </div>
-      </section>
+      {onboarding ? (
+        <EpicOnboarding
+          boardId={boardId}
+          unassigned={model.unassigned}
+          onDoneAction={() => setOnboarding(false)}
+        />
+      ) : (
+        <>
+          <section className="mt-8">
+            <div className="mb-2 flex items-baseline justify-between gap-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-grey)]">
+                Epics
+              </h2>
+              <CreateEpicDialog boardId={boardId} />
+            </div>
+            <div className="paper-lane p-3">
+              <div className="flex flex-wrap gap-2">
+                <input
+                  className="paper-field h-8 min-w-64 flex-1 bg-[var(--surface-raised)]"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Find an epic, owner, outcome, or task"
+                  aria-label="Search epics"
+                />
+                <select
+                  className="paper-field h-8 bg-[var(--surface-raised)]"
+                  value={outlook}
+                  onChange={(event) =>
+                    setOutlook(event.target.value as typeof outlook)
+                  }
+                  aria-label="Filter by outlook"
+                >
+                  <option value="all">All outlooks</option>
+                  <option value="at-risk">Date at risk</option>
+                  <option value="attention">Needs attention</option>
+                  <option value="planning">Planning needed</option>
+                  <option value="on-track">On track</option>
+                </select>
+              </div>
+              <div className="mt-3 border-t border-[var(--border-hairline)] pt-2">
+                <TaskLegend />
+              </div>
+            </div>
+          </section>
 
-      <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((view) => (
-          <EpicTile
-            key={view.epic.id}
-            view={view}
-            cockpitBase={cockpitBase}
-            cardBase={cardBase}
-          />
-        ))}
-        {!filtered.length && (
-          <p className="py-10 text-sm text-[var(--color-grey)]">
-            No active epics match this view.
-          </p>
-        )}
-      </section>
-
-      {model.completed.length > 0 && (
-        <details className="mt-8 border-t border-[var(--border-strong)] pt-4">
-          <summary className="cursor-pointer text-sm font-medium">
-            Recent arrivals · {model.completed.length} completed epic
-            {model.completed.length === 1 ? "" : "s"}
-          </summary>
           <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {model.completed.map((view) => (
+            {filtered.map((view) => (
               <EpicTile
                 key={view.epic.id}
                 view={view}
@@ -304,8 +309,32 @@ export function CockpitView({
                 cardBase={cardBase}
               />
             ))}
+            {!filtered.length && (
+              <p className="py-10 text-sm text-[var(--color-grey)]">
+                No active epics match this search or outlook filter.
+              </p>
+            )}
           </section>
-        </details>
+
+          {model.completed.length > 0 && (
+            <details className="mt-8 border-t border-[var(--border-strong)] pt-4">
+              <summary className="cursor-pointer text-sm font-medium">
+                Recent arrivals · {model.completed.length} completed epic
+                {model.completed.length === 1 ? "" : "s"}
+              </summary>
+              <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {model.completed.map((view) => (
+                  <EpicTile
+                    key={view.epic.id}
+                    view={view}
+                    cockpitBase={cockpitBase}
+                    cardBase={cardBase}
+                  />
+                ))}
+              </section>
+            </details>
+          )}
+        </>
       )}
     </>
   );

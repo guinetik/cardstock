@@ -53,6 +53,7 @@ export default async function CockpitPage(props: {
       </header>
       <CockpitView
         model={model}
+        boardId={data.board.id}
         cockpitBase={`${boardBase}/cockpit`}
         cardBase={`${boardBase}/c`}
         boardHref={boardBase}

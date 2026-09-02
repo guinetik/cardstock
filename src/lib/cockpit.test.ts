@@ -146,6 +146,24 @@ describe("buildCockpitModel", () => {
     expect(model.active[0]?.outlook).toBe("planning");
   });
 
+  test("keeps an epic with zero tasks visible as an active planning epic", () => {
+    const model = buildCockpitModel({
+      cards: [],
+      lanes,
+      epics: [epic()],
+      snapshots: [],
+      moves: [],
+      now: new Date("2026-03-01T12:00:00Z"),
+    });
+    expect(model.active).toHaveLength(1);
+    expect(model.completed).toHaveLength(0);
+    expect(model.active[0]?.metrics.taskCount).toBe(0);
+    expect(model.active[0]?.outlook).toBe("planning");
+    expect(model.active[0]?.reasons).toContain(
+      "No tasks are attached to this epic yet.",
+    );
+  });
+
   test("separates completed and unassigned work", () => {
     const model = buildCockpitModel({
       cards: [
