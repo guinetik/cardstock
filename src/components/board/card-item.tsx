@@ -305,26 +305,6 @@ export function CardItem(props: {
             // nothing — the sensor's distance threshold keeps a click a click.
             onKeyDown={(e) => e.stopPropagation()}
           >
-            {card.tag_ids.length > 0 && (
-              <>
-                <span className="field-label">Tags</span>
-                <div className="flex flex-wrap gap-x-1.5 gap-y-1">
-                  {card.tag_ids.map((id) => {
-                    const t = tagName.get(id);
-                    return t ? (
-                      <span
-                        key={id}
-                        className={`mark mark--${t.hue}`}
-                        title={t.group}
-                      >
-                        {t.name}
-                      </span>
-                    ) : null;
-                  })}
-                </div>
-              </>
-            )}
-
             {!props.overlay && props.onPatch && (
               <>
                 <span className="field-label">Dates</span>
@@ -375,6 +355,8 @@ export function CardItem(props: {
                   />
                 </div>
 
+                <Ratings card={card} onPatch={props.onPatch} />
+
                 <span className="field-label">Waiting</span>
                 <input
                   type="text"
@@ -388,8 +370,6 @@ export function CardItem(props: {
                   aria-label="Waiting on"
                   title="Anything here marks the card blocked"
                 />
-
-                <Ratings card={card} onPatch={props.onPatch} />
               </>
             )}
 
@@ -399,6 +379,26 @@ export function CardItem(props: {
                 <p className="line-clamp-3 text-[13px] leading-snug text-[var(--color-ink2)]">
                   {card.summary}
                 </p>
+              </>
+            )}
+
+            {card.tag_ids.length > 0 && (
+              <>
+                <span className="field-label">Tags</span>
+                <div className="flex flex-wrap gap-x-1.5 gap-y-1">
+                  {card.tag_ids.map((id) => {
+                    const t = tagName.get(id);
+                    return t ? (
+                      <span
+                        key={id}
+                        className={`mark mark--${t.hue}`}
+                        title={t.group}
+                      >
+                        {t.name}
+                      </span>
+                    ) : null;
+                  })}
+                </div>
               </>
             )}
           </section>
