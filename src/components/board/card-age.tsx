@@ -98,8 +98,7 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
     <PaperTooltip
       side="top"
       align="end"
-      triggerClassName="card-age inline-flex items-center"
-      triggerProps={{ "data-signal": signal }}
+      triggerClassName="inline-flex items-center"
       content={
         <PaperTooltipLines
           lines={[
@@ -110,6 +109,7 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
         />
       }
     >
+      <span data-signal={signal} className="card-age inline-flex items-center">
       <CalendarClock
         className="card-age__icon shrink-0"
         size={11}
@@ -163,6 +163,7 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
       >
         {formatRaisedShort(card.raised_on)}
       </time>
+      </span>
     </PaperTooltip>
   );
 }
