@@ -3,6 +3,7 @@ import type { Card } from "./types";
 
 const DAY = 86_400_000;
 const MONTH = /^(\d{4})-(0[1-9]|1[0-2])$/;
+const DAY_DROP = /^calendar-day:(\d{4}-\d{2}-\d{2})(?::popover)?$/;
 
 /** Visible slips in a day cell before "+N more". */
 export const CALENDAR_DAY_CAP = 4;
@@ -172,4 +173,15 @@ export function calendarDayOverflow<T>(slips: readonly T[]): {
     visible: slips.slice(0, CALENDAR_DAY_CAP),
     overflow: slips.length - CALENDAR_DAY_CAP,
   };
+}
+
+/**
+ * UTC day key from a calendar droppable id, or `null`.
+ *
+ * Accepts `calendar-day:YYYY-MM-DD` and `calendar-day:YYYY-MM-DD:popover`.
+ *
+ * @param overId - dnd-kit `over.id`.
+ */
+export function calendarDropDate(overId: string): string | null {
+  return DAY_DROP.exec(overId)?.[1] ?? null;
 }

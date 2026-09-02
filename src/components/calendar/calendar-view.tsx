@@ -29,6 +29,7 @@ import {
   CALENDAR_WEEKDAYS,
   type CalendarSlip as CalendarSlipData,
   calendarDayOverflow,
+  calendarDropDate,
   calendarGroups,
   monthMatrix,
 } from "@/lib/calendar";
@@ -40,6 +41,14 @@ const MONTH_HEADING = new Intl.DateTimeFormat("en-US", {
 });
 
 const OVER_INK = { boxShadow: "inset 0 0 0 1px var(--color-ink)" } as const;
+
+const POPOVER_DAY = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 function boardsHref(
   path: string,
@@ -185,6 +194,9 @@ function CalendarDayCell(props: {
   const { setNodeRef, isOver } = useDroppable({
     id: `calendar-day:${props.date}`,
   });
+  const { setNodeRef: setPopoverRef, isOver: popoverOver } = useDroppable({
+    id: `calendar-day:${props.date}:popover`,
+  });
   const { visible, overflow } = calendarDayOverflow(props.slips);
   const dayNum = Number(props.date.slice(8));
   return (
@@ -194,6 +206,7 @@ function CalendarDayCell(props: {
       data-calendar-day={props.date}
       data-in-month={props.inMonth ? "true" : "false"}
       data-today={props.isToday ? "true" : "false"}
+      data-overflow={overflow > 0 ? "true" : undefined}
       data-over={isOver ? "" : undefined}
       style={isOver ? OVER_INK : undefined}
     >
@@ -210,28 +223,36 @@ function CalendarDayCell(props: {
               watchDays={props.watchDays}
             />
           ))}
-        {overflow > 0 && (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger className="calendar-more">
-              +{overflow} more
-            </PopoverTrigger>
-            <PopoverContent className="rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
-              <div className="calendar-day-popover">
-                {props.slips.map((slip) => (
-                  <DraggableCalendarSlip
-                    key={slipKey(slip)}
-                    slip={slip}
-                    projectSlug={props.projectSlug}
-                    showBoard={props.showBoard}
-                    today={props.today}
-                    watchDays={props.watchDays}
-                  />
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
       </div>
+      {overflow > 0 && (
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger className="calendar-more">
+            +{overflow} more
+          </PopoverTrigger>
+          <PopoverContent className="rounded-[var(--radius-card)] p-0 w-auto shadow-none bg-transparent ring-0">
+            <div
+              ref={setPopoverRef}
+              className="calendar-day-popover"
+              data-over={popoverOver ? "" : undefined}
+              style={popoverOver ? OVER_INK : undefined}
+            >
+              <h3 className="calendar-day-popover-title">
+                {POPOVER_DAY.format(new Date(`${props.date}T00:00:00Z`))}
+              </h3>
+              {props.slips.map((slip) => (
+                <DraggableCalendarSlip
+                  key={slipKey(slip)}
+                  slip={slip}
+                  projectSlug={props.projectSlug}
+                  showBoard={props.showBoard}
+                  today={props.today}
+                  watchDays={props.watchDays}
+                />
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
     </div>
   );
 }
@@ -313,9 +334,8 @@ export function CalendarView(props: {
     let next: string | null | undefined;
     if (over === "calendar-tray") next = null;
     else {
-      const key = String(over);
-      if (key.startsWith("calendar-day:"))
-        next = key.slice("calendar-day:".length);
+      const day = calendarDropDate(String(over));
+      if (day) next = day;
     }
     if (next === undefined) return;
     if (next === previous.card.target_date) return;

@@ -31,7 +31,14 @@ type BoardRow = {
 
 type LaneRow = Pick<
   Lane,
-  "id" | "key" | "name" | "position" | "kind" | "sla_days" | "wip_limit" | "color"
+  | "id"
+  | "key"
+  | "name"
+  | "position"
+  | "kind"
+  | "sla_days"
+  | "wip_limit"
+  | "color"
 > & { board_id: string };
 
 type CardRow = CalendarCard & {

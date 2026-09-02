@@ -4,6 +4,7 @@ import {
   addCalendarMonths,
   calendarBoards,
   calendarDayOverflow,
+  calendarDropDate,
   calendarGroups,
   calendarMonth,
   monthMatrix,
@@ -140,5 +141,16 @@ describe("calendarDayOverflow", () => {
     expect(calendarDayOverflow([1, 2, 3, 4, 5, 6]).visible).toEqual([
       1, 2, 3, 4,
     ]);
+  });
+});
+
+describe("calendarDropDate", () => {
+  test("reads the day key from a cell or its popover", () => {
+    expect(calendarDropDate("calendar-day:2026-09-18")).toBe("2026-09-18");
+    expect(calendarDropDate("calendar-day:2026-09-18:popover")).toBe(
+      "2026-09-18",
+    );
+    expect(calendarDropDate("calendar-tray")).toBeNull();
+    expect(calendarDropDate("calendar-day:not-a-day")).toBeNull();
   });
 });

@@ -2247,6 +2247,7 @@
     min-width: 0;
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: start;
     gap: 0.35rem;
   }
   .calendar-dow {
@@ -2259,13 +2260,19 @@
   }
   .calendar-day {
     aspect-ratio: 1;
+    width: 100%;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
     padding: 0.28rem;
     background: var(--surface-panel);
     border: 1px solid var(--border-hairline);
     border-radius: var(--radius-card);
+  }
+  .calendar-day[data-overflow="true"] {
+    z-index: 1;
   }
   .calendar-day[data-today="true"] {
     outline: 1px solid var(--color-ink);
@@ -2291,14 +2298,15 @@
     align-content: start;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
   .calendar-more {
-    grid-column: 1 / -1;
+    flex-shrink: 0;
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 10px;
     color: var(--color-grey);
     text-align: left;
-    background: none;
+    background: var(--surface-panel);
     border: 0;
     padding: 0.1rem 0.15rem;
     cursor: pointer;
@@ -2352,12 +2360,24 @@
     margin-top: 0.15rem;
   }
   .calendar-day-popover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
     width: min(18rem, 90vw);
+    max-height: 24rem;
+    overflow: auto;
     padding: 0.6rem;
     background: var(--surface-card);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-lift);
+  }
+  .calendar-day-popover-title {
+    margin: 0;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--color-grey);
   }
   .calendar-chips {
     display: flex;
