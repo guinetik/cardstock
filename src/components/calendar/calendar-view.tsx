@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/core";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { updateCard } from "@/app/p/[project]/b/[board]/actions";
 import { CalendarSlip } from "@/components/calendar/calendar-slip";
 import { DraggableCalendarSlip } from "@/components/calendar/draggable-calendar-slip";
 import {
@@ -236,7 +237,7 @@ function CalendarDayCell(props: {
 }
 
 /**
- * Month of target dates. With `onPatch`, slips drag onto days or the tray.
+ * Month of target dates. Slips drag onto days or the tray; drops call `updateCard`.
  *
  * @param props.projectSlug - Project URL slug.
  * @param props.projectName - Mono eyebrow.
@@ -249,7 +250,6 @@ function CalendarDayCell(props: {
  * @param props.boards - Known boards for filter chips.
  * @param props.selectedBoards - Chip filter, or null for all.
  * @param props.path - Page path for month and chip links.
- * @param props.onPatch - Persist `target_date` only; leave labels and start dates.
  */
 export function CalendarView(props: {
   projectSlug: string;
@@ -263,10 +263,6 @@ export function CalendarView(props: {
   boards: { slug: string; name: string }[];
   selectedBoards: string[] | null;
   path: string;
-  onPatch?: (
-    cardId: string,
-    targetDate: string | null,
-  ) => Promise<{ ok: true } | { ok: false; error: string }>;
 }) {
   const [items, setItems] = useState(props.slips);
   const [error, setError] = useState<string | null>(null);
@@ -311,7 +307,7 @@ export function CalendarView(props: {
     setActiveId(null);
     const over = event.over?.id;
     const cardId = String(event.active.id);
-    if (!over || !props.onPatch) return;
+    if (!over) return;
     const previous = items.find((slip) => slip.card.id === cardId);
     if (!previous) return;
     let next: string | null | undefined;
@@ -324,7 +320,7 @@ export function CalendarView(props: {
     if (next === undefined) return;
     if (next === previous.card.target_date) return;
     applyTarget(cardId, next);
-    const result = await props.onPatch(cardId, next);
+    const result = await updateCard(cardId, { target_date: next });
     if (!result.ok) {
       applyTarget(cardId, previous.card.target_date);
       setError(result.error);
