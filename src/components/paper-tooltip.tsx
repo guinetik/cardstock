@@ -1,5 +1,6 @@
 "use client";
 
+import { PaperclipIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import {
   Tooltip,
@@ -12,14 +13,14 @@ import { cn } from "@/lib/utils";
 export type PaperTooltipContentProps = ComponentProps<typeof TooltipContent>;
 
 /**
- * Tooltip body styled for the paper theme: raised surface, ink type, lift
- * shadow, and slightly larger copy than the default UI tooltip.
+ * Tooltip body styled as a small slip clipped to the board: raised stock, ink
+ * type, lift shadow, and a paperclip anchoring the top edge.
  */
 export function PaperTooltipContent({
   className,
   children,
   side = "top",
-  sideOffset = 6,
+  sideOffset = 10,
   ...props
 }: PaperTooltipContentProps) {
   return (
@@ -29,7 +30,12 @@ export function PaperTooltipContent({
       className={cn("paper-tooltip", className)}
       {...props}
     >
-      {children}
+      <PaperclipIcon
+        className="paper-tooltip__clip"
+        aria-hidden="true"
+        strokeWidth={2.1}
+      />
+      <div className="paper-tooltip__sheet">{children}</div>
     </TooltipContent>
   );
 }
@@ -50,8 +56,9 @@ export interface PaperTooltipProps {
 }
 
 /**
- * Hover hint for board chrome and other paper surfaces. Requires a
- * {@link TooltipProvider} ancestor — the board view wraps the desk with one.
+ * Hover hint for board chrome and other paper surfaces. Renders as a clipped
+ * margin note. Requires a {@link TooltipProvider} ancestor — the board view
+ * wraps the desk with one.
  */
 export function PaperTooltip({
   content,
@@ -90,7 +97,7 @@ export interface PaperTooltipLinesProps {
 }
 
 /**
- * Stacked tooltip copy: a lead line, optional muted meta, then the hint.
+ * Stacked copy on a clipped slip: a lead line, optional meta, then the note.
  */
 export function PaperTooltipLines({ lines }: PaperTooltipLinesProps) {
   const visible = lines.filter(
@@ -102,7 +109,7 @@ export function PaperTooltipLines({ lines }: PaperTooltipLinesProps) {
     <span className="paper-tooltip__stack">
       {visible.map((line, index) => (
         <span
-          key={line}
+          key={`${line}-${index}`}
           className={cn(
             index === 0
               ? "paper-tooltip__lead"

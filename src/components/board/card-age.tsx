@@ -24,12 +24,11 @@ const RING_R = 5.5;
 const RING_C = 2 * Math.PI * RING_R;
 
 const SIGNAL_HINT: Record<TimelineSignal, string> = {
-  forgotten:
-    "Forgotten — raised past the watch window with no target. Give it a date or close it.",
-  overdue: "Overdue — the target date has passed and this is not shipped.",
-  planned: "Planned — has a target date and is not late yet.",
-  active: "Open — still inside the watch window, no target yet.",
-  delivered: "Delivered — this work has shipped.",
+  forgotten: "Past the watch window with no target — give it a date or close it.",
+  overdue: "Target date passed and this is not shipped.",
+  planned: "Has a target date and is not late yet.",
+  active: "Still inside the watch window, no target yet.",
+  delivered: "This work has shipped.",
 };
 
 /** Props for {@link CardAge}. */
@@ -103,7 +102,7 @@ export function CardAge({ card, today, watchDays, gates }: CardAgeProps) {
         <PaperTooltipLines
           lines={[
             `Raised ${formatRaisedShort(card.raised_on)}`,
-            ageDays != null ? `${ageDays} days ago` : null,
+            ageDays != null ? `${ageDays} days on the board` : null,
             SIGNAL_HINT[signal],
           ]}
         />

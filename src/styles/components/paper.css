@@ -775,21 +775,50 @@
   min-height: 1.125rem;
 }
 
-/* Theme-aware hints — not the OS tooltip or the inverted UI default. */
+/* Clipped margin notes — not the OS tooltip or the inverted UI default. */
 .paper-tooltip[data-slot="tooltip-content"] {
+  position: relative;
   width: max-content;
   max-width: 17rem;
-  padding: 0.55rem 0.7rem;
+  padding: 0.5rem 0.35rem 0.35rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-input);
-  background: var(--surface-raised);
+  background: var(--surface-card);
   color: var(--color-ink);
   box-shadow: var(--shadow-lift);
   font-size: 13px;
   line-height: 1.45;
+  transform: rotate(-0.65deg);
+  transform-origin: center bottom;
 }
-.paper-tooltip[data-slot="tooltip-content"] > svg {
+.paper-tooltip[data-slot="tooltip-content"] > svg:not(.paper-tooltip__clip) {
   display: none;
+}
+.paper-tooltip__clip {
+  position: absolute;
+  top: -0.62rem;
+  left: 50%;
+  z-index: 1;
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--color-grey);
+  transform: translateX(-50%) rotate(14deg);
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.12));
+  pointer-events: none;
+}
+.paper-tooltip__sheet {
+  position: relative;
+  padding: 0.45rem 0.55rem 0.5rem 0.75rem;
+  border-top: 1px dashed var(--border-hairline);
+  background: var(--surface-raised);
+}
+.paper-tooltip__sheet::before {
+  position: absolute;
+  inset: 0.35rem auto 0.35rem 0.35rem;
+  width: 1px;
+  content: "";
+  background: var(--pen-red);
+  opacity: 0.45;
 }
 .paper-tooltip__stack {
   display: grid;
@@ -827,6 +856,9 @@
     transition: none;
     translate: none;
     scale: none;
+  }
+  .paper-tooltip[data-slot="tooltip-content"] {
+    transform: none;
   }
 }
 
@@ -1687,6 +1719,20 @@
   .lane-map-col[data-kind] .lane-map-cell--vacant {
     background: transparent;
     border-color: var(--border-strong);
+  }
+  .lane-map-cell--more {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0.7rem;
+    border-style: dashed;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    line-height: 1;
+    color: var(--color-grey);
+    text-align: center;
   }
   /* Marked variant: taller slips carrying the task-cabin marks (✓ ! ◷ →). */
   .lane-map--marked .lane-map-pack {
