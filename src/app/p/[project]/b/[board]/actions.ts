@@ -40,6 +40,7 @@ export interface CreateCardInput {
   status?: Card["status"];
   epicId?: string | null;
   epic?: string;
+  assigneeId?: string | null;
   area?: string;
   priority?: Card["priority"];
   effort?: Card["effort"];
@@ -239,6 +240,11 @@ export async function createCard(
       return { ok: false, error: error.message };
     }
   }
+  // Routed through `assignCard` rather than written into the insert, so the
+  // roster check and the history line exist on exactly one path. A rejected
+  // assignee leaves a created, unassigned card rather than no card at all.
+  if (input.assigneeId) await assignCard(card.id as string, input.assigneeId);
+
   await c.db.from("card_events").insert({
     card_id: card.id,
     actor: c.me.email,

@@ -695,6 +695,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         boardId={data.board.id}
         groups={data.groups}
         epics={data.epics}
+        people={data.people}
         bodyTemplate={cardTemplate(data.board.settings)}
         onClose={() => setCardLane(null)}
         onCreate={addCard}
