@@ -53,6 +53,7 @@ export const frontmatterSchema = z.looseObject({
   status: z.enum(STATUSES),
   epic: z.string().min(1),
   area: z.string().min(1),
+  assignee: z.string().nullable().optional(),
   tags: strList,
   // known optional
   value: lmh,

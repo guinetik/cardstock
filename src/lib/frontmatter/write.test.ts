@@ -118,6 +118,47 @@ describe("writeSheet", () => {
     expect(out).toContain("tags:\n  - known\n  - mystery\n  - g:new\n");
     expect(out.replace("  - g:new\n", "")).toBe(file);
   });
+
+  test("an added assignee is written after area", () => {
+    const out = writeSheet(FILE, {
+      ...sheetOf(FILE),
+      assignee: "joao@example.test",
+    });
+    const lines = out.split("\n");
+    expect(lines).toContain("assignee: joao@example.test");
+    expect(lines.indexOf("assignee: joao@example.test")).toBe(
+      lines.indexOf("area: Designer") + 1,
+    );
+  });
+
+  test("an assignee already in the file round-trips byte-identically", () => {
+    const withAssignee = FILE.replace(
+      "raised_by: Sam",
+      "assignee: joao@example.test\nraised_by: Sam",
+    );
+    expect(writeSheet(withAssignee, sheetOf(withAssignee))).toBe(withAssignee);
+  });
+
+  test("an email belonging to nobody is still read off the file", () => {
+    const withStranger = FILE.replace(
+      "raised_by: Sam",
+      "assignee: stranger@nowhere.test\nraised_by: Sam",
+    );
+    expect(sheetOf(withStranger).assignee).toBe("stranger@nowhere.test");
+  });
+
+  test("a cleared assignee removes the line", () => {
+    const withAssignee = FILE.replace(
+      "raised_by: Sam",
+      "assignee: joao@example.test\nraised_by: Sam",
+    );
+    const out = writeSheet(withAssignee, {
+      ...sheetOf(withAssignee),
+      assignee: null,
+    });
+    expect(out).not.toContain("assignee:");
+    expect(out).toContain("raised_by: Sam");
+  });
 });
 
 // Free-text date-ish values, `effort` in lower case, `value:` standing in for

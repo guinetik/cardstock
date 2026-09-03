@@ -6,6 +6,7 @@
  * the row and writes only the keys that differ from the file it was given.
  */
 
+import { normaliseEmail } from "@/lib/assignee";
 import { valueToPriority } from "./mapping";
 import { bodyWithoutH1, extractAsk } from "./parse";
 import { type Frontmatter, isoOrNull } from "./schema";
@@ -16,6 +17,8 @@ export interface CardSheet {
   status: string;
   epic: string;
   area: string;
+  /** The assignee's email as the file states it. May match no member. */
+  assignee: string | null;
   tags: string[];
   raisedBy: string | null;
   raisedOn: string | null;
@@ -48,6 +51,7 @@ export const SHEET_KEYS = {
   status: { get: (s: CardSheet) => s.status },
   epic: { get: (s: CardSheet) => s.epic },
   area: { get: (s: CardSheet) => s.area },
+  assignee: { get: (s: CardSheet) => s.assignee },
   raised_by: { get: (s: CardSheet) => s.raisedBy },
   raised: { get: (s: CardSheet) => s.raisedOn },
   shipped: { get: (s: CardSheet) => s.shippedOn },
@@ -91,6 +95,7 @@ export function sheetFromFrontmatter(
     status: fm.status,
     epic: fm.epic,
     area: fm.area,
+    assignee: normaliseEmail(fm.assignee),
     tags: tagRefs,
     raisedBy: fm.raised_by ?? null,
     raisedOn: isoOrNull(fm.raised),

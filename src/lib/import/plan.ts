@@ -84,6 +84,7 @@ export function sheetFromCard(
     status: card.status,
     epic: card.epic ?? "",
     area: card.area ?? "",
+    assignee: null,
     tags: refs,
     raisedBy: card.raised_by,
     raisedOn: card.raised_on,

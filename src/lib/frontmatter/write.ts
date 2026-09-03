@@ -52,6 +52,24 @@ function fileLines(key: string, value: Value, indent: string): string[] {
   return [`${key}: ${formatScalar(value)}`];
 }
 
+/**
+ * Where a key with no line yet belongs: right after its nearest schema
+ * neighbour that the file states, or right before the next one that does.
+ * `null` when the file states none of them — the caller appends at the end.
+ */
+function insertionPoint(lines: string[], key: SheetKey): number | null {
+  const idx = SHEET_KEY_ORDER.indexOf(key);
+  for (let i = idx - 1; i >= 0; i--) {
+    const at = locate(lines, SHEET_KEY_ORDER[i]);
+    if (at) return at.end;
+  }
+  for (let i = idx + 1; i < SHEET_KEY_ORDER.length; i++) {
+    const at = locate(lines, SHEET_KEY_ORDER[i]);
+    if (at) return at.start;
+  }
+  return null;
+}
+
 /** Where `key` sits in the frontmatter: its line and any `- item` lines under it. */
 function locate(
   fm: string[],
@@ -189,7 +207,12 @@ export function writeSheet(
             : [];
       } else replacement = fileLines(key, want, at.indent);
       lines.splice(at.start, at.end - at.start, ...replacement);
-    } else append.push(...fileLines(key, want, "  "));
+    } else {
+      const newLines = fileLines(key, want, "  ");
+      const pos = insertionPoint(lines, key);
+      if (pos == null) append.push(...newLines);
+      else lines.splice(pos, 0, ...newLines);
+    }
   }
   while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
   lines = [...lines, ...append];
