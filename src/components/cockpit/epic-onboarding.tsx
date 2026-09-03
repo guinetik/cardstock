@@ -108,10 +108,13 @@ function EpicDropTarget({
   return (
     <div
       ref={setNodeRef}
-      className={`paper-card paper-card--static flex min-h-16 flex-col justify-center gap-1 p-3 ${
-        isOver ? "outline-2 outline-dashed outline-[var(--pen-amber)]" : ""
+      className={`epic-tome flex min-h-20 flex-col justify-center gap-1 ${
+        isOver ? "epic-tome--over" : ""
       }`}
     >
+      <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--color-grey-faint)]">
+        Epic
+      </p>
       <p className="truncate text-sm font-medium">{epic.source_name}</p>
       <p className="text-xs text-[var(--color-grey)]">
         {tasks.length
@@ -188,13 +191,18 @@ export function EpicOnboarding({
     new Map(),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Snapshot of the unfiled pile taken on mount. Each drop revalidates the
+  // page and the just-filed card leaves the live `unassigned` prop, which
+  // would erase its battery cell and shrink every battery; the flow instead
+  // works this fixed roster until Done.
+  const [roster] = useState(unassigned);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
     useSensor(KeyboardSensor),
   );
 
-  const pool = unassigned.filter((task) => !assigned.has(task.id));
-  const overlayTask = unassigned.find((task) => task.id === activeId);
+  const pool = roster.filter((task) => !assigned.has(task.id));
+  const overlayTask = roster.find((task) => task.id === activeId);
 
   async function add() {
     setBusy(true);
@@ -299,14 +307,14 @@ export function EpicOnboarding({
                   <EpicDropTarget
                     key={epic.id}
                     epic={epic}
-                    tasks={unassigned.filter(
+                    tasks={roster.filter(
                       (task) => assigned.get(task.id) === epic.id,
                     )}
-                    capacity={unassigned.length}
+                    capacity={roster.length}
                   />
                 ))}
               </div>
-              {unassigned.length > 0 && <TaskPool pool={pool} />}
+              {roster.length > 0 && <TaskPool pool={pool} />}
               <DragOverlay>
                 {overlayTask ? <TaskSlip task={overlayTask} overlay /> : null}
               </DragOverlay>

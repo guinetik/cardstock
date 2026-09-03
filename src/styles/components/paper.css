@@ -1019,19 +1019,65 @@
     background: var(--surface-card);
     box-shadow: var(--shadow-card);
   }
+  /*
+   * An epic is a closed tome on the desk: cloth spine down the left, the
+   * page block peeking out past the cover at the bottom-right. The cockpit
+   * grid shelves working tomes whose spine cloth takes the outlook pen;
+   * onboarding shows blank ones whose charge bar reads as pages filling in.
+   */
+  .epic-tome,
   .cockpit-epic {
+    /* Two sheets of the page block showing beneath the cover. */
+    --tome-sheets:
+      3px 3px 0 -1px var(--surface-raised), 3px 3px 0 0 var(--border-strong),
+      6px 6px 0 -1px var(--surface-raised), 6px 6px 0 0 var(--border-hairline);
     position: relative;
+    background: var(--surface-card);
+    border: 1px solid var(--border-strong);
+    /* Square where the spine meets the cover, rounded at the fore-edge. */
+    border-radius: 2px var(--radius-card) var(--radius-card) 2px;
+    box-shadow: var(--shadow-card), var(--tome-sheets);
+  }
+  .epic-tome::before,
+  .cockpit-epic::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 9px;
+    background: var(--color-ink2);
+    border-right: 1px solid var(--border-strong);
+    border-radius: 2px 0 0 2px;
+    transition: background var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  /* Head and tail bands where the spine cloth turns over the boards. */
+  .epic-tome::after,
+  .cockpit-epic::after {
+    content: "";
+    position: absolute;
+    inset: 6px auto 6px 0;
+    width: 9px;
+    border-block: 2px solid var(--surface-card);
+    pointer-events: none;
+  }
+  .epic-tome {
+    padding: 0.85rem 0.85rem 0.85rem 1.4rem;
+    transition: border-color var(--motion-duration-hover) var(--motion-ease-out);
+  }
+  /* A task held over the tome: the spine takes the pen. */
+  .epic-tome--over {
+    border-color: var(--pen-amber);
+  }
+  .epic-tome--over::before {
+    background: var(--pen-amber);
+  }
+  .cockpit-epic {
     min-width: 0;
-    padding: 1rem;
+    padding: 1rem 1rem 1rem 1.45rem;
     transition:
       translate var(--motion-duration-hover) var(--motion-ease-out),
       box-shadow var(--motion-duration-hover) var(--motion-ease-out);
   }
   .cockpit-epic::before {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 3px;
-    content: "";
     background: var(--color-grey-faint);
   }
   .cockpit-epic--at-risk::before {
@@ -1045,7 +1091,7 @@
   }
   .cockpit-epic:hover {
     translate: 0 var(--motion-rise);
-    box-shadow: var(--shadow-lift);
+    box-shadow: var(--shadow-lift), var(--tome-sheets);
   }
   .cockpit-task-square {
     transition:
