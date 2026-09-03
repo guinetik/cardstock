@@ -223,6 +223,7 @@ export async function CardSheet({
 
       <IssueComments
         cardId={card.id}
+        memberEmail={me.email}
         comments={issue.comments}
         leftover={issue.leftover}
       />
