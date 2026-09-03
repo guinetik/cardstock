@@ -228,7 +228,9 @@ export async function createCard(
     card_id: card.id,
     actor: c.me.email,
     kind: "created",
-    payload: { lane_id: input.laneId },
+    // board_id lets a notification listener scope a brand-new card — the
+    // events table has no board column and the card is not on desks yet.
+    payload: { lane_id: input.laneId, board_id: input.boardId },
   });
   refreshBoards();
   return {

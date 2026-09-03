@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { Binder, type BinderProject } from "@/components/binder";
 import { manageableProjectIds } from "@/lib/access-server";
 import { memberLabel } from "@/lib/keys";
+import { notificationPrefs } from "@/lib/notify";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
+import { NotificationSettings } from "./notification-settings";
 import { PortraitEditor } from "./portrait-editor";
 import { ProfileForm } from "./profile-form";
 
@@ -68,6 +70,17 @@ export default async function ProfilePage() {
           <PortraitEditor email={member.email} />
         </div>
       </header>
+
+      <section aria-labelledby="profile-notifications" className="mb-10">
+        <h2 id="profile-notifications" className="mb-4">
+          Notifications
+        </h2>
+        <NotificationSettings
+          initial={notificationPrefs(
+            ((member.prefs ?? {}) as Record<string, unknown>).notifications,
+          )}
+        />
+      </section>
 
       <section aria-labelledby="profile-stock">
         <h2 id="profile-stock" className="mb-5">

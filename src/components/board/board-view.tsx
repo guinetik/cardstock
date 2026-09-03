@@ -57,6 +57,7 @@ import {
   parseLaneView,
   type StoredBoardLaneViews,
 } from "@/lib/lane-view";
+import { notificationPrefs } from "@/lib/notify";
 import { rankBetween } from "@/lib/rank";
 import { forgottenAfterDays, timelineToday } from "@/lib/timeline";
 import type { BoardData, Card, Lane } from "@/lib/types";
@@ -67,6 +68,7 @@ import { LaneActionDialog, type LaneActionMode } from "./lane-action-dialog";
 import { LaneColumn } from "./lane-column";
 import { LaneCrudDialog, type LaneDialogMode } from "./lane-crud-dialog";
 import { useBoardRealtime } from "./use-board-realtime";
+import { useCardEventNotifications } from "./use-card-event-notifications";
 
 /**
  * Prefer the droppable under the pointer so an empty work lane wins over
@@ -101,6 +103,8 @@ export interface Me {
     inboxSort?: InboxSort;
     showInternal?: boolean;
     laneViews?: StoredBoardLaneViews;
+    /** Parsed by {@link notificationPrefs}; shape is its business. */
+    notifications?: unknown;
   };
 }
 
@@ -155,6 +159,10 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     });
   }, []);
   const [pending, startTransition] = useTransition();
+  const notifyPrefs = useMemo(
+    () => notificationPrefs(me.prefs.notifications),
+    [me.prefs.notifications],
+  );
 
   useBoardRealtime({
     boardId: data.board.id,
@@ -164,6 +172,15 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       setCards(s.cards);
       setLanes(s.lanes);
     },
+  });
+
+  useCardEventNotifications({
+    boardId: data.board.id,
+    selfEmail: me.email,
+    prefs: notifyPrefs,
+    cardTitle: (id) => cards.find((c) => c.id === id)?.title,
+    laneName: (id) => lanes.find((l) => l.id === id)?.name,
+    knownCard: (id) => cards.some((c) => c.id === id),
   });
 
   const sensors = useSensors(
