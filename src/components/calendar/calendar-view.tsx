@@ -13,6 +13,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -85,6 +86,37 @@ function monthHref(
 
 function slipKey(slip: CalendarSlipData): string {
   return `${slip.boardSlug}:${slip.card.id}`;
+}
+
+/** Small select beside the board name — jumps straight to another board's calendar. */
+function BoardSwitcher(props: {
+  projectSlug: string;
+  boardSlug: string | null;
+  boards: { slug: string; name: string }[];
+}) {
+  const router = useRouter();
+  if (props.boards.length === 0) return null;
+  return (
+    <select
+      className="paper-field h-6 py-0 text-[12.5px]"
+      aria-label="Switch board"
+      value=""
+      onChange={(event) => {
+        const slug = event.target.value;
+        if (!slug || slug === props.boardSlug) return;
+        router.push(`/p/${props.projectSlug}/b/${slug}/calendar`);
+      }}
+    >
+      <option value="" disabled>
+        Switch Board
+      </option>
+      {props.boards.map((board) => (
+        <option key={board.slug} value={board.slug}>
+          {board.name}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 /**
@@ -182,8 +214,12 @@ function CalendarTray(props: {
       data-calendar-tray=""
       data-over={isOver ? "" : undefined}
     >
-      <h2>
-        Unscheduled{" "}
+      <h2 className="flex items-center gap-1.5">
+        <Inbox
+          className="size-3.5 text-[var(--pen-amber)]"
+          aria-hidden="true"
+        />
+        <span className="text-[var(--pen-amber)]">Unscheduled</span>
         <span className="font-mono text-[10px] text-[var(--color-grey)]">
           {filtering
             ? `${shown.length} of ${props.slips.length}`
@@ -330,6 +366,7 @@ function CalendarDayCell(props: {
  * @param props.watchDays - Forgotten watch window.
  * @param props.slips - Live slips already filtered by the server.
  * @param props.boards - Known boards for filter chips.
+ * @param props.allBoards - Every project board, for the board-switcher select.
  * @param props.selectedBoards - Chip filter, or null for all.
  * @param props.path - Page path for month and chip links.
  */
@@ -343,6 +380,8 @@ export function CalendarView(props: {
   watchDays: number;
   slips: CalendarSlipData[];
   boards: { slug: string; name: string }[];
+  /** Every board in the project, for the board-switcher select beside "Project". */
+  allBoards: { slug: string; name: string }[];
   boardIds: string[];
   selectedBoards: string[] | null;
   path: string;
@@ -426,14 +465,21 @@ export function CalendarView(props: {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5">
       <header className="flex flex-col gap-2">
         <div>
           <p className="eyebrow">{props.projectName}</p>
           <h1 className="text-[27px] leading-none">{monthLabel}</h1>
-          <p className="mt-1 text-sm text-[var(--color-grey)]">
-            {props.heading}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-sm text-[var(--color-grey)]">
+              {props.heading}
+            </p>
+            <BoardSwitcher
+              projectSlug={props.projectSlug}
+              boardSlug={props.boardSlug}
+              boards={props.allBoards}
+            />
+          </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
             {boardBase ? (
               <nav
@@ -526,13 +572,13 @@ export function CalendarView(props: {
                   className="paper-link"
                   href={monthHref(props.path, prevMonth, props.selectedBoards)}
                 >
-                  Previous
+                  Last Month
                 </Link>
                 <Link
                   className="paper-link"
                   href={monthHref(props.path, nextMonth, props.selectedBoards)}
                 >
-                  Next
+                  Next Month
                 </Link>
               </nav>
             }

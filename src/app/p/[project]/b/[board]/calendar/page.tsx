@@ -5,7 +5,7 @@ import { CalendarView } from "@/components/calendar/calendar-view";
 import { loadBoard } from "@/lib/board-data";
 import { type CalendarSlip, calendarMonth } from "@/lib/calendar";
 import { resolveBoardGates } from "@/lib/gates";
-import { currentMember } from "@/lib/supabase/server";
+import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { forgottenAfterDays, timelineToday } from "@/lib/timeline";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,12 @@ export default async function BoardCalendarPage(
   const me = await currentMember();
   if (!me) redirect("/login?error=member");
   const data = await loadBoard(project, board);
+  const db = await supabaseServer();
+  const { data: siblingBoards } = await db
+    .from("boards")
+    .select("slug, name")
+    .eq("project_id", data.project.id)
+    .order("name");
   const today = timelineToday();
   const month = calendarMonth((await props.searchParams).month, today);
   const gates = resolveBoardGates(
@@ -54,6 +60,7 @@ export default async function BoardCalendarPage(
         watchDays={forgottenAfterDays(data.project.settings)}
         slips={slips}
         boards={[]}
+        allBoards={siblingBoards ?? []}
         boardIds={[data.board.id]}
         selectedBoards={null}
         path={path}
