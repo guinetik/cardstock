@@ -25,7 +25,7 @@ export async function loadBoardState(
     db
       .from("cards")
       .select(
-        "id, external_id, title, status, epic, area, raised_by, raised_on, shipped_on, needs, summary, summary_edited_at, body_md, body_edited_at, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, color, source_hash, source_text, frontmatter_extra, card_tags(tag_id), card_links!card_links_from_card_fkey(to_card, kind)",
+        "id, external_id, title, status, epic, area, assignee, assignee_id, raised_by, raised_on, shipped_on, needs, summary, summary_edited_at, body_md, body_edited_at, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, color, source_hash, source_text, frontmatter_extra, card_tags(tag_id), card_links!card_links_from_card_fkey(to_card, kind)",
       )
       .eq("board_id", boardId),
     db.from("epics").select("id, source_name").eq("board_id", boardId),

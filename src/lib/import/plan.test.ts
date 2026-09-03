@@ -16,6 +16,8 @@ function state(cards: Partial<ExistingCard>[] = []): BoardState {
     status: "backlog",
     epic: "E",
     area: "A",
+    assignee: null,
+    assignee_id: null,
     raised_by: null,
     raised_on: null,
     shipped_on: null,
@@ -251,6 +253,22 @@ describe("sheetFromCard", () => {
   test("a card with no lane states no rank", () => {
     const s = state([{ id: "a", external_id: "1", lane_id: null, rank: 4 }]);
     expect(sheetFromCard(s.cards.get("1")!, s).rank).toBeNull();
+  });
+  // Regression: sheetFromCard once hardcoded assignee: null, so writeSheet
+  // (which now manages assignee) read that as "the board wants it cleared"
+  // and deleted a stated assignee line on every export — even when the row
+  // actually agreed with the file. This is the exact pairing
+  // exportBoardEntries uses (sheetFromCard, then writeSheet against the
+  // stored source_text), so it must round-trip byte-identically.
+  test("a card whose row agrees with the file's assignee exports byte-identical", () => {
+    const src = sheet(
+      1,
+      "assignee: joao@example.test\nlane: unsorted\nrank: 1",
+    ).text;
+    const s = state([
+      { id: "a", external_id: "1", assignee: "joao@example.test" },
+    ]);
+    expect(writeSheet(src, sheetFromCard(s.cards.get("1")!, s))).toBe(src);
   });
 });
 

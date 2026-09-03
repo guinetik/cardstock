@@ -29,6 +29,8 @@ export interface ExistingCard {
   status: string;
   epic: string | null;
   area: string | null;
+  assignee: string | null;
+  assignee_id: string | null;
   raised_by: string | null;
   raised_on: string | null;
   shipped_on: string | null;
