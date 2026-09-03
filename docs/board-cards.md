@@ -32,3 +32,7 @@ The whole card is a handle, open or closed: the title row, the status line, and 
 Do not put empty tactician fields in the resting chrome. E2E that clicks ratings or dates must `hover()` the card first.
 
 See `docs/paper.md` for the surfaces, colours and motion these classes come from.
+
+## Assignee
+
+One person per card, or nobody. The board does not draw a portrait on the card — assignment shows on the card page and in the Assignee filter, which offers every project member plus `unassigned`, with your own chip first and labelled `Me`. See `docs/superpowers/specs/2026-09-03-card-assignee-design.md`.
