@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Person } from "@/lib/assignee";
+import { loadProjectRoster } from "@/lib/board-data";
 import type { BoardState, ExistingCard } from "./types";
 
 /** Everything the planner compares against, from the database, through whatever client the caller holds. */
@@ -12,7 +12,7 @@ export async function loadBoardState(
     { data: groups, error: groupsError },
     { data: cards, error: cardsError },
     { data: epics, error: epicsError },
-    { data: roster, error: rosterError },
+    { data: board, error: boardError },
   ] = await Promise.all([
     db
       .from("lanes")
@@ -31,13 +31,7 @@ export async function loadBoardState(
       )
       .eq("board_id", boardId),
     db.from("epics").select("id, source_name").eq("board_id", boardId),
-    db
-      .from("boards")
-      .select(
-        "project_id, projects!inner(project_members(members(id, email, display_name)))",
-      )
-      .eq("id", boardId)
-      .maybeSingle(),
+    db.from("boards").select("project_id").eq("id", boardId).maybeSingle(),
   ]);
   // An empty `?? []` fallback on error would hand the planner an empty
   // board state and every card would come back "new" — the exact thing a
@@ -47,8 +41,12 @@ export async function loadBoardState(
     throw new Error(`board state: tag_groups: ${groupsError.message}`);
   if (cardsError) throw new Error(`board state: cards: ${cardsError.message}`);
   if (epicsError) throw new Error(`board state: epics: ${epicsError.message}`);
-  if (rosterError)
-    throw new Error(`board state: roster: ${rosterError.message}`);
+  if (boardError) throw new Error(`board state: board: ${boardError.message}`);
+  if (!board) throw new Error(`board state: board: no board for ${boardId}`);
+  // The shared shaping used by the board and card pages on every load — one
+  // path from `project_members` to `Person[]`, so import can't drift from
+  // what the UI offers as roster.
+  const members = await loadProjectRoster(db, board.project_id as string);
   const idToExternal = new Map(
     (cards ?? []).map((c) => [c.id as string, c.external_id as string]),
   );
@@ -75,33 +73,6 @@ export async function loadBoardState(
         .filter((n) => Number.isInteger(n)),
     });
   }
-  // The roster is read through the board's project so import resolves an
-  // assignee email without the caller having to know the project id.
-  const memberships =
-    (
-      roster as unknown as {
-        projects?: {
-          project_members?: {
-            members?: {
-              id: string;
-              email: string;
-              display_name: string | null;
-            } | null;
-          }[];
-        } | null;
-      } | null
-    )?.projects?.project_members ?? [];
-  const members: Person[] = memberships
-    .map((m) => m.members)
-    .filter(
-      (m): m is { id: string; email: string; display_name: string | null } =>
-        m != null,
-    )
-    .map((m) => ({
-      memberId: m.id,
-      email: m.email,
-      displayName: m.display_name,
-    }));
   return {
     id: boardId,
     lanes: (lanes ?? []) as BoardState["lanes"],

@@ -11,7 +11,7 @@ const SAMPLE = cardToMarkdown({
   status: "backlog",
   epic: "Billing",
   area: "Product",
-  assignee: null,
+  assignee: "ana@x.test",
   tags: ["kind:question"],
   raisedBy: "Ana",
   raisedOn: "2026-08-07",

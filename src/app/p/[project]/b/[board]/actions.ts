@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { normaliseEmail } from "@/lib/assignee";
 import { loadBoard } from "@/lib/board-data";
 import { type CardColor, isCardColor } from "@/lib/card-color";
 import { isCardStatus, normalizeNeeds } from "@/lib/card-status";
@@ -766,7 +767,11 @@ export async function assignCard(
     )?.members?.email;
     if (!found)
       return { ok: false, error: "That person is not on this project." };
-    email = found;
+    // `sheetFromFrontmatter` lowercases via `normaliseEmail` and `diffSheets`
+    // compares case-sensitively; writing a mixed-case `members.email` here
+    // verbatim would make every import see a changed assignee and every
+    // export rewrite the line for no real change.
+    email = normaliseEmail(found);
   }
 
   const { error } = await c.db

@@ -79,8 +79,10 @@ export function CardEditor({
   const [tags, setTags] = useState(new Set(tagIds));
   const [editingTags, setEditingTags] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const offRoster =
-    card.assignee && !findPerson(people, card.assignee) ? card.assignee : null;
+  const assigned =
+    people.find((p) => p.memberId === card.assignee_id) ??
+    findPerson(people, card.assignee);
+  const offRoster = !assigned && card.assignee ? card.assignee : null;
 
   /**
    * Persist a partial card update and refresh the page.
@@ -167,7 +169,7 @@ export function CardEditor({
           <span className={fieldLabel}>Assignee</span>
           <select
             className={field}
-            defaultValue={card.assignee_id ?? (offRoster ? OFF_ROSTER : "")}
+            defaultValue={assigned?.memberId ?? (offRoster ? OFF_ROSTER : "")}
             disabled={pending}
             onChange={(e) =>
               start(async () => {

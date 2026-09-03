@@ -7,6 +7,7 @@ import {
   isFiltering,
   matches,
   sortInbox,
+  toCsv,
 } from "./filters";
 import type { Card, Lane, TagGroup } from "./types";
 
@@ -271,4 +272,16 @@ test("a card whose file names an off-roster person is assigned, not unassigned",
 test("an assignee filter counts as filtering", () => {
   expect(isFiltering({ ...emptyFilters(), assignee: MEMBER })).toBe(true);
   expect(isFiltering(emptyFilters())).toBe(false);
+});
+
+describe("toCsv", () => {
+  test("the header and the row carry assignee at the same position", () => {
+    const csv = toCsv([task({ assignee: "joao@example.test" })], [work], []);
+    const [head, row] = csv.split("\n");
+    const headCols = head.split(",");
+    const rowCols = row.split(",");
+    const idx = headCols.indexOf("assignee");
+    expect(idx).toBeGreaterThan(-1);
+    expect(rowCols[idx]).toBe("joao@example.test");
+  });
 });

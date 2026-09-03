@@ -1,6 +1,13 @@
 /**
- * One assignee, three surfaces. The card select, the filter chips, and the
- * history line all label a person through here so a name never reads two ways.
+ * One assignee, two roster-aware surfaces. The card select and the filter
+ * chips both label a person through here so a name never reads two ways.
+ *
+ * The history line does not go through this module: `card-history.ts` only
+ * has the email a `card_events` payload carries, no roster to resolve it
+ * against, so it capitalises the local part instead of looking up a
+ * `display_name`. That is why the same person can read `Ana Silva` in the
+ * filter and `Ana` in the history — both are correct for what each surface
+ * has on hand.
  *
  * `members.email` is `citext`, so every comparison in TypeScript lowercases
  * first — otherwise a file saying `Joao@x.test` would resolve in Postgres and
