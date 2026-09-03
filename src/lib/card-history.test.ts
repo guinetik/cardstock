@@ -244,6 +244,24 @@ describe("edited", () => {
     expect(line.facts).toBe("changed the color");
     expect(line.facts).not.toContain("blue");
   });
+
+  test("an assignment names the person", () => {
+    const line = formatCardEvent(
+      ev({ kind: "edited", payload: { assignee: "joao@example.test" } }),
+      lanes,
+      opts,
+    );
+    expect(line.facts).toBe("assigned this to Joao");
+  });
+
+  test("clearing the assignee says so", () => {
+    const line = formatCardEvent(
+      ev({ kind: "edited", payload: { assignee: null } }),
+      lanes,
+      opts,
+    );
+    expect(line.facts).toBe("unassigned this");
+  });
 });
 
 describe("archived and restored", () => {

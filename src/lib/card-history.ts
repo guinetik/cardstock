@@ -36,6 +36,7 @@ const EDIT_ORDER = [
   "priority",
   "effort",
   "status",
+  "assignee",
   "target_date",
   "target_label",
   "audience",
@@ -248,6 +249,12 @@ function editField(key: EditFieldKey, value: unknown): string {
     case "status":
       if (isCardStatus(value)) return `set status to ${value}`;
       return "changed status";
+    case "assignee":
+      // The payload carries the email; the ledger says the person, using the
+      // same capitalised local-part rule as the actor column.
+      return typeof value === "string" && value
+        ? `assigned this to ${formatActor(value)}`
+        : "unassigned this";
     case "target_date":
       return typeof value === "string" && value
         ? `set the target date to ${value}`
