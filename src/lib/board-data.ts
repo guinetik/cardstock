@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { type Person, personLabel } from "@/lib/assignee";
 import { resolveBoardGates } from "@/lib/gates";
 import { supabaseServer } from "@/lib/supabase/server";
 import { timelineMilestones } from "@/lib/timeline";
@@ -31,6 +32,7 @@ export async function loadBoard(
     { data: cardTags },
     { data: moves },
     { data: epics },
+    { data: memberships },
   ] = await Promise.all([
     db
       .from("lanes")
@@ -47,7 +49,7 @@ export async function loadBoard(
     db
       .from("cards")
       .select(
-        "id, external_id, title, summary, status, epic, epic_id, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at, color",
+        "id, external_id, title, summary, status, epic, epic_id, area, assignee_id, assignee, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at, color",
       )
       .eq("board_id", board.id)
       .order("rank"),
@@ -67,6 +69,10 @@ export async function loadBoard(
       .select("id, source_name, outcome")
       .eq("board_id", board.id)
       .order("source_name"),
+    db
+      .from("project_members")
+      .select("members(id, email, display_name)")
+      .eq("project_id", project.id),
   ]);
 
   const tagsByCard = new Map<string, string[]>();
@@ -85,6 +91,27 @@ export async function loadBoard(
     (moves ?? []) as unknown as Parameters<typeof timelineMilestones>[2],
     gates,
   );
+
+  const people: Person[] = (
+    (memberships ?? []) as unknown as {
+      members: {
+        id: string;
+        email: string;
+        display_name: string | null;
+      } | null;
+    }[]
+  )
+    .map((row) => row.members)
+    .filter(
+      (m): m is { id: string; email: string; display_name: string | null } =>
+        m != null,
+    )
+    .map((m) => ({
+      memberId: m.id,
+      email: m.email,
+      displayName: m.display_name,
+    }))
+    .sort((a, b) => personLabel(a).localeCompare(personLabel(b)));
 
   return {
     project: {
@@ -105,5 +132,6 @@ export async function loadBoard(
       built_at: builtAt.get(c.id) ?? null,
       delivered_at: c.shipped_on ?? deliveredAt.get(c.id) ?? null,
     })) as Card[],
+    people,
   };
 }

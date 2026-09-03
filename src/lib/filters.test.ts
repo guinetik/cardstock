@@ -76,6 +76,8 @@ const task = (patch: Partial<Card> = {}): Card => ({
   epic_id: null,
   area: null,
   raised_by: null,
+  assignee_id: null,
+  assignee: null,
   raised_on: null,
   shipped_on: null,
   needs: null,
