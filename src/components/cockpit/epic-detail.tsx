@@ -88,6 +88,29 @@ export function EpicDetail({
             {view.epic.outcome ||
               "Describe the outcome so a reader can understand the promise without opening a task."}
           </p>
+          <nav
+            className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
+            aria-label="Board views"
+          >
+            <Link className="paper-link" href={boardHref}>
+              Board
+            </Link>
+            <Link className="paper-link" href={`${boardHref}/timeline`}>
+              Timeline
+            </Link>
+            <Link className="paper-link" href={`${boardHref}/calendar`}>
+              Calendar
+            </Link>
+            <Link className="paper-link" href={`${boardHref}/manage`}>
+              Manage
+            </Link>
+            <Link
+              className="paper-link"
+              href={boardHref.replace(/\/b\/[^/]+$/, "")}
+            >
+              Project
+            </Link>
+          </nav>
         </div>
         <div className="flex items-center gap-3">
           {inboxLane && (
