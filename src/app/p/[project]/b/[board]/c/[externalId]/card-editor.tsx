@@ -6,6 +6,7 @@ import {
   setCardTags,
   updateCard,
 } from "@/app/p/[project]/b/[board]/actions";
+import { assignCardEpic } from "@/app/p/[project]/b/[board]/cockpit/actions";
 import { CardColorPicker } from "@/components/board/card-color-picker";
 import { Button } from "@/components/ui/button";
 import { type CardColor, parseCardColor } from "@/lib/card-color";
@@ -28,6 +29,9 @@ interface CardLite {
   archived_at: string | null;
   /** Pastel tint, or null for the neutral paper surface. */
   color: CardColor | null;
+  /** Frontmatter `area`; the scheme requires one, "general" is the default. */
+  area: string;
+  epic_id: string | null;
 }
 
 const field =
@@ -50,11 +54,13 @@ export function CardEditor({
   card,
   groups,
   tagIds,
+  epics,
   backHref,
 }: {
   card: CardLite;
   groups: { id: string; name: string; tags: { id: string; name: string }[] }[];
   tagIds: string[];
+  epics: { id: string; source_name: string }[];
   backHref: string;
 }) {
   const router = useRouter();
@@ -123,6 +129,41 @@ export function CardEditor({
               </option>
             ))}
           </select>
+        </label>
+        <label>
+          <span className={fieldLabel}>Epic</span>
+          <select
+            className={field}
+            defaultValue={card.epic_id ?? ""}
+            disabled={pending}
+            onChange={(e) =>
+              start(async () => {
+                const r = await assignCardEpic(card.id, e.target.value || null);
+                setMsg(r.ok ? "Saved" : r.error);
+                router.refresh();
+              })
+            }
+          >
+            <option value="">Unassigned</option>
+            {epics.map((epic) => (
+              <option key={epic.id} value={epic.id}>
+                {epic.source_name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span className={fieldLabel}>Area</span>
+          <input
+            type="text"
+            className={field}
+            defaultValue={card.area}
+            placeholder="general"
+            onBlur={(e) => {
+              const next = e.target.value.trim() || "general";
+              if (next !== card.area) save({ area: next });
+            }}
+          />
         </label>
         <label>
           <span className={fieldLabel}>Priority</span>

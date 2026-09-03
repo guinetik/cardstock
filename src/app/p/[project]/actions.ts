@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentAccess } from "@/lib/access-server";
+import { CARD_TEMPLATE_MAX, CARD_TEMPLATE_SETTING } from "@/lib/card-template";
 import { GATES_SETTING, validateGatesForSave } from "@/lib/gates";
 import { cleanName, keyFromName } from "@/lib/keys";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
@@ -369,4 +370,56 @@ export async function updateBoardGates(
   revalidatePath(`/p/${projectSlug}/b/${boardSlug}/timeline`);
   revalidatePath(`/p/${projectSlug}/b/${boardSlug}/manage`);
   return { message: "Gates saved." };
+}
+
+export type CardTemplateResult = { error?: string; message?: string } | null;
+
+/**
+ * Save a board's new-card markdown template. Owners and project admins only.
+ * An empty save clears the template; new cards then start blank again.
+ */
+export async function updateCardTemplate(
+  _previous: CardTemplateResult,
+  form: FormData,
+): Promise<CardTemplateResult> {
+  const boardId = String(form.get("boardId") ?? "");
+  const projectSlug = String(form.get("projectSlug") ?? "");
+  const boardSlug = String(form.get("boardSlug") ?? "");
+  if (!boardId || !projectSlug || !boardSlug)
+    return { error: "Board not found." };
+
+  const template = String(form.get("template") ?? "").trim();
+  if (template.length > CARD_TEMPLATE_MAX)
+    return { error: "The template is too long to be a skeleton." };
+
+  const db = await supabaseServer();
+  const { data: project } = await db
+    .from("projects")
+    .select("id")
+    .eq("slug", projectSlug)
+    .maybeSingle();
+  if (!project) return { error: "Project not found." };
+
+  const access = await currentAccess(project.id);
+  if (!access?.canManage)
+    return { error: "Only an owner or project admin can change the template." };
+
+  const { data: board } = await db
+    .from("boards")
+    .select("id, project_id, settings")
+    .eq("id", boardId)
+    .maybeSingle();
+  if (!board || board.project_id !== project.id)
+    return { error: "Board not found." };
+
+  const settings = (board.settings ?? {}) as Record<string, unknown>;
+  const { error } = await db
+    .from("boards")
+    .update({ settings: { ...settings, [CARD_TEMPLATE_SETTING]: template } })
+    .eq("id", board.id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/p/${projectSlug}/b/${boardSlug}`);
+  revalidatePath(`/p/${projectSlug}/b/${boardSlug}/manage`);
+  return { message: "Template saved." };
 }

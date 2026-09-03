@@ -83,6 +83,11 @@ export async function CardSheet({
       .order("at", { ascending: false })
       .limit(50),
   ]);
+  const { data: epics } = await db
+    .from("epics")
+    .select("id, source_name")
+    .eq("board_id", b.id)
+    .order("source_name");
   const lane = (lanes ?? []).find((l) => l.id === card.lane_id);
   const issue = splitIssueBody(card.body_md);
   const html = marked.parse(
@@ -149,7 +154,10 @@ export async function CardSheet({
           archived_at: card.archived_at,
           external_id: card.external_id,
           color: parseCardColor(card.color),
+          area: card.area,
+          epic_id: card.epic_id,
         }}
+        epics={epics ?? []}
         groups={
           (groups ?? []) as unknown as {
             id: string;

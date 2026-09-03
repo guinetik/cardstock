@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { loadBoard } from "@/lib/board-data";
 import { type CardColor, isCardColor } from "@/lib/card-color";
 import { isCardStatus, normalizeNeeds } from "@/lib/card-status";
+import { cardTemplate } from "@/lib/card-template";
 import {
   formatCommentAt,
   joinIssueBody,
@@ -153,16 +154,22 @@ export async function createCard(
     selectedEpic = epic;
   }
 
-  const [{ data: existing }, { data: first }] = await Promise.all([
-    c.db.from("cards").select("external_id").eq("board_id", input.boardId),
-    c.db
-      .from("cards")
-      .select("rank")
-      .eq("lane_id", input.laneId)
-      .order("rank")
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [{ data: existing }, { data: first }, { data: boardRow }] =
+    await Promise.all([
+      c.db.from("cards").select("external_id").eq("board_id", input.boardId),
+      c.db
+        .from("cards")
+        .select("rank")
+        .eq("lane_id", input.laneId)
+        .order("rank")
+        .limit(1)
+        .maybeSingle(),
+      c.db
+        .from("boards")
+        .select("settings")
+        .eq("id", input.boardId)
+        .maybeSingle(),
+    ]);
   const nextId =
     Math.max(
       0,
@@ -176,7 +183,15 @@ export async function createCard(
     lane_id: input.laneId,
     title,
     summary: input.summary?.trim() || null,
-    body_md: input.bodyMarkdown?.trim() ?? "",
+    // An empty body starts from the board's template so a site-born card has
+    // the same section skeleton a markdown-born one must.
+    body_md:
+      input.bodyMarkdown?.trim() ||
+      cardTemplate(boardRow?.settings as Record<string, unknown> | null),
+    // Frontmatter parity with imported sheets: markdown-born cards carry who
+    // raised them and when; site-born cards must too, or age goes blank.
+    raised_on: now.slice(0, 10),
+    raised_by: c.me.display_name?.trim() || c.me.email.split("@")[0],
     status,
     epic: selectedEpic?.source_name ?? input.epic?.trim() ?? "Unassigned",
     epic_id: selectedEpic?.id ?? null,
@@ -453,6 +468,9 @@ export async function moveCard(
 
 export interface CardPatch {
   summary?: string | null;
+  /** Frontmatter `area`; blank falls back to "general", never null — the
+   * sync scheme lists area among required keys. */
+  area?: string;
   priority?: 1 | 2 | 3 | null;
   effort?: "L" | "M" | "H" | null;
   planned_start_date?: string | null;
@@ -491,6 +509,9 @@ export async function updateCard(
   // A blank note is no blocker: trim so a stray space cannot hold a card blocked.
   if (Object.hasOwn(clean, "needs")) {
     clean.needs = normalizeNeeds(clean.needs as string | null);
+  }
+  if (Object.hasOwn(clean, "area")) {
+    clean.area = String(clean.area ?? "").trim() || "general";
   }
   // Hand ownership of the summary to the app: the next import must not replace
   // these words with the frontmatter's. The exporter writes it back out.

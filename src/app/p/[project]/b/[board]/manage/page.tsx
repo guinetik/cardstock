@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CardTemplateEditor } from "@/app/p/[project]/card-template-editor";
 import { GatesEditor } from "@/app/p/[project]/gates-editor";
 import { ProjectSection } from "@/app/p/[project]/project-section";
 import { TaxonomyEditor } from "@/app/p/[project]/taxonomy-editor";
 import { currentAccess } from "@/lib/access-server";
 import { loadBoardManage } from "@/lib/board-manage-data";
+import { cardTemplate } from "@/lib/card-template";
 import { resolveBoardGates } from "@/lib/gates";
 import { currentMember } from "@/lib/supabase/server";
 import { markHue } from "@/lib/types";
@@ -102,6 +104,18 @@ export default async function BoardManagePage(
           boardId={data.board.id}
           boardName={data.board.name}
           groups={groups}
+        />
+      </ProjectSection>
+
+      <ProjectSection id="card-template-heading" title="card template">
+        <CardTemplateEditor
+          boardId={data.board.id}
+          projectSlug={data.project.slug}
+          boardSlug={data.board.slug}
+          initial={cardTemplate(
+            (data.board.settings ?? {}) as Record<string, unknown>,
+          )}
+          canEdit={access.canManage}
         />
       </ProjectSection>
 

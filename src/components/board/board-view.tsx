@@ -40,6 +40,7 @@ import {
 } from "@/app/p/[project]/b/[board]/actions";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CardColor } from "@/lib/card-color";
+import { cardTemplate } from "@/lib/card-template";
 import {
   boardStatuses,
   emptyFilters,
@@ -688,6 +689,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         boardId={data.board.id}
         groups={data.groups}
         epics={data.epics}
+        bodyTemplate={cardTemplate(data.board.settings)}
         onClose={() => setCardLane(null)}
         onCreate={addCard}
       />
