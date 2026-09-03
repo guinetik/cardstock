@@ -1,4 +1,4 @@
-import type { BoardGate } from "./gates";
+import { type BoardGate, cardGate } from "./gates";
 import type { Card } from "./types";
 
 const DAY = 86_400_000;
@@ -39,6 +39,7 @@ export type CalendarCard = Pick<
   | "status"
   | "shipped_on"
   | "lane_id"
+  | "epic"
 >;
 
 /** A card placed on the month, tagged with the board CardAge must use. */
@@ -121,6 +122,31 @@ export function monthMatrix(month: string, today: string): CalendarDay[] {
   return days;
 }
 
+/**
+ * Case-insensitive subsequence match: every query character appears in `text`
+ * in order, not necessarily adjacent. An empty query matches everything.
+ */
+export function fuzzyMatch(query: string, text: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const haystack = text.toLowerCase();
+  let at = 0;
+  for (const ch of needle) {
+    at = haystack.indexOf(ch, at);
+    if (at === -1) return false;
+    at += 1;
+  }
+  return true;
+}
+
+/** Shipped by the board's own definition: a shipped gate match, or a ship date. */
+function slipDelivered(slip: CalendarSlip): boolean {
+  return (
+    !!slip.card.shipped_on ||
+    cardGate(slip.card, slip.gates)?.outcome === "shipped"
+  );
+}
+
 function byExternalId(a: CalendarSlip, b: CalendarSlip): number {
   return a.card.external_id.localeCompare(b.card.external_id, undefined, {
     numeric: true,
@@ -144,7 +170,8 @@ export function calendarGroups(
   for (const slip of slips) {
     const target = slip.card.target_date;
     if (!target) {
-      tray.push(slip);
+      // Delivered work needs no scheduling: the tray is a to-schedule pile.
+      if (!slipDelivered(slip)) tray.push(slip);
       continue;
     }
     if (!present.has(target)) continue;

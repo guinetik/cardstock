@@ -35,7 +35,7 @@ export default async function ProjectCalendarPage(
     <main className="flex h-full min-h-0 flex-1 flex-col px-4 pt-5 pb-4 sm:px-6">
       <Link
         href={`/p/${project}`}
-        className="text-xs text-muted-foreground hover:underline"
+        className="mb-4 inline-block text-xs text-muted-foreground hover:underline"
       >
         ← {data.project.name}
       </Link>

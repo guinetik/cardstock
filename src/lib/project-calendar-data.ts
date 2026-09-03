@@ -88,6 +88,7 @@ export function assembleCalendarSlips(
         status: card.status,
         shipped_on: card.shipped_on,
         lane_id: card.lane_id,
+        epic: card.epic,
       },
       boardSlug: board.slug,
       boardName: board.name,
@@ -141,7 +142,7 @@ export async function loadProjectCalendar(
     db
       .from("cards")
       .select(
-        "id, board_id, external_id, title, color, raised_on, target_date, target_label, status, shipped_on, lane_id, archived_at",
+        "id, board_id, external_id, title, color, raised_on, target_date, target_label, status, shipped_on, lane_id, epic, archived_at",
       )
       .in("board_id", ids),
   ]);

@@ -32,6 +32,7 @@ const card = {
   status: "backlog",
   shipped_on: null,
   lane_id: "l1",
+  epic: null,
   archived_at: null,
 };
 

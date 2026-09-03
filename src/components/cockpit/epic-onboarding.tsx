@@ -22,6 +22,7 @@ import { PaperTooltip, PaperTooltipLines } from "@/components/paper-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { snapCenterToCursor } from "@/lib/dnd";
 import type { Card } from "@/lib/types";
 
 type SeedEpic = { id: string; source_name: string };
@@ -315,7 +316,7 @@ export function EpicOnboarding({
                 ))}
               </div>
               {roster.length > 0 && <TaskPool pool={pool} />}
-              <DragOverlay>
+              <DragOverlay modifiers={[snapCenterToCursor]}>
                 {overlayTask ? <TaskSlip task={overlayTask} overlay /> : null}
               </DragOverlay>
             </DndContext>

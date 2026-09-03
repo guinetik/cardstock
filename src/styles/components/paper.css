@@ -2296,6 +2296,26 @@
     gap: 1rem;
     align-items: stretch;
   }
+  /* The grid's own column, so month stepping sits on the calendar's edge
+   * rather than the page's (the tray extends the page past the grid). */
+  .calendar-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+  .calendar-nav {
+    display: flex;
+    gap: 0.85rem;
+    justify-content: flex-end;
+    font-size: 12.5px;
+  }
+  /*
+   * The month is a corkboard: white day sheets pinned to mid-value cork so
+   * the sheets — not the page — carry the contrast, and canary post-its
+   * carry it again on the sheets. The speckle is two offset dot fields.
+   */
   .calendar-grid {
     flex: 1;
     min-width: 0;
@@ -2303,14 +2323,45 @@
     grid-template-columns: repeat(7, minmax(0, 1fr));
     align-items: stretch;
     gap: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--surface-cork);
+    background-image:
+      radial-gradient(var(--cork-speck) 1px, transparent 1.5px),
+      radial-gradient(var(--cork-speck) 1px, transparent 1.5px);
+    background-size:
+      11px 11px,
+      7px 7px;
+    background-position:
+      0 0,
+      4px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-well);
   }
+  /*
+   * Weekday names are written on strips of masking tape stuck to the cork:
+   * translucent stock the speckle ghosts through, torn ends, and the same
+   * alternating hand-placed tilt the tag marks use.
+   */
   .calendar-dow {
+    justify-self: center;
+    align-self: center;
+    padding: 0.3rem 1rem 0.32rem;
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--color-grey);
+    color: var(--color-ink2);
     text-align: center;
+    background: color-mix(in oklab, var(--surface-card) 78%, transparent);
+    clip-path: polygon(2% 0, 98% 7%, 100% 86%, 96% 100%, 3% 95%, 0 14%);
+    rotate: -0.8deg;
+  }
+  .calendar-dow:nth-child(2n) {
+    rotate: 0.6deg;
+  }
+  .calendar-dow:nth-child(3n) {
+    rotate: -0.3deg;
   }
   .calendar-day {
     aspect-ratio: 1;
@@ -2323,6 +2374,8 @@
     background: var(--surface-card);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-card);
+    /* A sheet pinned on the cork, not painted into it. */
+    box-shadow: var(--shadow-card);
   }
   .calendar-day-body {
     display: flex;
@@ -2337,10 +2390,12 @@
     outline: 1px solid var(--color-ink);
     outline-offset: -1px;
   }
+  /* Out-of-month days: no sheet pinned there, just bare cork. */
   .calendar-day[data-in-month="false"] {
     color: var(--color-grey);
-    background: var(--surface-panel);
+    background: transparent;
     border-style: dashed;
+    box-shadow: none;
   }
   .calendar-day-num {
     font-family: var(--font-mono, ui-monospace, monospace);
@@ -2415,6 +2470,9 @@
     min-width: 0;
     overflow: visible;
     padding: 0.22rem 0.3rem 0.24rem;
+    /* An uncoloured slip is a canary post-it, so it reads against the day
+     * sheet on its own; a card-color class still wins over this default. */
+    background: var(--surface-postit);
   }
   .calendar-slip-anchor {
     display: flex;
@@ -2458,6 +2516,14 @@
   /* No rotate transition: while rotate animates, the article is a containing
    * block and the fixed float pins against it instead of the viewport. */
   .calendar-slip--stub {
+    display: grid;
+    place-items: center;
+    /* A true square of stock whatever the id's width: the number sits
+     * centered, and a long id grows the whole square, not a strip. The
+     * larger face is also more paper to pick up when dragging. */
+    min-width: 2.25rem;
+    height: auto;
+    aspect-ratio: 1;
     rotate: var(--slip-tilt, 0deg);
     padding: 0.24rem 0.28rem;
     cursor: grab;

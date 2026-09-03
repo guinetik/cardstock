@@ -29,30 +29,34 @@ export default async function CockpitPage(props: {
         >
           ← {data.board.name}
         </Link>
-        <div className="mt-1 flex flex-wrap items-baseline gap-4">
-          <h1 className="text-[27px] leading-tight">Epic cockpit</h1>
-          <nav className="ml-auto flex gap-4 text-sm">
-            <Link className="paper-link" href={`${boardBase}/timeline`}>
-              Timeline
-            </Link>
-            <Link
-              className="paper-link"
-              href={`/p/${project}/b/${board}/calendar`}
-            >
-              Calendar
-            </Link>
-            <Link className="paper-link" href={`${boardBase}/manage`}>
-              Manage
-            </Link>
-            <Link className="paper-link" href={`/p/${project}`}>
-              Project
-            </Link>
-          </nav>
-        </div>
-        <p className="max-w-2xl text-sm text-muted-foreground">
+        <h1 className="mt-1 text-[27px] leading-tight">Epic Cockpit</h1>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           The whole delivery fleet, without the task-level noise. Open an epic
           when a signal needs explanation.
         </p>
+        <nav
+          className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
+          aria-label="Board views"
+        >
+          <Link className="paper-link" href={boardBase}>
+            Board
+          </Link>
+          <Link className="paper-link" href={`${boardBase}/timeline`}>
+            Timeline
+          </Link>
+          <Link
+            className="paper-link"
+            href={`/p/${project}/b/${board}/calendar`}
+          >
+            Calendar
+          </Link>
+          <Link className="paper-link" href={`${boardBase}/manage`}>
+            Manage
+          </Link>
+          <Link className="paper-link" href={`/p/${project}`}>
+            Project
+          </Link>
+        </nav>
       </header>
       <CockpitView
         model={model}

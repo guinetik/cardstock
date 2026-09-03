@@ -28,6 +28,11 @@
   --surface-input: #ffffff;
   --surface-raised: #ffffff;
   --surface-topbar: #fcfbf8;
+  /* The calendar's corkboard: mid-value so pinned white sheets carry the
+     contrast, flecked by the speck colour. Post-its default to canary. */
+  --surface-cork: #d9c09c;
+  --cork-speck: rgb(97 74 44 / 0.14);
+  --surface-postit: #f9efb7;
 
   --border-hairline: #ded8ca;
   --border-strong: #c7bfad;

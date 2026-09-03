@@ -28,6 +28,11 @@
   --surface-input: #2c2921;
   --surface-raised: #2c2921;
   --surface-topbar: #23201a;
+  /* Cork under the lamp: darker than the desk, still warm; the canary
+     post-it dims to lamplit gold rather than inverting. */
+  --surface-cork: #262019;
+  --cork-speck: rgb(236 230 216 / 0.05);
+  --surface-postit: #46401f;
 
   --border-hairline: #38332a;
   --border-strong: #4c4639;

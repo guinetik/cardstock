@@ -31,8 +31,10 @@ import {
   calendarDayOverflow,
   calendarDropDate,
   calendarGroups,
+  fuzzyMatch,
   monthMatrix,
 } from "@/lib/calendar";
+import { snapCenterToCursor } from "@/lib/dnd";
 
 const MONTH_HEADING = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -102,28 +104,33 @@ export function CalendarDesk(props: {
   days: ReturnType<typeof monthMatrix>;
   byDate: Map<string, CalendarSlipData[]>;
   tray: CalendarSlipData[];
+  /** Month stepping links, laid along the calendar's own edge. */
+  nav?: React.ReactNode;
 }) {
   return (
     <div className="calendar-page">
-      <div className="calendar-grid">
-        {CALENDAR_WEEKDAYS.map((label) => (
-          <div key={label} className="calendar-dow">
-            {label}
-          </div>
-        ))}
-        {props.days.map((day) => (
-          <CalendarDayCell
-            key={day.date}
-            date={day.date}
-            inMonth={day.inMonth}
-            isToday={day.isToday}
-            slips={props.byDate.get(day.date) ?? []}
-            projectSlug={props.projectSlug}
-            showBoard={props.showBoard}
-            today={props.today}
-            watchDays={props.watchDays}
-          />
-        ))}
+      <div className="calendar-main">
+        {props.nav}
+        <div className="calendar-grid">
+          {CALENDAR_WEEKDAYS.map((label) => (
+            <div key={label} className="calendar-dow">
+              {label}
+            </div>
+          ))}
+          {props.days.map((day) => (
+            <CalendarDayCell
+              key={day.date}
+              date={day.date}
+              inMonth={day.inMonth}
+              isToday={day.isToday}
+              slips={props.byDate.get(day.date) ?? []}
+              projectSlug={props.projectSlug}
+              showBoard={props.showBoard}
+              today={props.today}
+              watchDays={props.watchDays}
+            />
+          ))}
+        </div>
       </div>
       <CalendarTray
         slips={props.tray}
@@ -144,6 +151,28 @@ function CalendarTray(props: {
   watchDays: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: "calendar-tray" });
+  const [query, setQuery] = useState("");
+  const [epic, setEpic] = useState("all");
+  const epics = useMemo(
+    () =>
+      [
+        ...new Set(
+          props.slips.flatMap((slip) =>
+            slip.card.epic?.trim() ? [slip.card.epic.trim()] : [],
+          ),
+        ),
+      ].sort((a, b) => a.localeCompare(b)),
+    [props.slips],
+  );
+  const shown = props.slips.filter(
+    (slip) =>
+      (epic === "all" || slip.card.epic?.trim() === epic) &&
+      fuzzyMatch(
+        query,
+        `#${slip.card.external_id} ${slip.card.title} ${slip.card.epic ?? ""}`,
+      ),
+  );
+  const filtering = query.trim() !== "" || epic !== "all";
   return (
     <aside
       ref={setNodeRef}
@@ -154,14 +183,46 @@ function CalendarTray(props: {
       <h2>
         Unscheduled{" "}
         <span className="font-mono text-[10px] text-[var(--color-grey)]">
-          {props.slips.length}
+          {filtering
+            ? `${shown.length} of ${props.slips.length}`
+            : shown.length}
         </span>
       </h2>
+      {props.slips.length > 0 && (
+        <div className="mb-2 grid gap-1.5">
+          <input
+            className="paper-field h-7 w-full bg-[var(--surface-raised)] text-xs"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Find a card"
+            aria-label="Search unscheduled cards"
+          />
+          {epics.length > 0 && (
+            <select
+              className="paper-field h-7 w-full bg-[var(--surface-raised)] text-xs"
+              value={epic}
+              onChange={(event) => setEpic(event.target.value)}
+              aria-label="Filter by epic"
+            >
+              <option value="all">All epics</option>
+              {epics.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       <div className="calendar-tray-list">
         {props.slips.length === 0 ? (
           <p className="text-xs text-[var(--color-grey)]">Nothing undated</p>
+        ) : shown.length === 0 ? (
+          <p className="text-xs text-[var(--color-grey)]">
+            No cards match this search
+          </p>
         ) : (
-          props.slips.map((slip) => (
+          shown.map((slip) => (
             <DraggableCalendarSlip
               key={slipKey(slip)}
               slip={slip}
@@ -299,6 +360,10 @@ export function CalendarView(props: {
   const monthLabel = MONTH_HEADING.format(new Date(`${props.month}-01`));
   const prevMonth = addCalendarMonths(props.month, -1);
   const nextMonth = addCalendarMonths(props.month, 1);
+  const boardBase = props.boardSlug
+    ? `/p/${props.projectSlug}/b/${props.boardSlug}`
+    : null;
+  const projectHref = `/p/${props.projectSlug}`;
   const showBoard = props.boardSlug === null;
   const overlay = items.find((slip) => slip.card.id === activeId);
 
@@ -347,28 +412,47 @@ export function CalendarView(props: {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <header className="flex flex-wrap items-end gap-x-5 gap-y-2">
+      <header className="flex flex-col gap-2">
         <div>
           <p className="eyebrow">{props.projectName}</p>
           <h1 className="text-[27px] leading-none">{monthLabel}</h1>
           <p className="mt-1 text-sm text-[var(--color-grey)]">
             {props.heading}
           </p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            {boardBase ? (
+              <nav
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
+                aria-label="Board views"
+              >
+                <Link className="paper-link" href={boardBase}>
+                  Board
+                </Link>
+                <Link className="paper-link" href={`${boardBase}/cockpit`}>
+                  Epic Cockpit
+                </Link>
+                <Link className="paper-link" href={`${boardBase}/timeline`}>
+                  Timeline
+                </Link>
+                <Link className="paper-link" href={`${boardBase}/manage`}>
+                  Manage
+                </Link>
+                <Link className="paper-link" href={projectHref}>
+                  Project
+                </Link>
+              </nav>
+            ) : (
+              <nav
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
+                aria-label="Project views"
+              >
+                <Link className="paper-link" href={projectHref}>
+                  Project
+                </Link>
+              </nav>
+            )}
+          </div>
         </div>
-        <nav className="ml-auto flex items-center gap-3 pb-0.5 text-[12.5px]">
-          <Link
-            className="paper-link"
-            href={monthHref(props.path, prevMonth, props.selectedBoards)}
-          >
-            Previous
-          </Link>
-          <Link
-            className="paper-link"
-            href={monthHref(props.path, nextMonth, props.selectedBoards)}
-          >
-            Next
-          </Link>
-        </nav>
       </header>
       {props.boards.length > 1 && (
         <div className="calendar-chips">
@@ -421,8 +505,24 @@ export function CalendarView(props: {
             days={days}
             byDate={byDate}
             tray={tray}
+            nav={
+              <nav className="calendar-nav" aria-label="Calendar months">
+                <Link
+                  className="paper-link"
+                  href={monthHref(props.path, prevMonth, props.selectedBoards)}
+                >
+                  Previous
+                </Link>
+                <Link
+                  className="paper-link"
+                  href={monthHref(props.path, nextMonth, props.selectedBoards)}
+                >
+                  Next
+                </Link>
+              </nav>
+            }
           />
-          <DragOverlay>
+          <DragOverlay modifiers={[snapCenterToCursor]}>
             {overlay ? (
               <CalendarSlip
                 slip={overlay}

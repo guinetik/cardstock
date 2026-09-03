@@ -7,6 +7,7 @@ import {
   calendarDropDate,
   calendarGroups,
   calendarMonth,
+  fuzzyMatch,
   monthMatrix,
 } from "./calendar";
 
@@ -27,6 +28,7 @@ const slip = (
     status: "backlog",
     shipped_on: null,
     lane_id: "lane-1",
+    epic: null,
     ...patch,
   },
 });
@@ -115,6 +117,39 @@ describe("calendarGroups", () => {
     expect(tray.map((s) => s.card.id).sort()).toEqual(["none", "rough"]);
   });
 
+  test("keeps delivered undated cards out of the tray but on their day", () => {
+    const days = monthMatrix("2026-09", "2026-09-02");
+    const shippedGate = {
+      id: "ship",
+      name: "Shipped",
+      statuses: ["done"],
+      lane_ids: [] as string[],
+      outcome: "shipped" as const,
+    };
+    const { byDate, tray } = calendarGroups(
+      [
+        slip({ id: "s", external_id: "6", shipped_on: "2026-08-20" }),
+        {
+          ...slip({ id: "g", external_id: "7", status: "done" }),
+          gates: [shippedGate],
+        },
+        {
+          ...slip({
+            id: "d",
+            external_id: "9",
+            status: "done",
+            target_date: "2026-09-15",
+          }),
+          gates: [shippedGate],
+        },
+        slip({ id: "o", external_id: "8" }),
+      ],
+      days,
+    );
+    expect(tray.map((s) => s.card.id)).toEqual(["o"]);
+    expect(byDate.get("2026-09-15")?.map((s) => s.card.id)).toEqual(["d"]);
+  });
+
   test("sorts a day by numeric external_id", () => {
     const days = monthMatrix("2026-09", "2026-09-02");
     const { byDate } = calendarGroups(
@@ -128,6 +163,18 @@ describe("calendarGroups", () => {
       "2",
       "10",
     ]);
+  });
+});
+
+describe("fuzzyMatch", () => {
+  test("matches case-insensitive subsequences, empty query matches all", () => {
+    expect(fuzzyMatch("clndr", "Calendar polish")).toBe(true);
+    expect(fuzzyMatch("CAL", "calendar")).toBe(true);
+    expect(fuzzyMatch("drag fix", "fix the drag ghost")).toBe(false);
+    expect(fuzzyMatch("dragho", "fix the drag ghost")).toBe(true);
+    expect(fuzzyMatch("xyz", "calendar")).toBe(false);
+    expect(fuzzyMatch("", "anything")).toBe(true);
+    expect(fuzzyMatch("  ", "anything")).toBe(true);
   });
 });
 

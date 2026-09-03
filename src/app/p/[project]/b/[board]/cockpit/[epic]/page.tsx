@@ -7,7 +7,7 @@ import { laneMicrocosm } from "@/lib/lane-map";
 import { currentMember } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Epic cockpit" };
+export const metadata: Metadata = { title: "Epic Cockpit" };
 
 export default async function EpicCockpitPage(props: {
   params: Promise<{ project: string; board: string; epic: string }>;

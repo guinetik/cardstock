@@ -8,7 +8,7 @@ test("the epic cockpit moves from fleet signal to task detail", async ({
   await page.goto("/p/demo/b/backlog/cockpit");
 
   await expect(
-    page.getByRole("heading", { name: "Epic cockpit" }),
+    page.getByRole("heading", { name: "Epic Cockpit" }),
   ).toBeVisible();
   await expect(page.getByText("Active epics", { exact: true })).toBeVisible();
   const maps = page.getByTestId("task-map");
