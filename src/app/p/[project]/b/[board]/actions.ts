@@ -705,6 +705,71 @@ export async function savePrefs(
   return { ok: true };
 }
 
+/**
+ * Hand a card to somebody on its project, or take it back.
+ *
+ * Writes the FK and the tracker text in one patch so exported frontmatter
+ * always mirrors the assignment, exactly as `assignCardEpic` does. The roster
+ * check here is the only one there is — the database deliberately allows an
+ * off-roster email so that import can carry a file naming someone not yet
+ * invited.
+ */
+export async function assignCard(
+  cardId: string,
+  memberId: string | null,
+): Promise<Result> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
+  if (memberId !== null && !UUID.test(memberId))
+    return { ok: false, error: "Invalid person." };
+
+  let email: string | null = null;
+  if (memberId) {
+    const { data: card } = await c.db
+      .from("cards")
+      .select("board_id, boards!inner(project_id)")
+      .eq("id", cardId)
+      .maybeSingle();
+    const projectId = (
+      card as unknown as { boards?: { project_id: string } } | null
+    )?.boards?.project_id;
+    if (!projectId) return { ok: false, error: "Card not found." };
+    const { data: membership } = await c.db
+      .from("project_members")
+      .select("members!inner(email)")
+      .eq("project_id", projectId)
+      .eq("member_id", memberId)
+      .maybeSingle();
+    const found = (
+      membership as unknown as { members?: { email: string } } | null
+    )?.members?.email;
+    if (!found)
+      return { ok: false, error: "That person is not on this project." };
+    email = found;
+  }
+
+  const { error } = await c.db
+    .from("cards")
+    .update({ assignee_id: memberId, assignee: email })
+    .eq("id", cardId);
+  if (error) return { ok: false, error: error.message };
+
+  // One key, not the two-column patch: the history formatter turns
+  // `{assignee}` into a sentence, while `{assignee_id, assignee}` would read
+  // "changed assignee_id and changed assignee".
+  await c.db.from("card_events").insert({
+    card_id: cardId,
+    actor: c.me.email,
+    kind: "edited",
+    payload: { assignee: email },
+  });
+
+  revalidatePath("/p/[project]/b/[board]", "page");
+  revalidatePath("/p/[project]/b/[board]/c/[externalId]", "page");
+  return { ok: true };
+}
+
 export async function revalidateBoard(project: string, board: string) {
   revalidatePath(`/p/${project}/b/${board}`);
 }
