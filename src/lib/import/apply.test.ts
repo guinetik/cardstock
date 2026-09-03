@@ -10,13 +10,20 @@ import type { BoardState, ExistingCard, Plan, PlanRow } from "./types";
  */
 function fakeDb(failAt = 0) {
   const events: unknown[] = [];
+  const cardWrites: Record<string, unknown>[] = [];
   let writes = 0;
   const db = {
     from(table: string) {
       // biome-ignore lint/suspicious/noExplicitAny: a stand-in, not the real builder
       const builder: any = {
-        upsert: () => builder,
-        update: () => builder,
+        upsert: (columns: Record<string, unknown>) => {
+          if (table === "cards") cardWrites.push(columns);
+          return builder;
+        },
+        update: (columns: Record<string, unknown>) => {
+          if (table === "cards") cardWrites.push(columns);
+          return builder;
+        },
         delete: () => builder,
         eq: () => builder,
         select: () => builder,
@@ -41,7 +48,7 @@ function fakeDb(failAt = 0) {
       return builder;
     },
   };
-  return { db: db as unknown as SupabaseClient, events };
+  return { db: db as unknown as SupabaseClient, events, cardWrites };
 }
 
 const card = (external_id: string): ExistingCard =>
@@ -52,13 +59,16 @@ const card = (external_id: string): ExistingCard =>
     relates: [],
   }) as unknown as ExistingCard;
 
-const state = (cards: ExistingCard[] = []): BoardState => ({
+const state = (
+  cards: ExistingCard[] = [],
+  members: BoardState["members"] = [],
+): BoardState => ({
   id: "board-1",
   lanes: [],
   groups: [],
   cards: new Map(cards.map((c) => [c.external_id, c])),
   epics: new Map(),
-  members: [],
+  members,
 });
 
 const patch = () => ({
@@ -127,5 +137,61 @@ describe("applyPlan", () => {
     );
     expect(counts).toEqual({ created: 0, updated: 1, recalibrated: 1 });
     expect(events).toHaveLength(1);
+  });
+
+  test("an assignee email matching a member resolves to their id", async () => {
+    const { db, cardWrites } = fakeDb();
+    const rows: PlanRow[] = [
+      {
+        id: "1",
+        title: "Card 1",
+        verdict: "new",
+        lane: "unsorted",
+        changes: [],
+        patch: {
+          ...patch(),
+          columns: { external_id: "1", assignee: "Ana@Example.com" },
+        },
+        hash: "h",
+      },
+    ];
+    await applyPlan(
+      db,
+      state(
+        [],
+        [{ memberId: "m-1", email: "ana@example.com", displayName: "Ana" }],
+      ),
+      plan(rows),
+      "me",
+    );
+    expect(cardWrites).toHaveLength(1);
+    expect(cardWrites[0]).toMatchObject({
+      assignee: "Ana@Example.com",
+      assignee_id: "m-1",
+    });
+  });
+
+  test("an assignee email matching nobody leaves the FK null and keeps the text", async () => {
+    const { db, cardWrites } = fakeDb();
+    const rows: PlanRow[] = [
+      {
+        id: "1",
+        title: "Card 1",
+        verdict: "new",
+        lane: "unsorted",
+        changes: [],
+        patch: {
+          ...patch(),
+          columns: { external_id: "1", assignee: "nobody@example.com" },
+        },
+        hash: "h",
+      },
+    ];
+    await applyPlan(db, state([], []), plan(rows), "me");
+    expect(cardWrites).toHaveLength(1);
+    expect(cardWrites[0]).toMatchObject({
+      assignee: "nobody@example.com",
+      assignee_id: null,
+    });
   });
 });
