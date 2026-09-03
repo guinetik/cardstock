@@ -63,7 +63,17 @@ export function Binder({ project }: { project: BinderProject }) {
                 <p className="binder-count">
                   {plural(b.cards, "card", "cards")}
                 </p>
-                <div className="binder-foot binder-foot--tools">
+                <div className="binder-foot binder-foot--tools binder-foot--stacked">
+                  <span className="binder-io">
+                    <Link
+                      href={`${href}/b/${b.slug}/manage`}
+                      className="binder-tool"
+                      aria-label={`Manage ${b.name}`}
+                      title={`Manage ${b.name}`}
+                    >
+                      <Settings size={14} aria-hidden="true" />
+                    </Link>
+                  </span>
                   <span className="binder-io">
                     {project.canManage && (
                       <>
@@ -83,14 +93,6 @@ export function Binder({ project }: { project: BinderProject }) {
                         />
                       </>
                     )}
-                    <Link
-                      href={`${href}/b/${b.slug}/manage`}
-                      className="binder-tool"
-                      aria-label={`Manage ${b.name}`}
-                      title={`Manage ${b.name}`}
-                    >
-                      <Settings size={14} aria-hidden="true" />
-                    </Link>
                     <Link
                       href={`${href}/b/${b.slug}/cockpit`}
                       className="binder-tool binder-tool--pen"

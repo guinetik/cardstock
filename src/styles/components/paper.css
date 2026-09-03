@@ -1294,17 +1294,26 @@
   }
 
   /* Binders in the folder: one per board, spine to the left. */
+  /*
+   * Even columns that share the shelf: each binder is at least 16rem (the
+   * foot's toolbar in one row) and stretches to split any leftover width,
+   * so a row never ends in an awkward strip of empty desk.
+   */
   .binders {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
     gap: 0.75rem;
     grid-column: 1;
+  }
+  .binders .binder {
+    width: auto;
   }
   .binder {
     position: relative;
     display: flex;
-    /* Wide enough for the count and the three keys on the foot, in one row. */
-    width: 15.5rem;
+    /* Wide enough for the foot's whole toolbar in one row: the three keys
+     * plus the labelled Epic Cockpit button, with air after it. */
+    width: 16rem;
     max-width: 100%;
     /* Tall enough that the toolbar on the foot never crowds the board name. */
     min-height: 8rem;
@@ -1400,6 +1409,13 @@
   /* On the projects page the count sits under the name and the keys start at the left. */
   .binder-foot--tools {
     justify-content: flex-start;
+  }
+  /* Two shelves of keys: manage alone on top, the I/O row and the cockpit
+   * below it, so the labelled button never fights for one row's width. */
+  .binder-foot--stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
   .binder > .binder-count {
     margin-top: 0.3rem;
