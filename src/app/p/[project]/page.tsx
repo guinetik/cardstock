@@ -135,7 +135,6 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
 
   const allCards = boards.flatMap((b) => b.cards ?? []);
   const cardCount = allCards.length;
-  const onFile = allCards.filter((c) => c.source_path).length;
   const href = `/p/${project.slug}`;
   const timelineWatchDays = forgottenAfterDays(project.settings);
 
@@ -158,22 +157,14 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
               No description.
             </p>
           )}
-          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-            <span className="stat stat--flat stat--ink">
-              {plural(boards.length, "board", "boards")}
-            </span>
-            <span className="stat stat--flat">
-              {plural(cardCount, "card", "cards")}
-            </span>
-            {onFile > 0 && (
-              <span className="stat stat--flat stat--faint">
-                {onFile} from .md files
-              </span>
-            )}
+          <nav
+            className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
+            aria-label="Project views"
+          >
             <Link className="paper-link" href={`${href}/calendar`}>
               Calendar
             </Link>
-          </p>
+          </nav>
         </div>
         <div className="letterhead-aside">
           {cardCount > 0 ? (
@@ -245,6 +236,13 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
                         aria-label={`${board.name} cockpit`}
                       >
                         Take stock
+                      </Link>
+                      <Link
+                        href={`${boardHref}/manage`}
+                        className="binder-cockpit paper-link"
+                        aria-label={`Manage ${board.name}`}
+                      >
+                        Manage
                       </Link>
                       {canManage && (
                         <a

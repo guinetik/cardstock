@@ -6,7 +6,8 @@ import { type BoardGate, GATE_NAME_MAX } from "@/lib/gates";
 import { updateBoardGates } from "./actions";
 
 /**
- * Project-page editor for one board's ordered gates, or a read-only name list.
+ * Editor for one board's ordered gates, or a read-only name list.
+ * Used on the project page (one block per board) and the board manage page.
  */
 export function GatesEditor({
   boardId,

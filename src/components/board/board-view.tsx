@@ -38,6 +38,7 @@ import {
   updateCard,
   updateLane,
 } from "@/app/p/[project]/b/[board]/actions";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CardColor } from "@/lib/card-color";
 import {
   boardStatuses,
@@ -48,6 +49,7 @@ import {
   matches,
   sortInbox,
 } from "@/lib/filters";
+import { resolveBoardGates } from "@/lib/gates";
 import {
   compactLaneView,
   type LaneViewMode,
@@ -56,13 +58,11 @@ import {
   type StoredBoardLaneViews,
 } from "@/lib/lane-view";
 import { rankBetween } from "@/lib/rank";
-import { resolveBoardGates } from "@/lib/gates";
 import { forgottenAfterDays, timelineToday } from "@/lib/timeline";
 import type { BoardData, Card, Lane } from "@/lib/types";
 import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
 import { FilterBar } from "./filter-bar";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { LaneActionDialog, type LaneActionMode } from "./lane-action-dialog";
 import { LaneColumn } from "./lane-column";
 import { LaneCrudDialog, type LaneDialogMode } from "./lane-crud-dialog";
@@ -566,9 +566,12 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <header className="flex flex-wrap items-end gap-x-5 gap-y-2 px-4 pt-5 pb-3 sm:px-6">
         <div>
-          <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.11em] text-[var(--color-grey-faint)]">
+          <a
+            href={`/p/${data.project.slug}`}
+            className="mb-1 inline-block font-mono text-[10px] uppercase tracking-[0.11em] text-[var(--color-grey-faint)] hover:text-[var(--color-ink)]"
+          >
             {data.project.name}
-          </p>
+          </a>
           <h1 className="text-[27px] leading-none">{data.board.name}</h1>
         </div>
         <span className="pb-0.5 font-mono text-xs text-[var(--color-grey)]">
@@ -576,43 +579,52 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
           <b className="font-medium text-[var(--color-ink)]">{unsorted}</b>{" "}
           unsorted
         </span>
-        <nav className="ml-auto flex items-center gap-2 pb-0.5 text-[12.5px]">
+        <nav
+          className="flex items-center gap-4 pb-0.5 text-[12.5px]"
+          aria-label="Board views"
+        >
           <a
             className="paper-link"
             href={`/p/${data.project.slug}/b/${data.board.slug}/cockpit`}
           >
-            Epic cockpit
+            Epic Cockpit
           </a>
           <a
-            className="paper-link ml-2"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/timeline`}
-          >
-            Timeline
-          </a>
-          <a
-            className="paper-link ml-2"
+            className="paper-link"
             href={`/p/${data.project.slug}/b/${data.board.slug}/calendar`}
           >
             Calendar
           </a>
           <a
-            className="paper-link ml-2"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/export?internal=${filters.showInternal ? 1 : 0}${filters.showArchived ? "&archived=1" : ""}${filters.tags.size ? `&tags=${[...filters.tags].join(",")}` : ""}${filters.query ? `&q=${encodeURIComponent(filters.query)}` : ""}`}
+            className="paper-link"
+            href={`/p/${data.project.slug}/b/${data.board.slug}/timeline`}
           >
-            Export CSV
+            Timeline
           </a>
-          <a className="paper-link ml-2" href={`/p/${data.project.slug}`}>
-            Project
+          <a
+            className="paper-link"
+            href={`/p/${data.project.slug}/b/${data.board.slug}/manage`}
+          >
+            Manage
           </a>
+        </nav>
+        <fieldset className="m-0 ml-auto flex items-center gap-2 border-0 p-0 pb-0.5">
+          <legend className="sr-only">Board actions</legend>
           <button
             type="button"
-            className="ml-2 h-7 rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 font-medium text-[var(--surface-card)] hover:opacity-90 disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 text-[12.5px] font-medium text-[var(--surface-card)] hover:opacity-90 disabled:opacity-50"
             onClick={() => setLaneDialog({ type: "add" })}
             disabled={laneBusy !== null}
           >
             Add lane
           </button>
-        </nav>
+          <a
+            className="inline-flex h-7 items-center rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 text-[12.5px] font-medium text-[var(--surface-card)] hover:opacity-90"
+            href={`/p/${data.project.slug}/b/${data.board.slug}/export?internal=${filters.showInternal ? 1 : 0}${filters.showArchived ? "&archived=1" : ""}${filters.tags.size ? `&tags=${[...filters.tags].join(",")}` : ""}${filters.query ? `&q=${encodeURIComponent(filters.query)}` : ""}`}
+          >
+            Export CSV
+          </a>
+        </fieldset>
         {error && (
           <p className="basis-full border-l-2 border-[var(--pen-red)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--color-ink)]">
             {error}
@@ -663,111 +675,113 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         onCreate={addCard}
       />
       <TooltipProvider delay={300}>
-      <DndContext
-        id="board-dnd"
-        sensors={sensors}
-        collisionDetection={boardCollisionDetection}
-        // Lanes collapse and spring open mid-drag, so the cached droppable
-        // rects from drag start are wrong the moment a card is picked up.
-        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDragEnd={onDragEnd}
-        onDragCancel={endDrag}
-      >
-        <main
-          className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:px-6"
-          aria-label="Priority lanes"
+        <DndContext
+          id="board-dnd"
+          sensors={sensors}
+          collisionDetection={boardCollisionDetection}
+          // Lanes collapse and spring open mid-drag, so the cached droppable
+          // rects from drag start are wrong the moment a card is picked up.
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+          onDragStart={onDragStart}
+          onDragOver={onDragOver}
+          onDragEnd={onDragEnd}
+          onDragCancel={endDrag}
         >
-          {lanes.map((lane, laneIndex) => (
-            <LaneColumn
-              key={lane.id}
-              lane={lane}
-              cards={byLane.get(lane.id) ?? []}
-              visible={visible}
-              groups={data.groups}
-              view={viewFor(lane.id)}
-              onView={(v) => changeLaneView(lane.id, v)}
-              onPatch={patch}
-              onArchive={archive}
-              pinned={pinned}
-              onPin={pin}
-              projectSlug={data.project.slug}
-              boardSlug={data.board.slug}
-              today={today}
-              watchDays={watchDays}
-              gates={gates}
-              hiddenByDefault={lane.kind === "archive" && !filters.showArchived}
-              onAddCard={() => setCardLane(lane)}
-              manage={
-                lane.kind !== "archive"
-                  ? {
-                      disabled: laneBusy !== null,
-                      canEditName: lane.kind === "work",
-                      canMoveLaneLeft:
-                        lane.kind === "work" &&
-                        laneIndex > 0 &&
-                        lanes[laneIndex - 1]?.kind !== "archive",
-                      canMoveLaneRight:
-                        lane.kind === "work" &&
-                        laneIndex < lanes.length - 1 &&
-                        lanes[laneIndex + 1]?.kind !== "archive",
-                      canMoveCardsLeft:
-                        laneIndex > 0 &&
-                        lanes[laneIndex - 1]?.kind !== "archive",
-                      canMoveCardsRight:
-                        laneIndex < lanes.length - 1 &&
-                        lanes[laneIndex + 1]?.kind !== "archive",
-                      canSortCards: lane.kind !== "inbox",
-                      onRename: () => setLaneDialog({ type: "rename", lane }),
-                      onMoveLane: (delta) => void shiftLane(lane.id, delta),
-                      onMoveCards: (delta) => {
-                        const destination = lanes[laneIndex + delta];
-                        if (!destination || destination.kind === "archive")
-                          return;
-                        setLaneAction({
-                          type: "move-cards",
-                          lane,
-                          destination,
-                          cardCount: byLane.get(lane.id)?.length ?? 0,
-                        });
-                      },
-                      onSortCards: (direction) =>
-                        setLaneAction({
-                          type: "sort-cards",
-                          lane,
-                          direction,
-                          cardCount: byLane.get(lane.id)?.length ?? 0,
-                        }),
-                      onDelete: () => setLaneDialog({ type: "delete", lane }),
-                    }
-                  : undefined
-              }
-            />
-          ))}
-          <button
-            type="button"
-            className="flex min-h-28 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground hover:border-foreground/30 hover:bg-muted/30 hover:text-foreground disabled:opacity-50"
-            onClick={() => setLaneDialog({ type: "add" })}
-            disabled={laneBusy !== null}
+          <main
+            className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:px-6"
+            aria-label="Priority lanes"
           >
-            + Add lane
-          </button>
-        </main>
-        <DragOverlay>
-          {active ? (
-            <CardItem
-              card={active}
-              groups={data.groups}
-              lane={lanes.find((l) => l.id === active.lane_id)}
-              today={today}
-              watchDays={watchDays}
-              gates={gates}
-              overlay
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+            {lanes.map((lane, laneIndex) => (
+              <LaneColumn
+                key={lane.id}
+                lane={lane}
+                cards={byLane.get(lane.id) ?? []}
+                visible={visible}
+                groups={data.groups}
+                view={viewFor(lane.id)}
+                onView={(v) => changeLaneView(lane.id, v)}
+                onPatch={patch}
+                onArchive={archive}
+                pinned={pinned}
+                onPin={pin}
+                projectSlug={data.project.slug}
+                boardSlug={data.board.slug}
+                today={today}
+                watchDays={watchDays}
+                gates={gates}
+                hiddenByDefault={
+                  lane.kind === "archive" && !filters.showArchived
+                }
+                onAddCard={() => setCardLane(lane)}
+                manage={
+                  lane.kind !== "archive"
+                    ? {
+                        disabled: laneBusy !== null,
+                        canEditName: lane.kind === "work",
+                        canMoveLaneLeft:
+                          lane.kind === "work" &&
+                          laneIndex > 0 &&
+                          lanes[laneIndex - 1]?.kind !== "archive",
+                        canMoveLaneRight:
+                          lane.kind === "work" &&
+                          laneIndex < lanes.length - 1 &&
+                          lanes[laneIndex + 1]?.kind !== "archive",
+                        canMoveCardsLeft:
+                          laneIndex > 0 &&
+                          lanes[laneIndex - 1]?.kind !== "archive",
+                        canMoveCardsRight:
+                          laneIndex < lanes.length - 1 &&
+                          lanes[laneIndex + 1]?.kind !== "archive",
+                        canSortCards: lane.kind !== "inbox",
+                        onRename: () => setLaneDialog({ type: "rename", lane }),
+                        onMoveLane: (delta) => void shiftLane(lane.id, delta),
+                        onMoveCards: (delta) => {
+                          const destination = lanes[laneIndex + delta];
+                          if (!destination || destination.kind === "archive")
+                            return;
+                          setLaneAction({
+                            type: "move-cards",
+                            lane,
+                            destination,
+                            cardCount: byLane.get(lane.id)?.length ?? 0,
+                          });
+                        },
+                        onSortCards: (direction) =>
+                          setLaneAction({
+                            type: "sort-cards",
+                            lane,
+                            direction,
+                            cardCount: byLane.get(lane.id)?.length ?? 0,
+                          }),
+                        onDelete: () => setLaneDialog({ type: "delete", lane }),
+                      }
+                    : undefined
+                }
+              />
+            ))}
+            <button
+              type="button"
+              className="flex min-h-28 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground hover:border-foreground/30 hover:bg-muted/30 hover:text-foreground disabled:opacity-50"
+              onClick={() => setLaneDialog({ type: "add" })}
+              disabled={laneBusy !== null}
+            >
+              + Add lane
+            </button>
+          </main>
+          <DragOverlay>
+            {active ? (
+              <CardItem
+                card={active}
+                groups={data.groups}
+                lane={lanes.find((l) => l.id === active.lane_id)}
+                today={today}
+                watchDays={watchDays}
+                gates={gates}
+                overlay
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </TooltipProvider>
     </div>
   );

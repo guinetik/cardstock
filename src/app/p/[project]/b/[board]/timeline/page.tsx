@@ -207,24 +207,34 @@ export default async function TimelinePage(
         ← {data.board.name}
       </Link>
 
-      <header className="mt-1 flex flex-wrap items-end justify-between gap-4 border-b border-[var(--border-strong)] pb-5">
-        <div>
-          <h1 className="text-[30px] leading-tight">Timeline</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Work begins at its raised date. The watchlist calls out anything
-            still unplanned after {watchDays} days.
-          </p>
-        </div>
-        <nav className="flex flex-col items-end gap-2">
-          <Link
-            className="paper-link"
-            href={`/p/${project}/b/${board}/calendar`}
-          >
+      <header className="mt-1 border-b border-[var(--border-strong)] pb-5">
+        <h1 className="text-[30px] leading-tight">Timeline</h1>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          Work begins at its raised date. The watchlist calls out anything
+          still unplanned after {watchDays} days.
+        </p>
+        <nav
+          className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
+          aria-label="Board views"
+        >
+          <Link className="paper-link" href={back}>
+            Board
+          </Link>
+          <Link className="paper-link" href={`${back}/cockpit`}>
+            Epic Cockpit
+          </Link>
+          <Link className="paper-link" href={`${back}/calendar`}>
             Calendar
           </Link>
+          <Link className="paper-link" href={`${back}/manage`}>
+            Manage
+          </Link>
+          <Link className="paper-link" href={`/p/${project}`}>
+            Project
+          </Link>
           <Link
+            className="paper-link"
             href={`/p/${project}#settings-heading`}
-            className="paper-link text-xs"
           >
             {watchDays}-day project window
           </Link>

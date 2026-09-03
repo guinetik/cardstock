@@ -18,6 +18,22 @@ test("gate: signed-out users land on /login", async ({ browser }) => {
   await ctx.close();
 });
 
+test("the letterhead links the project; views stay in the menu", async ({
+  page,
+}) => {
+  const projectHref = BOARD.replace(/\/b\/[^/]+$/, "");
+  await expect(page.locator(`header a[href="${projectHref}"]`)).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Board views" }).getByRole("link"),
+  ).toHaveText(["Epic Cockpit", "Calendar", "Timeline", "Manage"]);
+  const actions = page.getByRole("group", { name: "Board actions" });
+  await expect(actions.getByRole("button", { name: "Add lane" })).toBeVisible();
+  await expect(actions.getByRole("link", { name: "Export CSV" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Project", exact: true }),
+  ).toHaveCount(0);
+});
+
 test("board renders lanes in seed order with counts", async ({ page }) => {
   const names = await page.locator("[data-lane] h2").allTextContents();
   expect(names.slice(0, 8)).toEqual([
@@ -170,9 +186,7 @@ test("archive from the card page hides it and shows it under 'archived'", async 
   ).toHaveCount(0);
 });
 
-test("card title opens the card page with the full body", async ({
-  page,
-}) => {
+test("card title opens the card page with the full body", async ({ page }) => {
   const card = page.locator('[data-lane="now"] [data-id]').first();
   const id = await card.getAttribute("data-id");
   await card.locator("p a").click();
@@ -219,12 +233,16 @@ test("work lanes can be created, renamed, reordered and removed", async ({
   const key = `crud-lane-${suffix}`;
 
   const navAddLane = page
-    .getByRole("navigation")
+    .getByRole("group", { name: "Board actions" })
     .getByRole("button", { name: "Add lane" });
   await expect(navAddLane).toBeVisible();
   await navAddLane.click();
   await page.getByLabel("Lane name").fill(initialName);
-  await page.getByRole("button", { name: "Add lane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Add lane", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const lane = page.locator(`[data-lane="${key}"]`);
   await expect(lane).toBeVisible();
 

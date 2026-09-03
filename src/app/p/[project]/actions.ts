@@ -56,6 +56,12 @@ export async function createBoard(
 
 export type TaxonomyResult = { error?: string } | null;
 
+/** The project page and each board's manage page both show this vocabulary. */
+function revalidateVocabulary() {
+  revalidatePath("/p/[project]", "page");
+  revalidatePath("/p/[project]/b/[board]/manage", "page");
+}
+
 /** RLS restricts these to project members; this returns a reason instead of a policy error. */
 async function requireMember(): Promise<string | null> {
   const me = await currentMember();
@@ -99,7 +105,7 @@ export async function createTagGroup(
     position: (last?.position ?? -1) + 1,
   });
   if (error) return { error: error.message };
-  revalidatePath("/p/[project]", "page");
+  revalidateVocabulary();
   return null;
 }
 
@@ -118,7 +124,7 @@ export async function renameTagGroup(
     .update({ name: clean })
     .eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath("/p/[project]", "page");
+  revalidateVocabulary();
   return null;
 }
 
@@ -152,7 +158,7 @@ export async function deleteTagGroup(
   }
   const { error } = await db.from("tag_groups").delete().eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath("/p/[project]", "page");
+  revalidateVocabulary();
   return null;
 }
 
@@ -195,7 +201,7 @@ export async function createTag(
     .from("tags")
     .insert({ group_id: groupId, key, name: clean });
   if (error) return { error: error.message };
-  revalidatePath("/p/[project]", "page");
+  revalidateVocabulary();
   return null;
 }
 
@@ -211,7 +217,7 @@ export async function renameTag(
   const db = await supabaseServer();
   const { error } = await db.from("tags").update({ name: clean }).eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath("/p/[project]", "page");
+  revalidateVocabulary();
   return null;
 }
 
@@ -235,7 +241,7 @@ export async function deleteTag(
     };
   const { error } = await db.from("tags").delete().eq("id", id);
   if (error) return { error: error.message };
-  revalidatePath("/p/[project]", "page");
+  revalidateVocabulary();
   return null;
 }
 
@@ -361,5 +367,6 @@ export async function updateBoardGates(
 
   revalidatePath(`/p/${projectSlug}`);
   revalidatePath(`/p/${projectSlug}/b/${boardSlug}/timeline`);
+  revalidatePath(`/p/${projectSlug}/b/${boardSlug}/manage`);
   return { message: "Gates saved." };
 }

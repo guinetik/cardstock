@@ -35,4 +35,7 @@ test("titles carry project and board context through nested pages", async ({
 
   await page.goto(`${BOARD}/cockpit`);
   await expect(page).toHaveTitle(`Cockpit | ${boardTitle}`);
+
+  await page.goto(`${BOARD}/manage`);
+  await expect(page).toHaveTitle(`Manage | ${boardTitle}`);
 });

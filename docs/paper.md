@@ -113,21 +113,28 @@ the tab names the project, the binders name the boards.
 
 The project page is a **letterhead** plus a stack of section folders
 (`.folder--section`). The letterhead is the project name in Newsreader, the
-blurb, the counts as `.stat`s, and the `.folder-stamp` in the margin — the
-stamp is written once. Each chapter below is its own manila file with a quiet
+blurb, then the view links (Calendar). The `.folder-stamp` in the margin
+carries the filed card count — written once. Each chapter below is its own manila file with a quiet
 Plex tab (`boards`, `people`, `concepts`, `settings`); the tab does not lift
 the folder. Binders live only in Boards — wide `.binder`s with a **lane microcosm**
 (`.lane-map`): one row of columns that shrink together (no scrollport),
 drawer vs panel stock, three cards filling a row. Untinted slips use the
 cockpit pens (queued, moving, late, blocked, delivered); a card's own tint
 wins. Names live in an absolute tip on hover,
-*Take stock*, and *Export CSV*, and *New board* in the aside. People is wide
+*Take stock*, *Manage*, and *Export CSV*, and *New board* in the aside. People is wide
 `.binder`s — white cover, riveted spine — one person per cover, last binder
 blank for the invite.
 Concepts is the **concept graph** (`.graph`): each group a `.graph-node` with
 highlighter on its spine, tags as `.mark`s on a ruled trunk. Settings holds
 the two asks as inner rows, same shape and opposite pens: `.cta` to take the
 project home as markdown, `.danger` to delete it.
+
+## Board letterhead
+
+The board page names the project in the eyebrow, as a link back to the folder,
+then the board title. Counts sit beside the title (`13 open · 4 unsorted`),
+then the view links: Epic Cockpit, Calendar, Timeline, Manage. Two ink buttons on the
+right: **Add lane** and **Export CSV**.
 
 ## Lanes
 

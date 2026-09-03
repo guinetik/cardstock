@@ -33,7 +33,7 @@ async function addLane(
   color?: string,
 ) {
   await page
-    .getByRole("navigation")
+    .getByRole("group", { name: "Board actions" })
     .getByRole("button", { name: "Add lane" })
     .click();
   await page.getByLabel("Lane name").fill(name);
@@ -42,7 +42,11 @@ async function addLane(
       .getByLabel("New lane color")
       .getByRole("button", { name: color })
       .click();
-  await page.getByRole("button", { name: "Add lane", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Add lane", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const { data, error } = await admin
     .from("lanes")
     .select("id, key")

@@ -1,12 +1,12 @@
-import { Download, Gauge } from "lucide-react";
+import { Download, Gauge, Settings } from "lucide-react";
 import Link from "next/link";
 import { BoardImportDialog } from "@/components/board-import-dialog";
 import { SheetContract } from "@/components/sheet-contract";
 
 /**
  * A project drawn as a dossier: a manila folder whose tab is the project's
- * name, with its boards inside as binders. A binder opens its board; the
- * cockpit link on it is where you take stock.
+ * name, with its boards inside as binders. A binder opens its board; manage
+ * is concepts and gates; the cockpit link is where you take stock.
  */
 
 export interface BinderBoard {
@@ -83,6 +83,14 @@ export function Binder({ project }: { project: BinderProject }) {
                         />
                       </>
                     )}
+                    <Link
+                      href={`${href}/b/${b.slug}/manage`}
+                      className="binder-tool"
+                      aria-label={`Manage ${b.name}`}
+                      title={`Manage ${b.name}`}
+                    >
+                      <Settings size={14} aria-hidden="true" />
+                    </Link>
                     <Link
                       href={`${href}/b/${b.slug}/cockpit`}
                       className="binder-tool binder-tool--pen"
