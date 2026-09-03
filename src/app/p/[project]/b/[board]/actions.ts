@@ -243,7 +243,21 @@ export async function createCard(
   // Routed through `assignCard` rather than written into the insert, so the
   // roster check and the history line exist on exactly one path. A rejected
   // assignee leaves a created, unassigned card rather than no card at all.
-  if (input.assigneeId) await assignCard(card.id as string, input.assigneeId);
+  // `card` was selected before this call, so it still reads the pre-assignment
+  // `assignee_id`/`assignee` (both null) — re-read them below once the write
+  // has actually landed, or callers merging `result.card` straight into local
+  // state (board-view's `addCard`) would silently show the card unassigned.
+  if (input.assigneeId) {
+    const assignResult = await assignCard(card.id as string, input.assigneeId);
+    if (assignResult.ok) {
+      const { data: assigned } = await c.db
+        .from("cards")
+        .select("assignee_id, assignee")
+        .eq("id", card.id)
+        .maybeSingle();
+      if (assigned) card = { ...card, ...assigned };
+    }
+  }
 
   await c.db.from("card_events").insert({
     card_id: card.id,
