@@ -231,11 +231,18 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
                     </span>
                     <span className="binder-links">
                       <Link
+                        href={boardHref}
+                        className="binder-cockpit paper-link"
+                        aria-label={`Go to ${board.name}`}
+                      >
+                        Go to Board
+                      </Link>
+                      <Link
                         href={`${boardHref}/cockpit`}
                         className="binder-cockpit paper-link"
-                        aria-label={`${board.name} cockpit`}
+                        aria-label={`${board.name} Epic Cockpit`}
                       >
-                        Take stock
+                        Epic Cockpit
                       </Link>
                       <Link
                         href={`${boardHref}/manage`}

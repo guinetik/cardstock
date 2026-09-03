@@ -6,7 +6,7 @@ import { SheetContract } from "@/components/sheet-contract";
 /**
  * A project drawn as a dossier: a manila folder whose tab is the project's
  * name, with its boards inside as binders. A binder opens its board; manage
- * is concepts and gates; the cockpit link is where you take stock.
+ * is concepts and gates; the cockpit link opens Epic Cockpit.
  */
 
 export interface BinderBoard {
@@ -94,11 +94,11 @@ export function Binder({ project }: { project: BinderProject }) {
                     <Link
                       href={`${href}/b/${b.slug}/cockpit`}
                       className="binder-tool binder-tool--pen"
-                      aria-label={`${b.name} cockpit`}
-                      title={`Take stock of ${b.name}`}
+                      aria-label={`${b.name} Epic Cockpit`}
+                      title={`Epic Cockpit for ${b.name}`}
                     >
                       <Gauge size={14} aria-hidden="true" />
-                      Take stock
+                      Epic Cockpit
                     </Link>
                   </span>
                 </div>

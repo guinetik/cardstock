@@ -18,7 +18,7 @@ admins only (`canManageProject`), same as on the project page.
 ## Where to open it
 
 - Board header: *Manage*
-- Project page binder: *Manage* next to *Take stock*
+- Project page binder: *Go to Board*, *Epic Cockpit*, and *Manage*
 - Cockpit and timeline nav
 - Home folder: gear on the binder
 

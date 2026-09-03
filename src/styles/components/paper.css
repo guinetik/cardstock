@@ -1410,7 +1410,7 @@
     white-space: nowrap;
     color: var(--color-grey);
   }
-  /* Take stock: the cockpit, a link of its own above the cover link. */
+  /* Epic Cockpit: the cockpit, a link of its own above the cover link. */
   .binder-cockpit {
     position: relative;
     z-index: 1;
@@ -1452,7 +1452,7 @@
     outline: 2px solid var(--pen-blue);
     outline-offset: 2px;
   }
-  /* Take stock is the cockpit, so it is written in the red pen — and named. */
+  /* Epic Cockpit is the cockpit, so it is written in the red pen — and named. */
   .binder-tool--pen {
     gap: 5px;
     padding: 0 9px;

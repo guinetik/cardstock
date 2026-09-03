@@ -106,7 +106,7 @@ reference). On the projects page each one is a `.folder` taking a full row:
 manila stock (`--surface-well`) whose single `.folder-tab` is the project's
 name, and the way in. Inside the folder the boards are `.binder`s laid side by
 side — a riveted spine of the folder's stock, the board's name on the cover,
-its card count, and *Take stock*, which is the epic cockpit. The margin of
+its card count, and *Epic Cockpit*. The margin of
 the folder holds a `.folder-stamp` with the card count, in pen red, the one
 tilted thing on the page besides a dragged card. Nothing is written twice:
 the tab names the project, the binders name the boards.
@@ -121,7 +121,7 @@ the folder. Binders live only in Boards — wide `.binder`s with a **lane microc
 drawer vs panel stock, three cards filling a row. Untinted slips use the
 cockpit pens (queued, moving, late, blocked, delivered); a card's own tint
 wins. Names live in an absolute tip on hover,
-*Take stock*, *Manage*, and *Export CSV*, and *New board* in the aside. People is wide
+*Go to Board*, *Epic Cockpit*, *Manage*, and *Export CSV*, and *New board* in the aside. People is wide
 `.binder`s — white cover, riveted spine — one person per cover, last binder
 blank for the invite.
 Concepts is the **concept graph** (`.graph`): each group a `.graph-node` with
