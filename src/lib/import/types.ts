@@ -1,3 +1,4 @@
+import type { Person } from "@/lib/assignee";
 import type { Change } from "@/lib/frontmatter/sheet";
 
 export interface SheetFile {
@@ -63,6 +64,8 @@ export interface BoardState {
   cards: Map<string, ExistingCard>;
   /** epic source_name → id */
   epics: Map<string, string>;
+  /** The project roster, for resolving an assignee email to a member id. */
+  members: Person[];
 }
 
 /** What the applier writes for one card. Lane and tags are keys/refs; the applier resolves ids after creating what is new. */

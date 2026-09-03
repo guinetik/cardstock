@@ -72,6 +72,7 @@ function state(cards: Partial<ExistingCard>[] = []): BoardState {
       ]),
     ),
     epics: new Map([["E", "epic-1"]]),
+    members: [],
   };
 }
 
@@ -269,6 +270,44 @@ describe("sheetFromCard", () => {
       { id: "a", external_id: "1", assignee: "joao@example.test" },
     ]);
     expect(writeSheet(src, sheetFromCard(s.cards.get("1")!, s))).toBe(src);
+  });
+  test("a file naming an assignee plans the text column", () => {
+    const plan = planImport([sheet(1, "assignee: joao@example.test")], state());
+    const row = plan.rows[0];
+    expect(row.verdict).toBe("new");
+    if (row.verdict !== "new") throw new Error(row.verdict);
+    expect(row.patch.columns.assignee).toBe("joao@example.test");
+  });
+  test("an email belonging to nobody is planned, not dropped", () => {
+    const plan = planImport(
+      [sheet(1, "assignee: stranger@nowhere.test")],
+      state(),
+    );
+    const row = plan.rows[0];
+    if (row.verdict !== "new") throw new Error(row.verdict);
+    expect(row.patch.columns.assignee).toBe("stranger@nowhere.test");
+  });
+  // Absent is not the same as empty: a key the file does not state is not a
+  // change, so an unassigned file must not unassign a card the app assigned.
+  // The card's title is also changed from the file's, so this row genuinely
+  // verdicts "changed" (and columnsFor is actually exercised) rather than
+  // passing vacuously because the row happened to be "unchanged".
+  test("a file that drops the assignee line leaves the board's value alone", () => {
+    const plan = planImport(
+      [sheet(1, "")],
+      state([
+        {
+          external_id: "1",
+          title: "Old Title",
+          assignee: "joao@example.test",
+          assignee_id: "11111111-1111-4111-8111-111111111111",
+        },
+      ]),
+    );
+    const row = plan.rows[0];
+    if (row.verdict !== "changed") throw new Error(row.verdict);
+    expect(row.changes.map((c) => c.key)).toContain("title");
+    expect(row.patch.columns).not.toHaveProperty("assignee");
   });
 });
 

@@ -58,6 +58,7 @@ const state = (cards: ExistingCard[] = []): BoardState => ({
   groups: [],
   cards: new Map(cards.map((c) => [c.external_id, c])),
   epics: new Map(),
+  members: [],
 });
 
 const patch = () => ({

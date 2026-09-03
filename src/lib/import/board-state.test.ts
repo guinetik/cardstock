@@ -18,6 +18,9 @@ function fakeDb(responses: Record<string, { data: unknown; error: unknown }>) {
         order() {
           return builder;
         },
+        maybeSingle() {
+          return builder;
+        },
         // biome-ignore lint/suspicious/noThenProperty: mimics supabase-js's thenable PostgrestBuilder, which loadBoardState awaits directly.
         then(
           resolve: (v: unknown) => unknown,

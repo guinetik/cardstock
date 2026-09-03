@@ -112,6 +112,7 @@ function freshBoardState(): BoardState {
     groups: [],
     cards: new Map(),
     epics: new Map(),
+    members: [],
   };
 }
 
