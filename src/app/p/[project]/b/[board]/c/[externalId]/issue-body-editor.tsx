@@ -19,6 +19,7 @@ import {
   UndoRedo,
 } from "@mdxeditor/editor";
 import "@mdxeditor/editor/style.css";
+import { markdownPastePlugin } from "./markdown-paste-plugin";
 
 /**
  * Browser-only MDXEditor. Plugins are constructed here so they never run on the server.
@@ -47,6 +48,7 @@ export default function IssueBodyEditor({
           linkDialogPlugin(),
           codeBlockPlugin({ defaultCodeBlockLanguage: "txt" }),
           markdownShortcutPlugin(),
+          markdownPastePlugin(),
           toolbarPlugin({
             toolbarContents: () => (
               <>
