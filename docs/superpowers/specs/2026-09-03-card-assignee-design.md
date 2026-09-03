@@ -76,7 +76,7 @@ create index cards_board_assignee on public.cards (board_id, assignee_id);
 2. Validate `cardId` (and `memberId` when non-null) against the `UUID` pattern.
 3. When `memberId` is non-null, confirm a `project_members` row joining that member to `card_project(cardId)`, and read the member's email. No row → `That person is not on this project.`
 4. `update cards set assignee_id = …, assignee = <email or null>` — one patch, both columns.
-5. Insert a `card_events` row: `kind: "edited"`, `actor: me.email`, the patch as payload.
+5. Insert a `card_events` row: `kind: "edited"`, `actor: me.email`, payload `{ assignee: <email or null> }` — the email alone, **not** the two-column patch. `assignCardEpic` logs `{epic_id, epic}` and the history formatter renders that as `changed epic_id and changed epic`; logging one key keeps the ledger a sentence.
 6. `revalidatePath`.
 
 Step 3 is the only enforcement of the roster rule, so the create-dialog path must go through this action rather than writing the columns itself.
@@ -106,7 +106,7 @@ The field is not done until all of these move together:
 
 **Card page.** A native select in the labeled field grid beside Status, following `docs/card-detail.md` — `--surface-input`, `--color-ink`, 10px uppercase grey label. Options are the roster sorted by `display_name ?? email`, plus *Unassigned*. Saves through `assignCard`; `pending` disables it. When the stored text resolves to no member, it renders as a selected disabled option reading `joao@old.com · not on this project`, so editing another field never quietly erases it.
 
-**Filter bar.** `Filters.assignee: string | null`, with `ASSIGNEE_FILTER_NONE = "__none__"` beside the existing `EPIC_FILTER_NONE`. `matches` compares `card.assignee_id`; the none case also treats a card with off-roster text as assigned, not unassigned. A chip row per member plus *unassigned*, the signed-in member first and labeled **Me**. The value lives in the URL like the other view controls. Touches `emptyFilters`, `isFiltering`, `matches`, and adds an assignee column to `toCsv`.
+**Filter bar.** `Filters.assignee: string | null`, with `ASSIGNEE_FILTER_NONE = "__none__"` beside the existing `EPIC_FILTER_NONE`. `matches` compares `card.assignee_id`; the none case also treats a card with off-roster text as assigned, not unassigned. A chip row per member plus *unassigned*, the signed-in member first and labeled **Me**. The value lives in `BoardView`'s `useState<Filters>` alongside every other filter — board filters are not URL-backed today, and making this one the exception would be worse than being consistent. Touches `emptyFilters`, `isFiltering`, `matches`, and adds an assignee column to `toCsv`.
 
 **Create dialog.** A select defaulting to *Unassigned* — not to you, because filing a card is not the same as taking it. `createCard` gains an optional `assigneeId` and routes it through the same validation.
 
