@@ -1,9 +1,48 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import { type Person, personLabel } from "@/lib/assignee";
 import { resolveBoardGates } from "@/lib/gates";
 import { supabaseServer } from "@/lib/supabase/server";
 import { timelineMilestones } from "@/lib/timeline";
 import type { BoardData, Card, Epic, Lane, TagGroup } from "@/lib/types";
+
+/**
+ * A project's roster as `Person[]`, sorted by label.
+ *
+ * Shared so the board, the card page, and anything else that offers people to
+ * pick from order and label them identically — three copies of this shaping
+ * would drift the first time the rule changes.
+ */
+export async function loadProjectRoster(
+  db: SupabaseClient,
+  projectId: string,
+): Promise<Person[]> {
+  const { data: memberships } = await db
+    .from("project_members")
+    .select("members(id, email, display_name)")
+    .eq("project_id", projectId);
+
+  return (
+    (memberships ?? []) as unknown as {
+      members: {
+        id: string;
+        email: string;
+        display_name: string | null;
+      } | null;
+    }[]
+  )
+    .map((row) => row.members)
+    .filter(
+      (m): m is { id: string; email: string; display_name: string | null } =>
+        m != null,
+    )
+    .map((m) => ({
+      memberId: m.id,
+      email: m.email,
+      displayName: m.display_name,
+    }))
+    .sort((a, b) => personLabel(a).localeCompare(personLabel(b)));
+}
 
 /** Everything the board page needs, in one round-trip set. RLS scopes it to the member's projects. */
 export async function loadBoard(
@@ -32,7 +71,7 @@ export async function loadBoard(
     { data: cardTags },
     { data: moves },
     { data: epics },
-    { data: memberships },
+    people,
   ] = await Promise.all([
     db
       .from("lanes")
@@ -69,10 +108,7 @@ export async function loadBoard(
       .select("id, source_name, outcome")
       .eq("board_id", board.id)
       .order("source_name"),
-    db
-      .from("project_members")
-      .select("members(id, email, display_name)")
-      .eq("project_id", project.id),
+    loadProjectRoster(db, project.id),
   ]);
 
   const tagsByCard = new Map<string, string[]>();
@@ -91,27 +127,6 @@ export async function loadBoard(
     (moves ?? []) as unknown as Parameters<typeof timelineMilestones>[2],
     gates,
   );
-
-  const people: Person[] = (
-    (memberships ?? []) as unknown as {
-      members: {
-        id: string;
-        email: string;
-        display_name: string | null;
-      } | null;
-    }[]
-  )
-    .map((row) => row.members)
-    .filter(
-      (m): m is { id: string; email: string; display_name: string | null } =>
-        m != null,
-    )
-    .map((m) => ({
-      memberId: m.id,
-      email: m.email,
-      displayName: m.display_name,
-    }))
-    .sort((a, b) => personLabel(a).localeCompare(personLabel(b)));
 
   return {
     project: {

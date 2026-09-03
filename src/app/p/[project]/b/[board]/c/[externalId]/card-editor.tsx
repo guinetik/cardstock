@@ -3,12 +3,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   archiveCard,
+  assignCard,
   setCardTags,
   updateCard,
 } from "@/app/p/[project]/b/[board]/actions";
 import { assignCardEpic } from "@/app/p/[project]/b/[board]/cockpit/actions";
 import { CardColorPicker } from "@/components/board/card-color-picker";
 import { Button } from "@/components/ui/button";
+import { findPerson, type Person, personLabel } from "@/lib/assignee";
 import { type CardColor, parseCardColor } from "@/lib/card-color";
 import { CARD_STATUSES, normalizeNeeds } from "@/lib/card-status";
 import { markHue } from "@/lib/types";
@@ -32,12 +34,17 @@ interface CardLite {
   /** Frontmatter `area`; the scheme requires one, "general" is the default. */
   area: string;
   epic_id: string | null;
+  assignee_id: string | null;
+  assignee: string | null;
 }
 
 const field =
   "h-8 w-full rounded-[var(--radius-input)] border border-[var(--border-input)] bg-[var(--surface-input)] px-2.5 text-sm text-[var(--color-ink)]";
 const fieldLabel =
   "mb-1 block text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]";
+
+/** Sentinel value for the "not on this project" option, so it never collides with Unassigned's `""`. */
+const OFF_ROSTER = "__off_roster__";
 
 /**
  * Inline editor for summary, status, ratings, dates, the blocker note,
@@ -55,12 +62,14 @@ export function CardEditor({
   groups,
   tagIds,
   epics,
+  people,
   backHref,
 }: {
   card: CardLite;
   groups: { id: string; name: string; tags: { id: string; name: string }[] }[];
   tagIds: string[];
   epics: { id: string; source_name: string }[];
+  people: Person[];
   backHref: string;
 }) {
   const router = useRouter();
@@ -70,6 +79,8 @@ export function CardEditor({
   const [tags, setTags] = useState(new Set(tagIds));
   const [editingTags, setEditingTags] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const offRoster =
+    card.assignee && !findPerson(people, card.assignee) ? card.assignee : null;
 
   /**
    * Persist a partial card update and refresh the page.
@@ -150,6 +161,39 @@ export function CardEditor({
                 {epic.source_name}
               </option>
             ))}
+          </select>
+        </label>
+        <label>
+          <span className={fieldLabel}>Assignee</span>
+          <select
+            className={field}
+            defaultValue={card.assignee_id ?? (offRoster ? OFF_ROSTER : "")}
+            disabled={pending}
+            onChange={(e) =>
+              start(async () => {
+                const value = e.target.value;
+                if (value === OFF_ROSTER) return;
+                const r = await assignCard(card.id, value || null);
+                setMsg(r.ok ? "Saved" : r.error);
+                router.refresh();
+              })
+            }
+          >
+            <option value="">Unassigned</option>
+            {people.map((person) => (
+              <option key={person.memberId} value={person.memberId}>
+                {personLabel(person)}
+              </option>
+            ))}
+            {offRoster && (
+              // The file names somebody who is not on this project. It gets a
+              // value of its own — sharing `""` with Unassigned would make the
+              // browser select Unassigned instead, and the next save would
+              // quietly erase what the file says.
+              <option value={OFF_ROSTER} disabled>
+                {offRoster} · not on this project
+              </option>
+            )}
           </select>
         </label>
         <label>

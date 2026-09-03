@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CardHistory } from "@/components/board/card-history";
 import { EpicLabel } from "@/components/epic-label";
+import { loadProjectRoster } from "@/lib/board-data";
 import { parseCardColor } from "@/lib/card-color";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
@@ -40,7 +41,7 @@ export async function CardSheet({
   const db = await supabaseServer();
   const { data: b } = await db
     .from("boards")
-    .select("id, slug, name, settings, projects!inner(slug, name)")
+    .select("id, slug, name, settings, project_id, projects!inner(slug, name)")
     .eq("slug", board)
     .eq("projects.slug", project)
     .maybeSingle();
@@ -88,6 +89,7 @@ export async function CardSheet({
     .select("id, source_name")
     .eq("board_id", b.id)
     .order("source_name");
+  const people = await loadProjectRoster(db, b.project_id);
   const lane = (lanes ?? []).find((l) => l.id === card.lane_id);
   const issue = splitIssueBody(card.body_md);
   const html = marked.parse(
@@ -156,8 +158,11 @@ export async function CardSheet({
           color: parseCardColor(card.color),
           area: card.area,
           epic_id: card.epic_id,
+          assignee_id: card.assignee_id,
+          assignee: card.assignee,
         }}
         epics={epics ?? []}
+        people={people}
         groups={
           (groups ?? []) as unknown as {
             id: string;
