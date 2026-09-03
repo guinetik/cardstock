@@ -531,6 +531,15 @@
     padding-top: 0.15rem;
   }
   /*
+   * The Dates value cell is three rows tall (captions, day fields, rough
+   * date), so the baseline alignment that suits one-line rows pins DATES
+   * to the caption line at the top. Center the label on the block instead.
+   */
+  .card-form > .field-label--dates {
+    align-self: center;
+    padding-top: 0;
+  }
+  /*
    * Effort and priority share one form row. Column 1 matches the form's
    * 3.25rem label gutter so L/M/H start on the same value edge as Tags
    * and Target. Priority's label is max-content (the word is longer than

@@ -4,8 +4,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
+import { EpicLabel } from "@/components/epic-label";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
-import { statusChipClass } from "@/lib/card-status";
+import { CARD_STATUSES, statusChipClass } from "@/lib/card-status";
 import { daysInLane } from "@/lib/filters";
 import type { BoardGate } from "@/lib/gates";
 import {
@@ -18,7 +19,6 @@ import {
 } from "@/lib/types";
 import { CardAge, cardAgeState } from "./card-age";
 import { CardColorMenu } from "./card-color-menu";
-import { EpicLabel } from "@/components/epic-label";
 import { Ratings } from "./ratings";
 
 /**
@@ -203,10 +203,7 @@ export function CardItem(props: {
           </span>
         )}
         {age?.signal === "overdue" && (
-          <span
-            className="stat stat--blocked"
-            title="Target date has passed"
-          >
+          <span className="stat stat--blocked" title="Target date has passed">
             overdue
           </span>
         )}
@@ -282,7 +279,39 @@ export function CardItem(props: {
           >
             {!props.overlay && props.onPatch && (
               <>
-                <span className="field-label">Dates</span>
+                <span className="field-label">Status</span>
+                <select
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="paper-field h-6 w-full text-[11.5px]"
+                  value={card.status}
+                  onChange={(e) =>
+                    props.onPatch?.(card.id, { status: e.target.value })
+                  }
+                  aria-label="Status"
+                  title="The tracker status word"
+                >
+                  {CARD_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+
+                <span className="field-label">Waiting</span>
+                <input
+                  type="text"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="paper-field h-6 w-full text-[11.5px]"
+                  placeholder="a person, a decision, another team"
+                  value={card.needs ?? ""}
+                  onChange={(e) =>
+                    props.onPatch?.(card.id, { needs: e.target.value })
+                  }
+                  aria-label="Waiting on"
+                  title="Anything here marks the card blocked"
+                />
+
+                <span className="field-label field-label--dates">Dates</span>
                 <div className="card-dates">
                   <div className="card-dates-grid">
                     <span className="card-date-col-label">started</span>
@@ -331,20 +360,6 @@ export function CardItem(props: {
                 </div>
 
                 <Ratings card={card} onPatch={props.onPatch} />
-
-                <span className="field-label">Waiting</span>
-                <input
-                  type="text"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="paper-field h-6 w-full text-[11.5px]"
-                  placeholder="a person, a decision, another team"
-                  value={card.needs ?? ""}
-                  onChange={(e) =>
-                    props.onPatch?.(card.id, { needs: e.target.value })
-                  }
-                  aria-label="Waiting on"
-                  title="Anything here marks the card blocked"
-                />
               </>
             )}
 

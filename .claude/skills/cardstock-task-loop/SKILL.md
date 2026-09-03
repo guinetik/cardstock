@@ -35,6 +35,23 @@ Check all of these before touching anything. Any failure is a stop, not a workar
 - No other agent or session is mid-loop. `sync.py` rewrites all tracker files, so it is a global operation and two concurrent runs will race. One loop at a time.
 - The working tree has no uncommitted tracker changes from unrelated work. The opening commit is meant to be legible.
 
+## Mining call transcripts for feedback
+
+Hap and Sanjay's feedback on cardstock itself usually arrives as an aside inside a call that is mostly about the Designer product, not as a dedicated cardstock session. Use this when asked to sweep a call (or a date range of calls) for cardstock feedback and reconcile it against the tracker.
+
+1. **Find the transcripts.** They live in the vault at `<STAFFETO_VAULT>/delivery/designer/feedback/<date>.transcript.txt`, each paired with a `<date>.md` summary.
+2. **Don't trust the `.md` summary alone.** It's written for the Designer/website work and routinely omits cardstock asides entirely, even when the raw transcript has several. Read it for orientation, then grep the `.transcript.txt`.
+3. **Grep for more than the product name.** People say "cardstock" maybe once a call — otherwise it's "the board", "the tool", or just a description of clicking something. Search the literal name, but also ask-shaped language: `would be nice|it'd be cool|can we|should have|doesn't work|can't|hard to find|missing|confusing`. Read enough surrounding context on every hit to tell a cardstock UI complaint from a Designer-product one that happens to share a word like "card" or "board".
+4. **Throw out what isn't a new ask.** Naming banter, Joao narrating his own in-progress work back to Hap/Sanjay ("did you see the new calendar?"), and a question that resolves itself in the same exchange (someone tries ctrl-click, it works, done) are not feedback items — skip them.
+5. **Check before filing.** For anything that looks like a real ask, check both:
+   - the existing tracker files (`backlog/tracker/*.md`) — is this the same ask an item already covers, just said again or in different words?
+   - this repo's git history (`git log --oneline`, `git log -i --grep=`, `git log -S<term>` on the likely files) — has it already been built? A feature the ask assumes doesn't exist (like a filter or a chart) may predate the call entirely, which usually means the real gap is something narrower — missing data, discoverability, wrong default — not the feature itself. (`#4` and `#9` are both this shape: the feature existed, the data feeding it didn't.)
+6. **Update or file accordingly**, then run the normal validate → sync → commit loop:
+   - Already fully covered by an existing item and nothing changed → leave it alone.
+   - Already built (found the commit) but the tracker doesn't say so → update that item per **Phase 3**, citing the commit(s) in the `## Status` rewrite.
+   - Genuinely new and unresolved → **Filing a new item**, below. Set `relates:` to whatever existing item is closest in shape.
+7. **Cite evidence, don't assert.** "Built" claims in the `## Status` section should name the commit(s) found, not just say the feature exists — the next person checking this file should be able to verify it without re-doing the git archaeology.
+
 ## Filing a new item
 
 **A new card never starts at a lane that implies work has begun.** File into `unsorted`, or `now` only if you are about to work it immediately. Filing is not a promotion.
