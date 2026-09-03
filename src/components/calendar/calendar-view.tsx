@@ -14,10 +14,12 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { updateCard } from "@/app/p/[project]/b/[board]/actions";
 import { CalendarSlip } from "@/components/calendar/calendar-slip";
 import { DraggableCalendarSlip } from "@/components/calendar/draggable-calendar-slip";
+import { useCalendarRealtime } from "@/components/calendar/use-calendar-realtime";
 import {
   Popover,
   PopoverContent,
@@ -341,13 +343,21 @@ export function CalendarView(props: {
   watchDays: number;
   slips: CalendarSlipData[];
   boards: { slug: string; name: string }[];
+  boardIds: string[];
   selectedBoards: string[] | null;
   path: string;
 }) {
+  const router = useRouter();
   const [items, setItems] = useState(props.slips);
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [pendingDrops, setPendingDrops] = useState(0);
   useEffect(() => setItems(props.slips), [props.slips]);
+  useCalendarRealtime({
+    boardIds: props.boardIds,
+    busy: activeId !== null || pendingDrops > 0,
+    refresh: () => router.refresh(),
+  });
 
   const days = useMemo(
     () => monthMatrix(props.month, props.today),
@@ -403,10 +413,15 @@ export function CalendarView(props: {
     if (next === undefined) return;
     if (next === previous.card.target_date) return;
     applyTarget(cardId, next);
-    const result = await updateCard(cardId, { target_date: next });
-    if (!result.ok) {
-      applyTarget(cardId, previous.card.target_date);
-      setError(result.error);
+    setPendingDrops((count) => count + 1);
+    try {
+      const result = await updateCard(cardId, { target_date: next });
+      if (!result.ok) {
+        applyTarget(cardId, previous.card.target_date);
+        setError(result.error);
+      }
+    } finally {
+      setPendingDrops((count) => count - 1);
     }
   }
 

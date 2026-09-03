@@ -19,6 +19,8 @@ export interface ProjectCalendarData {
     settings: Record<string, unknown>;
   };
   boards: ProjectCalendarBoard[];
+  /** Board uuids, for the realtime doorbell's change filter. */
+  boardIds: string[];
   slips: CalendarSlip[];
 }
 
@@ -128,6 +130,7 @@ export async function loadProjectCalendar(
         settings: (project.settings ?? {}) as Record<string, unknown>,
       },
       boards: [],
+      boardIds: [],
       slips: [],
     };
   }
@@ -153,6 +156,7 @@ export async function loadProjectCalendar(
       settings: (project.settings ?? {}) as Record<string, unknown>,
     },
     boards: boardRows.map((board) => ({ slug: board.slug, name: board.name })),
+    boardIds: ids,
     slips: assembleCalendarSlips(
       boardRows,
       (lanes ?? []) as LaneRow[],

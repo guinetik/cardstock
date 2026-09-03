@@ -54,6 +54,7 @@ export default async function BoardCalendarPage(
         watchDays={forgottenAfterDays(data.project.settings)}
         slips={slips}
         boards={[]}
+        boardIds={[data.board.id]}
         selectedBoards={null}
         path={path}
       />

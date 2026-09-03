@@ -49,6 +49,7 @@ export default async function ProjectCalendarPage(
         watchDays={forgottenAfterDays(data.project.settings)}
         slips={slips}
         boards={data.boards}
+        boardIds={data.boardIds}
         selectedBoards={selected}
         path={`/p/${project}/calendar`}
       />

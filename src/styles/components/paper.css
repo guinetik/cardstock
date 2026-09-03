@@ -2459,8 +2459,15 @@
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    overflow: auto;
+    /* Vertical only: a too-wide slip must wrap, never grow a scrollbar. */
+    overflow: hidden auto;
     min-height: 0;
+  }
+  /* Links on a slip are never native drag sources — the slip itself is the
+   * draggable, and a browser link-drag would steal the gesture (WebKit needs
+   * the prefixed property on top of draggable={false}). */
+  .calendar-slip a {
+    -webkit-user-drag: none;
   }
   .calendar-slip {
     position: relative;
@@ -2561,6 +2568,9 @@
     font-size: 12px;
     line-height: 1.25;
     font-weight: 500;
+    /* A single unbroken word breaks mid-word onto the next row rather than
+     * pushing the slip wider than its tray. */
+    overflow-wrap: anywhere;
   }
   .calendar-slip .calendar-slip-title--full {
     -webkit-line-clamp: unset;

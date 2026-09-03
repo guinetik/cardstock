@@ -70,7 +70,11 @@ function SlipFace(props: {
     return (
       <div className="calendar-slip-slot">
         {props.linked ? (
-          <Link href={props.href} className="calendar-slip-id-link">
+          <Link
+            href={props.href}
+            className="calendar-slip-id-link"
+            draggable={false}
+          >
             {id}
           </Link>
         ) : (
@@ -84,7 +88,10 @@ function SlipFace(props: {
       href={props.href}
       className={`calendar-slip-title${props.compact ? "" : " calendar-slip-title--full"} hover:underline`}
       tabIndex={props.compact ? undefined : -1}
-      onPointerDown={(event) => event.stopPropagation()}
+      // Not a native drag source: pressing here must reach the dnd-kit
+      // sensor so the slip picks up; its distance threshold keeps a plain
+      // click a navigation.
+      draggable={false}
     >
       {props.card.title}
     </Link>
