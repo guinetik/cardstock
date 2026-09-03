@@ -654,6 +654,12 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         statuses={boardStatuses(cards)}
         epics={boardEpics}
         hasUnassignedEpics={hasUnassignedEpics}
+        people={data.people}
+        meMemberId={
+          data.people.find(
+            (p) => p.email.toLowerCase() === me.email.toLowerCase(),
+          )?.memberId ?? null
+        }
         filters={filters}
         onChange={setFilters}
         filtering={isFiltering(filters)}

@@ -3,6 +3,9 @@ import type { Card, Lane, TagGroup } from "./types";
 /** Filter value for cards with no epic assigned. */
 export const EPIC_FILTER_NONE = "__none__";
 
+/** Filter value for cards nobody is assigned to. */
+export const ASSIGNEE_FILTER_NONE = "__none__";
+
 export interface Filters {
   query: string;
   tags: Set<string>; // tag ids; OR within a group, AND across groups
@@ -12,6 +15,8 @@ export interface Filters {
   status: string | null;
   /** One epic id, {@link EPIC_FILTER_NONE} for unassigned, or null for every epic. */
   epic: string | null;
+  /** One member id, {@link ASSIGNEE_FILTER_NONE} for nobody, or null for everyone. */
+  assignee: string | null;
   showInternal: boolean;
   showArchived: boolean;
 }
@@ -25,6 +30,7 @@ export function emptyFilters(showInternal = true): Filters {
     effort: new Set(),
     status: null,
     epic: null,
+    assignee: null,
     showInternal,
     showArchived: false,
   };
@@ -39,6 +45,7 @@ export function isFiltering(f: Filters): boolean {
     f.effort.size > 0 ||
     f.status != null ||
     f.epic != null ||
+    f.assignee != null ||
     f.showArchived
   );
 }
@@ -104,6 +111,11 @@ export function matches(
   if (f.epic === EPIC_FILTER_NONE) {
     if (card.epic_id || card.epic?.trim()) return false;
   } else if (f.epic && card.epic_id !== f.epic) return false;
+  if (f.assignee === ASSIGNEE_FILTER_NONE) {
+    // An off-roster email is still somebody's name on the card, so a card with
+    // text but no FK is assigned — it is just assigned to a stranger.
+    if (card.assignee_id || card.assignee?.trim()) return false;
+  } else if (f.assignee && card.assignee_id !== f.assignee) return false;
   for (const [, wanted] of selectedByGroup(f, groups))
     if (!card.tag_ids.some((id) => wanted.has(id))) return false;
   return true;
@@ -168,6 +180,7 @@ export function toCsv(
     "target_date",
     "target_label",
     "epic",
+    "assignee",
     "area",
     "raised_by",
     "raised_on",
@@ -187,6 +200,7 @@ export function toCsv(
       c.target_date ?? "",
       c.target_label ?? "",
       c.epic ?? "",
+      c.assignee ?? "",
       c.area ?? "",
       c.raised_by ?? "",
       c.raised_on ?? "",

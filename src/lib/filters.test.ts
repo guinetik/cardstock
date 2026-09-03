@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+  ASSIGNEE_FILTER_NONE,
   boardStatuses,
-  emptyFilters,
   EPIC_FILTER_NONE,
+  emptyFilters,
   isFiltering,
   matches,
   sortInbox,
@@ -188,7 +189,12 @@ describe("epic filter", () => {
   test("one epic keeps only cards on that epic", () => {
     const f = { ...emptyFilters(), epic: "epic-1" };
     expect(
-      matches(task({ epic_id: "epic-1", epic: "Onboarding" }), f, groups, lanes),
+      matches(
+        task({ epic_id: "epic-1", epic: "Onboarding" }),
+        f,
+        groups,
+        lanes,
+      ),
     ).toBe(true);
     expect(
       matches(task({ epic_id: "epic-2", epic: "Billing" }), f, groups, lanes),
@@ -201,7 +207,12 @@ describe("epic filter", () => {
       true,
     );
     expect(
-      matches(task({ epic_id: "epic-1", epic: "Onboarding" }), f, groups, lanes),
+      matches(
+        task({ epic_id: "epic-1", epic: "Onboarding" }),
+        f,
+        groups,
+        lanes,
+      ),
     ).toBe(false);
     expect(
       matches(task({ epic_id: null, epic: "Legacy name" }), f, groups, lanes),
@@ -211,20 +222,53 @@ describe("epic filter", () => {
   test("epic still combines with status", () => {
     const f = { ...emptyFilters(), epic: "epic-1", status: "wip" };
     expect(
-      matches(
-        task({ epic_id: "epic-1", status: "wip" }),
-        f,
-        groups,
-        lanes,
-      ),
+      matches(task({ epic_id: "epic-1", status: "wip" }), f, groups, lanes),
     ).toBe(true);
     expect(
-      matches(
-        task({ epic_id: "epic-1", status: "backlog" }),
-        f,
-        groups,
-        lanes,
-      ),
+      matches(task({ epic_id: "epic-1", status: "backlog" }), f, groups, lanes),
     ).toBe(false);
   });
+});
+
+const MEMBER = "11111111-1111-4111-8111-111111111111";
+
+test("filtering by a person keeps only their cards", () => {
+  const mine = task({ assignee_id: MEMBER, assignee: "joao@example.test" });
+  const theirs = task({ assignee_id: null, assignee: null });
+  const f = { ...emptyFilters(), assignee: MEMBER };
+  expect(matches(mine, f, [], [])).toBe(true);
+  expect(matches(theirs, f, [], [])).toBe(false);
+});
+
+test("unassigned means no assignee at all", () => {
+  const f = { ...emptyFilters(), assignee: ASSIGNEE_FILTER_NONE };
+  expect(matches(task({ assignee_id: null, assignee: null }), f, [], [])).toBe(
+    true,
+  );
+  expect(
+    matches(
+      task({ assignee_id: MEMBER, assignee: "joao@example.test" }),
+      f,
+      [],
+      [],
+    ),
+  ).toBe(false);
+});
+
+test("a card whose file names an off-roster person is assigned, not unassigned", () => {
+  // The FK is null because nobody matched, but somebody's name is on it.
+  const stranger = task({
+    assignee_id: null,
+    assignee: "stranger@nowhere.test",
+  });
+  const none = { ...emptyFilters(), assignee: ASSIGNEE_FILTER_NONE };
+  expect(matches(stranger, none, [], [])).toBe(false);
+  expect(
+    matches(stranger, { ...emptyFilters(), assignee: MEMBER }, [], []),
+  ).toBe(false);
+});
+
+test("an assignee filter counts as filtering", () => {
+  expect(isFiltering({ ...emptyFilters(), assignee: MEMBER })).toBe(true);
+  expect(isFiltering(emptyFilters())).toBe(false);
 });

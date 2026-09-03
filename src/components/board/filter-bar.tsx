@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { EpicLabel } from "@/components/epic-label";
+import { type Person, personLabel } from "@/lib/assignee";
 import { statusChipClass } from "@/lib/card-status";
 import type { Filters, InboxSort } from "@/lib/filters";
-import { EPIC_FILTER_NONE } from "@/lib/filters";
-import { EFFORT_LABEL, markHue, type Epic, type TagGroup } from "@/lib/types";
+import { ASSIGNEE_FILTER_NONE, EPIC_FILTER_NONE } from "@/lib/filters";
+import { EFFORT_LABEL, type Epic, markHue, type TagGroup } from "@/lib/types";
 
 const PEN = { 1: "sq--red", 2: "sq--blue", 3: "sq--violet" } as const;
 const EFF = { L: "sq--green", M: "sq--amber", H: "sq--red" } as const;
@@ -39,6 +40,9 @@ export function FilterBar(props: {
   statuses: string[];
   epics: Pick<Epic, "id" | "source_name">[];
   hasUnassignedEpics: boolean;
+  people: Person[];
+  /** The signed-in member's id, so their chip can read "Me". Null when they are not on the roster. */
+  meMemberId: string | null;
   filters: Filters;
   onChange: (f: Filters) => void;
   filtering: boolean;
@@ -49,6 +53,20 @@ export function FilterBar(props: {
   const { filters: f, onChange } = props;
   const epicName = new Map(props.epics.map((e) => [e.id, e.source_name]));
   const showEpicFilter = props.epics.length > 0 || props.hasUnassignedEpics;
+  // You first: the commonest filter is "what is on my plate".
+  const ordered = [...props.people].sort((a, b) =>
+    a.memberId === props.meMemberId
+      ? -1
+      : b.memberId === props.meMemberId
+        ? 1
+        : 0,
+  );
+  const assigneeName = new Map(
+    props.people.map((p) => [
+      p.memberId,
+      p.memberId === props.meMemberId ? "Me" : personLabel(p),
+    ]),
+  );
   const toggle = <T,>(set: Set<T>, v: T) => {
     const n = new Set(set);
     n.has(v) ? n.delete(v) : n.add(v);
@@ -294,7 +312,8 @@ export function FilterBar(props: {
                   onClick={(e) => {
                     onChange({
                       ...f,
-                      epic: f.epic === EPIC_FILTER_NONE ? null : EPIC_FILTER_NONE,
+                      epic:
+                        f.epic === EPIC_FILTER_NONE ? null : EPIC_FILTER_NONE,
                     });
                     closeMenu(e.currentTarget);
                   }}
@@ -319,6 +338,82 @@ export function FilterBar(props: {
                     }}
                   >
                     <EpicLabel name={epic.source_name} />
+                  </button>
+                );
+              })}
+            </div>
+          </details>
+        </fieldset>
+      )}
+
+      {props.people.length > 0 && (
+        <fieldset className="fieldset relative">
+          <legend>Assignee</legend>
+          <details
+            name="filter-menu"
+            data-key="assignee"
+            onToggle={(e) => {
+              if (e.currentTarget.open) setMenuOpen(true);
+            }}
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 pb-0.5 text-[13px]">
+              <span className="stat stat--muted">
+                {f.assignee === ASSIGNEE_FILTER_NONE
+                  ? "unassigned"
+                  : f.assignee
+                    ? (assigneeName.get(f.assignee) ?? "someone")
+                    : "any"}
+              </span>
+              <Caret />
+            </summary>
+            <div className="absolute left-0 top-full z-20 mt-2 flex min-w-[10rem] max-w-[18rem] flex-col gap-1.5 rounded-[var(--radius-card)] border border-[var(--border-strong)] bg-[var(--surface-raised)] p-3 shadow-[var(--shadow-lift)]">
+              <button
+                type="button"
+                aria-pressed={f.assignee === null}
+                className="stat stat--muted text-left"
+                onClick={(e) => {
+                  onChange({ ...f, assignee: null });
+                  closeMenu(e.currentTarget);
+                }}
+              >
+                any
+              </button>
+              <button
+                type="button"
+                aria-pressed={f.assignee === ASSIGNEE_FILTER_NONE}
+                className="stat stat--muted text-left"
+                onClick={(e) => {
+                  onChange({
+                    ...f,
+                    assignee:
+                      f.assignee === ASSIGNEE_FILTER_NONE
+                        ? null
+                        : ASSIGNEE_FILTER_NONE,
+                  });
+                  closeMenu(e.currentTarget);
+                }}
+              >
+                unassigned
+              </button>
+              {ordered.map((person) => {
+                const on = f.assignee === person.memberId;
+                return (
+                  <button
+                    key={person.memberId}
+                    type="button"
+                    aria-pressed={on}
+                    className="text-left text-[13px]"
+                    onClick={(e) => {
+                      onChange({
+                        ...f,
+                        assignee: on ? null : person.memberId,
+                      });
+                      closeMenu(e.currentTarget);
+                    }}
+                  >
+                    {person.memberId === props.meMemberId
+                      ? "Me"
+                      : personLabel(person)}
                   </button>
                 );
               })}
@@ -377,6 +472,7 @@ export function FilterBar(props: {
               effort: new Set(),
               status: null,
               epic: null,
+              assignee: null,
               showArchived: false,
             })
           }
