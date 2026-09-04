@@ -373,3 +373,138 @@ test("the archive lane has a manage menu at all", async ({ page }) => {
     }),
   ).toBeVisible();
 });
+
+test("a pinned lane leads the board and holds the left edge while it scrolls", async ({
+  page,
+}) => {
+  const order = async () =>
+    page
+      .locator("[data-lane]")
+      .evaluateAll((els) => els.map((el) => el.getAttribute("data-lane")));
+
+  const before = await order();
+  expect(before.length).toBeGreaterThan(3);
+  // Pin a lane that is NOT already first: sticky alone would never bring one
+  // in from the right, so leading the board is the half being proven here.
+  const target = before[2] as string;
+
+  const pin = async (key: string, label: "Pin lane" | "Unpin lane") => {
+    await page
+      .locator(`[data-lane="${key}"]`)
+      .getByRole("button", { name: /^Manage / })
+      .click();
+    await expect(page.getByRole("menuitem", { name: label })).toBeVisible();
+    await page.getByRole("menuitem", { name: label }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+  };
+
+  try {
+    await pin(target, "Pin lane");
+
+    // It leads the board...
+    await expect.poll(async () => (await order())[0]).toBe(target);
+    const pinned = page.locator(`[data-lane="${target}"]`);
+    await expect(pinned).toHaveAttribute("data-pinned", "true");
+
+    // ...and it is still there after the board scrolls right.
+    const scroller = page.locator('main[aria-label="Priority lanes"]');
+    const leftBefore = (await pinned.boundingBox())!.x;
+    await scroller.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+    await expect
+      .poll(async () => Math.round((await pinned.boundingBox())!.x))
+      .toBe(Math.round(leftBefore));
+
+    // The shared order is untouched: everyone else still sees what they saw.
+    const shared = await order();
+    expect(shared.filter((k) => k !== target)).toEqual(
+      before.filter((k) => k !== target),
+    );
+
+    // A pin is this browser's, so it survives a reload.
+    await page.reload();
+    await expect(page.locator("[data-lane]").first()).toHaveAttribute(
+      "data-lane",
+      target,
+    );
+  } finally {
+    await pin(target, "Unpin lane");
+    await expect.poll(async () => await order()).toEqual(before);
+  }
+});
+
+test("a pinned lane cannot be dragged, and the others still can", async ({
+  page,
+}) => {
+  const order = async () =>
+    page
+      .locator("[data-lane]")
+      .evaluateAll((els) => els.map((el) => el.getAttribute("data-lane")));
+  const before = await order();
+  const target = before[2] as string;
+
+  // Every lane on the board, in the order the team sees — including the
+  // archive lane the filter hides, which is why this comes from the database
+  // rather than the DOM.
+  const boardId = (
+    await admin.from("boards").select("id").eq("slug", "backlog").single()
+  ).data!.id;
+  const sharedOrder = (
+    await admin
+      .from("lanes")
+      .select("id")
+      .eq("board_id", boardId)
+      .order("position")
+  ).data!.map((l) => l.id);
+
+  const menu = async (key: string, label: string) => {
+    await page
+      .locator(`[data-lane="${key}"]`)
+      .getByRole("button", { name: /^Manage / })
+      .click();
+    await page.getByRole("menuitem", { name: label }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+  };
+
+  try {
+    await menu(target, "Pin lane");
+    await expect.poll(async () => (await order())[0]).toBe(target);
+
+    // No grip: the one control that can start a lane drag is gone while the
+    // lane's position is a personal view rather than the board's.
+    await expect(
+      page.locator(`[data-lane="${target}"] [data-testid="lane-drag-handle"]`),
+    ).toHaveCount(0);
+
+    // An unpinned lane still drags, and the pinned one stays put in front.
+    const current = await order();
+    const grip = page.locator(
+      `[data-lane="${current[1]}"] [data-testid="lane-drag-handle"]`,
+    );
+    const dest = page.locator(`[data-lane="${current[3]}"] .lane-head`);
+    const from = (await grip.boundingBox())!;
+    const to = (await dest.boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 20, from.y, { steps: 5 });
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+      steps: 20,
+    });
+    await page.mouse.up();
+
+    await expect.poll(async () => (await order())[1]).not.toBe(current[1]);
+    expect((await order())[0]).toBe(target);
+  } finally {
+    await menu(target, "Unpin lane");
+    await page.waitForLoadState("networkidle").catch(() => {});
+    // Restore from the snapshot taken before the drag, not from the DOM:
+    // the board hides the archive lane, so a DOM reading is missing a lane
+    // and reorder_lanes rightly refuses a partial order.
+    const { error } = await admin.rpc("reorder_lanes", {
+      p_board_id: boardId,
+      p_ordered_ids: sharedOrder,
+    });
+    expect(error).toBeNull();
+  }
+});

@@ -58,6 +58,12 @@ import {
 } from "@/lib/filters";
 import { resolveBoardGates } from "@/lib/gates";
 import {
+  pinnedLaneId,
+  readBoardPins,
+  setBoardPin,
+  writeBoardPins,
+} from "@/lib/lane-pin";
+import {
   compactLaneView,
   type LaneViewMode,
   mergeBoardLaneViews,
@@ -164,6 +170,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const hoverLane = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [laneBusy, setLaneBusy] = useState<string | null>(null);
+  // Read after mount, never during render: the server has no localStorage, so
+  // seeding this from storage initially would hydrate to a different tree.
+  const [pinnedLane, setPinnedLane] = useState<string | null>(null);
   const [laneDialog, setLaneDialog] = useState<LaneDialogMode>(null);
   const [laneAction, setLaneAction] = useState<LaneActionMode>(null);
   const [cardLane, setCardLane] = useState<Lane | null>(null);
@@ -218,9 +227,29 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     }),
   );
 
+  // A pin is a local view of a shared order: the pinned lane is drawn first
+  // and sticks to the left edge, while `lanes` keeps the order the whole team
+  // sees. Sticky alone would not do it — it only engages once a lane would
+  // scroll off to the left, so a lane pinned from eight columns out would
+  // still be off-screen right, which is the exact case this is for.
+  const displayLanes = useMemo(() => {
+    if (!pinnedLane) return lanes;
+    const pin = lanes.find((l) => l.id === pinnedLane);
+    return pin ? [pin, ...lanes.filter((l) => l.id !== pinnedLane)] : lanes;
+  }, [lanes, pinnedLane]);
+
+  // Neighbour checks must read the SHARED order, never the displayed one:
+  // move_all_lane_cards compares database positions and refuses anything but
+  // an adjacent lane, so a pinned lane drawn first must not make lane two
+  // look like lane one's neighbour.
+  const globalIndex = useMemo(
+    () => new Map(lanes.map((l, i) => [l.id, i])),
+    [lanes],
+  );
+
   // Stable identity: SortableContext rebuilds its whole context value when
   // this array changes, which re-renders every lane.
-  const laneIds = useMemo(() => lanes.map((l) => l.id), [lanes]);
+  const laneIds = useMemo(() => displayLanes.map((l) => l.id), [displayLanes]);
 
   const byLane = useMemo(() => {
     const m = new Map<string, Card[]>();
@@ -267,6 +296,25 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     }
   }, []);
   useEffect(() => clearSpringTimer, [clearSpringTimer]);
+
+  // A pin outlives the lane it names — someone else can delete that lane, and
+  // storage happily keeps pointing at it. pinnedLaneId resolves that to null
+  // rather than leaving a stuck empty column behind.
+  useEffect(() => {
+    setPinnedLane(
+      pinnedLaneId(
+        readBoardPins(),
+        data.board.id,
+        lanes.map((l) => l.id),
+      ),
+    );
+  }, [data.board.id, lanes]);
+
+  function pinLane(laneId: string, on: boolean) {
+    const next = on ? laneId : null;
+    setPinnedLane(next);
+    writeBoardPins(setBoardPin(readBoardPins(), data.board.id, next));
+  }
 
   /**
    * While a card is in hand the binder is held open at one tab: the lane it
@@ -353,13 +401,27 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       if (!over) return;
       const overLaneId = findLane(String(over.id));
       if (!overLaneId || overLaneId === active.id) return;
-      const ids = lanes.map((l) => l.id);
+      const ids = displayLanes.map((l) => l.id);
       const from = ids.indexOf(String(active.id));
       const to = ids.indexOf(overLaneId);
       if (from < 0 || to < 0 || from === to) return;
-      // The RPC insists on the whole board, so the array is every lane —
-      // including the archive lane the filter may be hiding.
-      void reorderLanesTo(arrayMove(ids, from, to));
+      // The drag happened in display order, which may lead with a pinned
+      // lane. The board's order is everyone's, so the pin must not travel
+      // into it: drop the pinned lane out of the result and put it back in
+      // the slot it holds for the team. The RPC insists on the whole board,
+      // so the array is every lane — including the archive lane the filter
+      // may be hiding.
+      const moved = arrayMove(ids, from, to);
+      const pinIndex = pinnedLane ? globalIndex.get(pinnedLane) : undefined;
+      const next =
+        pinnedLane && pinIndex !== undefined
+          ? (() => {
+              const rest = moved.filter((id) => id !== pinnedLane);
+              rest.splice(pinIndex, 0, pinnedLane);
+              return rest;
+            })()
+          : moved;
+      void reorderLanesTo(next);
       return;
     }
     endDrag();
@@ -779,64 +841,69 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
               items={laneIds}
               strategy={horizontalListSortingStrategy}
             >
-              {lanes.map((lane, laneIndex) => (
-                <LaneColumn
-                  key={lane.id}
-                  lane={lane}
-                  cards={byLane.get(lane.id) ?? []}
-                  visible={visible}
-                  groups={data.groups}
-                  view={viewFor(lane.id)}
-                  onView={(v) => changeLaneView(lane.id, v)}
-                  onPatch={patch}
-                  onArchive={archive}
-                  pinned={pinned}
-                  onPin={pin}
-                  projectSlug={data.project.slug}
-                  boardSlug={data.board.slug}
-                  today={today}
-                  watchDays={watchDays}
-                  gates={gates}
-                  hiddenByDefault={
-                    lane.kind === "archive" && !filters.showArchived
-                  }
-                  onAddCard={() => setCardLane(lane)}
-                  manage={{
-                    disabled: laneBusy !== null,
-                    canDelete: !PROTECTED_KINDS.has(lane.kind),
-                    canMoveCardsLeft:
-                      lane.kind !== "archive" &&
-                      laneIndex > 0 &&
-                      lanes[laneIndex - 1]?.kind !== "archive",
-                    canMoveCardsRight:
-                      lane.kind !== "archive" &&
-                      laneIndex < lanes.length - 1 &&
-                      lanes[laneIndex + 1]?.kind !== "archive",
-                    canSortCards:
-                      lane.kind !== "archive" && lane.kind !== "inbox",
-                    onRename: () => setLaneDialog({ type: "rename", lane }),
-                    onMoveCards: (delta) => {
-                      const destination = lanes[laneIndex + delta];
-                      if (!destination || destination.kind === "archive")
-                        return;
-                      setLaneAction({
-                        type: "move-cards",
-                        lane,
-                        destination,
-                        cardCount: byLane.get(lane.id)?.length ?? 0,
-                      });
-                    },
-                    onSortCards: (direction) =>
-                      setLaneAction({
-                        type: "sort-cards",
-                        lane,
-                        direction,
-                        cardCount: byLane.get(lane.id)?.length ?? 0,
-                      }),
-                    onDelete: () => setLaneDialog({ type: "delete", lane }),
-                  }}
-                />
-              ))}
+              {displayLanes.map((lane) => {
+                const laneIndex = globalIndex.get(lane.id) ?? 0;
+                return (
+                  <LaneColumn
+                    key={lane.id}
+                    lane={lane}
+                    cards={byLane.get(lane.id) ?? []}
+                    visible={visible}
+                    groups={data.groups}
+                    view={viewFor(lane.id)}
+                    onView={(v) => changeLaneView(lane.id, v)}
+                    onPatch={patch}
+                    onArchive={archive}
+                    pinned={pinned}
+                    onPin={pin}
+                    projectSlug={data.project.slug}
+                    boardSlug={data.board.slug}
+                    today={today}
+                    watchDays={watchDays}
+                    gates={gates}
+                    hiddenByDefault={
+                      lane.kind === "archive" && !filters.showArchived
+                    }
+                    onAddCard={() => setCardLane(lane)}
+                    lanePinned={pinnedLane === lane.id}
+                    onPinLane={(on) => pinLane(lane.id, on)}
+                    manage={{
+                      disabled: laneBusy !== null,
+                      canDelete: !PROTECTED_KINDS.has(lane.kind),
+                      canMoveCardsLeft:
+                        lane.kind !== "archive" &&
+                        laneIndex > 0 &&
+                        lanes[laneIndex - 1]?.kind !== "archive",
+                      canMoveCardsRight:
+                        lane.kind !== "archive" &&
+                        laneIndex < lanes.length - 1 &&
+                        lanes[laneIndex + 1]?.kind !== "archive",
+                      canSortCards:
+                        lane.kind !== "archive" && lane.kind !== "inbox",
+                      onRename: () => setLaneDialog({ type: "rename", lane }),
+                      onMoveCards: (delta) => {
+                        const destination = lanes[laneIndex + delta];
+                        if (!destination || destination.kind === "archive")
+                          return;
+                        setLaneAction({
+                          type: "move-cards",
+                          lane,
+                          destination,
+                          cardCount: byLane.get(lane.id)?.length ?? 0,
+                        });
+                      },
+                      onSortCards: (direction) =>
+                        setLaneAction({
+                          type: "sort-cards",
+                          lane,
+                          direction,
+                          cardCount: byLane.get(lane.id)?.length ?? 0,
+                        }),
+                      onDelete: () => setLaneDialog({ type: "delete", lane }),
+                    }}
+                  />
+                );
+              })}
             </SortableContext>
             {/* Outside the SortableContext on purpose: it is not a sortable
                 item, and listing it would corrupt the index math. */}

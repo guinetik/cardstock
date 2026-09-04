@@ -13,6 +13,8 @@ import {
   Minus,
   MoreHorizontal,
   Pencil,
+  Pin,
+  PinOff,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -86,6 +88,7 @@ function SortableLane(props: {
   lane: Lane;
   className: string;
   overClassName: string;
+  pinned: boolean;
   children: ReactNode;
 }) {
   const {
@@ -97,7 +100,14 @@ function SortableLane(props: {
     setActivatorNodeRef,
     transform,
     transition,
-  } = useSortable({ id: props.lane.id, data: { type: "lane" } });
+  } = useSortable({
+    id: props.lane.id,
+    data: { type: "lane" },
+    // A pinned lane always draws first, so dragging it would be a gesture
+    // with nowhere to land. It stays a droppable, though — cards still go
+    // into it, and that is the point of keeping it in front of you.
+    disabled: { draggable: props.pinned, droppable: false },
+  });
   const handle = useMemo(
     () => ({ attributes, listeners, setActivatorNodeRef }),
     [attributes, listeners, setActivatorNodeRef],
@@ -114,7 +124,10 @@ function SortableLane(props: {
         transition,
         opacity: isDragging ? 0.4 : undefined,
       }}
-      className={`${props.className} ${isOver ? props.overClassName : ""}`}
+      data-pinned={props.pinned ? "true" : undefined}
+      className={`${props.className} ${isOver ? props.overClassName : ""} ${
+        props.pinned ? "paper-lane--pinned" : ""
+      }`}
     >
       <LaneDragContext.Provider value={handle}>
         {props.children}
@@ -131,9 +144,9 @@ function SortableLane(props: {
  * one of those from becoming a drag. So the grip is the only thing that
  * listens.
  */
-function LaneGrip({ lane }: { lane: Lane }) {
+function LaneGrip({ lane, pinned }: { lane: Lane; pinned: boolean }) {
   const handle = useContext(LaneDragContext);
-  if (!handle) return null;
+  if (!handle || pinned) return null;
   return (
     <button
       type="button"
@@ -172,6 +185,8 @@ export function LaneColumn(props: {
   gates: readonly BoardGate[];
   hiddenByDefault: boolean;
   onAddCard: () => void;
+  lanePinned: boolean;
+  onPinLane: (on: boolean) => void;
   manage?: {
     disabled: boolean;
     canDelete: boolean;
@@ -208,6 +223,7 @@ export function LaneColumn(props: {
     return (
       <SortableLane
         lane={lane}
+        pinned={props.lanePinned}
         overClassName="paper-lane--over"
         className={`paper-lane lane-spine flex h-full shrink-0 flex-col items-center gap-2 self-stretch py-2 ${width} ${colorClass}`}
       >
@@ -231,11 +247,12 @@ export function LaneColumn(props: {
   return (
     <SortableLane
       lane={lane}
+      pinned={props.lanePinned}
       overClassName="paper-lane--over"
       className={`paper-lane flex h-full shrink-0 flex-col gap-2 self-stretch p-2 ${width} ${colorClass} ${drawer ? "paper-lane--drawer" : ""}`}
     >
       <div className={`lane-head ${KIND_RULE[lane.kind]}`}>
-        <LaneGrip lane={lane} />
+        <LaneGrip lane={lane} pinned={props.lanePinned} />
         <h2 className={`lane-name ${KIND_INK[lane.kind]}`}>{lane.name}</h2>
         <span
           className="font-mono text-[11px] text-[var(--color-grey-faint)]"
@@ -277,6 +294,14 @@ export function LaneColumn(props: {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={props.manage.onRename}>
                   <Pencil /> Edit
+                </DropdownMenuItem>
+                {/* Pin is the only item here that changes nothing for anyone
+                    else: order is shared, this is one person's view of it. */}
+                <DropdownMenuItem
+                  onClick={() => props.onPinLane(!props.lanePinned)}
+                >
+                  {props.lanePinned ? <PinOff /> : <Pin />}
+                  {props.lanePinned ? "Unpin lane" : "Pin lane"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
