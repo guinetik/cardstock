@@ -104,7 +104,7 @@ begin
 
   select public.create_board(v_project, 'roadmap', 'Roadmap') into v_board;
   select count(*) into v_count from public.lanes where board_id = v_board;
-  if v_count <> 5 then raise exception 'new board has % lanes, expected 5', v_count; end if;
+  if v_count <> 4 then raise exception 'new board has % lanes, expected 4', v_count; end if;
 
   perform public.invite_project_member(
     v_project, 't-project-user@example.test', 'Project User', 'member'

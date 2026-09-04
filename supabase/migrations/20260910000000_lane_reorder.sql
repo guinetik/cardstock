@@ -177,3 +177,43 @@ begin
   return jsonb_build_object('moved_cards', v_moved);
 end;
 $$;
+
+create or replace function public.create_board(
+  p_project_id uuid,
+  p_slug text,
+  p_name text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_board_id uuid;
+begin
+  if not public.is_project_member(p_project_id) then
+    raise exception 'Project not found' using errcode = '42501';
+  end if;
+  if not public.is_project_admin(p_project_id) then
+    raise exception 'Only an owner or project admin can create a board'
+      using errcode = '42501';
+  end if;
+
+  insert into public.boards (project_id, slug, name)
+  values (p_project_id, p_slug, p_name)
+  returning id into v_board_id;
+
+  -- Four lanes, not five. The keys are deliberately unchanged from the
+  -- previous default: a card's frontmatter keeps saying `lane: done`,
+  -- because `done` is the clearer word for a file another tool or another
+  -- person may read. The flavour lives in `name` and never leaves the
+  -- database — nothing in the import or export path learns "zenbox".
+  insert into public.lanes (board_id, key, name, position, kind)
+  values
+    (v_board_id, 'unsorted', 'Icebox', 0, 'inbox'),
+    (v_board_id, 'now', 'Doing', 1, 'work'),
+    (v_board_id, 'done', 'Zenbox', 2, 'done'),
+    (v_board_id, 'archive', 'Archive', 3, 'archive');
+
+  return v_board_id;
+end;
+$$;

@@ -276,3 +276,40 @@ begin
     raise exception 'a waiting lane must be removable';
   end if;
 end $$;
+
+-- create_board seeds four lanes: flavourful names, semantic keys.
+do $$
+declare
+  v_project uuid;
+  v_board uuid;
+  v_seeded text;
+  v_owner_email text;
+begin
+  select email into v_owner_email from public.members where role = 'owner' limit 1;
+  select id into v_project from public.projects limit 1;
+
+  -- create_board is security definer and checks project membership via
+  -- current_email(); impersonate the real owner (is_owner() short-circuits
+  -- is_project_member/is_project_admin) rather than weaken the function.
+  set local role authenticated;
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('email', v_owner_email, 'role', 'authenticated')::text,
+    true
+  );
+
+  v_board := public.create_board(v_project, 'lane-template-test', 'Template test');
+
+  select string_agg(name || '/' || key || '/' || kind, ' ' order by position)
+  into v_seeded
+  from public.lanes where board_id = v_board;
+
+  set local role postgres;
+
+  if v_seeded <> 'Icebox/unsorted/inbox Doing/now/work Zenbox/done/done Archive/archive/archive'
+  then
+    raise exception 'unexpected default lanes: %', v_seeded;
+  end if;
+
+  delete from public.boards where id = v_board;
+end $$;
