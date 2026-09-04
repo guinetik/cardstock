@@ -346,7 +346,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   function onDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (active.data.current?.type === "lane") {
-      setActiveLane(null);
+      // endDrag, not setActiveLane: a lane drag sets none of the card fields
+      // today, and nothing should have to keep remembering that.
+      endDrag();
       if (!over) return;
       const overLaneId = findLane(String(over.id));
       if (!overLaneId || overLaneId === active.id) return;

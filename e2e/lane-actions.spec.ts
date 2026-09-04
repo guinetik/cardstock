@@ -190,6 +190,9 @@ test("a lane can be dragged across two positions", async ({ page }) => {
   try {
     await dragOneLaneTwoPositions(page);
   } finally {
+    // Let any reorder the page still has in flight land first, or it would
+    // overwrite the restore a moment after it.
+    await page.waitForLoadState("networkidle").catch(() => {});
     const { error } = await admin.rpc("reorder_lanes", {
       p_board_id: board!.id,
       p_ordered_ids: seededOrder,
@@ -204,7 +207,7 @@ async function dragOneLaneTwoPositions(page: import("@playwright/test").Page) {
       .locator("[data-lane]")
       .evaluateAll((els) => els.map((el) => el.getAttribute("data-lane")));
   const before = await order();
-  expect(before.length).toBeGreaterThan(2);
+  expect(before.length).toBeGreaterThan(3);
 
   const handle = page.locator(
     `[data-lane="${before[0]}"] [data-testid="lane-drag-handle"]`,
@@ -233,16 +236,44 @@ async function dragOneLaneTwoPositions(page: import("@playwright/test").Page) {
   expect(after[0]).toBe(before[1]);
   expect(after[1]).toBe(before[2]);
   expect(after[2]).toBe(before[0]);
-  // The header's other controls are 6px from the grip and must still be
-  // buttons, not drag targets.
-  const head = page.locator(`[data-lane="${before[1]}"]`);
-  await head.getByRole("button", { name: /^Add card to / }).click();
+  // The grip is the ONLY thing that listens. Press one of the header's other
+  // buttons and travel far enough to arm the 6px sensor, the way a shaky hand
+  // on the add-card button would: if the listeners ever migrate onto
+  // .lane-head or onto the <section>, this drags the lane and the order moves.
+  const head = page.locator(`[data-lane="${after[1]}"]`);
+  const addCard = head.getByRole("button", { name: /^Add card to / });
+  const far = page.locator(`[data-lane="${after[3]}"] .lane-head`);
+  const addBox = (await addCard.boundingBox())!;
+  const farBox = (await far.boundingBox())!;
+  await page.mouse.move(
+    addBox.x + addBox.width / 2,
+    addBox.y + addBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(addBox.x + 20, addBox.y + addBox.height / 2, {
+    steps: 5,
+  });
+  await page.mouse.move(
+    farBox.x + farBox.width / 2,
+    farBox.y + farBox.height / 2,
+    {
+      steps: 20,
+    },
+  );
+  await page.mouse.up();
+  expect(await order()).toEqual(after);
+  // That press-and-travel may or may not have opened the dialog; either way,
+  // leave nothing behind.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // And the buttons are still buttons: onClick reaches them.
+  await addCard.click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await head.getByRole("button", { name: /^Manage / }).click();
   await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
   await page.keyboard.press("Escape");
-  // Nothing moved: those clicks were clicks, not drags.
   expect(await order()).toEqual(after);
 }

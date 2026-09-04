@@ -91,6 +91,7 @@ function SortableLane(props: {
     setNodeRef,
     setActivatorNodeRef,
     transform,
+    transition,
   } = useSortable({ id: props.lane.id, data: { type: "lane" } });
   const handle = useMemo(
     () => ({ attributes, listeners, setActivatorNodeRef }),
@@ -100,8 +101,12 @@ function SortableLane(props: {
     <section
       data-lane={props.lane.key}
       ref={setNodeRef}
+      // transform *and* transition, exactly as SortableCard does: a lane that
+      // snapped into place while a card glided would be the same broken
+      // metaphor from the other side.
       style={{
         transform: CSS.Translate.toString(transform),
+        transition,
         opacity: isDragging ? 0.4 : undefined,
       }}
       className={`${props.className} ${isOver ? props.overClassName : ""}`}
