@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
-import { renderToStaticMarkup } from "react-dom/server";
 import type { Lane } from "@/lib/types";
-import { LaneCrudDialog, laneDialogCopy } from "./lane-crud-dialog";
+import { laneDialogCopy } from "./lane-crud-dialog";
 
 const lane = (key: string, name: string, kind: Lane["kind"]): Lane => ({
   id: `id-${key}`,
@@ -28,17 +27,10 @@ test("renaming any lane promises the ID will not change", () => {
   expect(done).not.toMatch(/stay fixed/i);
 });
 
-test("the name field is not read-only for a done lane", () => {
-  const html = renderToStaticMarkup(
-    <LaneCrudDialog
-      mode={{ type: "rename", lane: lane("done", "Done", "done") }}
-      lanes={[lane("done", "Done", "done")]}
-      cardCount={0}
-      onClose={() => {}}
-      onCreate={async () => null}
-      onRename={async () => null}
-      onDelete={async () => null}
-    />,
-  );
-  expect(html).not.toContain("readonly");
-});
+// The former "the name field is not read-only for a done lane" test is gone:
+// DialogContent requires a Dialog.Root context (base-ui throws
+// "DialogRootContext is missing" without one), so LaneDialogForm cannot be
+// rendered standalone under renderToStaticMarkup, and rendering it through
+// LaneCrudDialog's real <Dialog> hits the portal and yields an empty string
+// either way — the exact vacuous assertion this test used to make. A green
+// light that means nothing is worse than no light.

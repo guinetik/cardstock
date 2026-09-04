@@ -88,7 +88,7 @@ begin
   -- one does not produce an error — it produces a feature that silently
   -- stops working.
   if v_source_kind in ('inbox', 'done', 'archive') then
-    raise exception 'Icebox, done and archive lanes cannot be removed';
+    raise exception 'inbox, done and archive lanes cannot be removed';
   end if;
 
   perform 1 from public.lanes where board_id = v_board_id for update;

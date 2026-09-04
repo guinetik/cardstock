@@ -43,7 +43,7 @@ const KIND_RULE: Record<Lane["kind"], string> = {
   archive: "lane-head--soft",
 };
 
-const KIND_INK: Record<Lane["kind"], string> = {
+export const KIND_INK: Record<Lane["kind"], string> = {
   inbox: "text-[var(--color-grey)]",
   work: "text-[var(--color-ink)]",
   waiting: "text-[var(--pen-amber)]",
@@ -65,6 +65,11 @@ const TOOL =
  * the component that also builds the card list re-renders every card under it
  * on dnd-kit's clock, which was enough to make an in-flight edit to a card
  * field vanish before React saw the change event.
+ *
+ * A context provider is exactly the kind of thing a parent bailout does not
+ * stop: consumers re-render straight through it. So nothing below the grip
+ * — in particular nothing in the card subtree — may read `LaneDragContext`;
+ * doing so would silently defeat the protection this comment describes.
  */
 type LaneDragHandle = Pick<
   ReturnType<typeof useSortable>,
@@ -169,7 +174,6 @@ export function LaneColumn(props: {
   onAddCard: () => void;
   manage?: {
     disabled: boolean;
-    canEditName: boolean;
     canDelete: boolean;
     canMoveCardsLeft: boolean;
     canMoveCardsRight: boolean;

@@ -25,7 +25,7 @@ surface as cards.
 
 Remove is gated by kind, not by name: the `inbox`, `done` and `archive` kinds
 have no Remove item at all, since removing them is refused server-side
-('Icebox, done and archive lanes cannot be removed'). Every other lane offers
+('inbox, done and archive lanes cannot be removed'). Every other lane offers
 Remove.
 
 A new board seeds four lanes: Icebox (`unsorted`/`inbox`), Doing (`now`/

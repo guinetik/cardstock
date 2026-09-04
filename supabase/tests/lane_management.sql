@@ -239,7 +239,6 @@ begin
   end if;
 end $$;
 
-rollback;
 
 -- delete_work_lane: protected kinds are inbox/done/archive; others go.
 do $$
@@ -329,3 +328,5 @@ begin
     raise exception 'renaming a lane must not touch its key';
   end if;
 end $$;
+
+rollback;

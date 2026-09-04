@@ -103,11 +103,10 @@ function freshBoardState(): BoardState {
   return {
     id: "new",
     lanes: [
-      lane("unsorted", "Unsorted", 0, "inbox"),
-      lane("now", "Now", 1, "work"),
-      lane("next", "Next", 2, "work"),
-      lane("done", "Done", 3, "done"),
-      lane("archive", "Archive", 4, "archive"),
+      lane("unsorted", "Icebox", 0, "inbox"),
+      lane("now", "Doing", 1, "work"),
+      lane("done", "Zenbox", 2, "done"),
+      lane("archive", "Archive", 3, "archive"),
     ],
     groups: [],
     cards: new Map(),

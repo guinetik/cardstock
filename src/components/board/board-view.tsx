@@ -45,6 +45,7 @@ import {
 } from "@/app/p/[project]/b/[board]/actions";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CardColor } from "@/lib/card-color";
+import { laneColorModifier } from "@/lib/card-color";
 import { cardTemplate } from "@/lib/card-template";
 import {
   boardStatuses,
@@ -71,7 +72,7 @@ import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
 import { FilterBar } from "./filter-bar";
 import { LaneActionDialog, type LaneActionMode } from "./lane-action-dialog";
-import { LaneColumn } from "./lane-column";
+import { KIND_INK, LaneColumn } from "./lane-column";
 import { LaneCrudDialog, type LaneDialogMode } from "./lane-crud-dialog";
 import { useBoardRealtime } from "./use-board-realtime";
 import { useCardEventNotifications } from "./use-card-event-notifications";
@@ -538,7 +539,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         return lane ? [{ ...lane, position: index }] : [];
       });
     });
+    setLaneBusy(data.board.id);
     const result = await reorderLanes(data.board.id, orderedIds);
+    setLaneBusy(null);
     if (!result.ok) {
       setLanes(previous);
       setError(result.error);
@@ -800,14 +803,17 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
                   onAddCard={() => setCardLane(lane)}
                   manage={{
                     disabled: laneBusy !== null,
-                    canEditName: true,
                     canDelete: !PROTECTED_KINDS.has(lane.kind),
                     canMoveCardsLeft:
-                      laneIndex > 0 && lanes[laneIndex - 1]?.kind !== "archive",
+                      lane.kind !== "archive" &&
+                      laneIndex > 0 &&
+                      lanes[laneIndex - 1]?.kind !== "archive",
                     canMoveCardsRight:
+                      lane.kind !== "archive" &&
                       laneIndex < lanes.length - 1 &&
                       lanes[laneIndex + 1]?.kind !== "archive",
-                    canSortCards: lane.kind !== "inbox",
+                    canSortCards:
+                      lane.kind !== "archive" && lane.kind !== "inbox",
                     onRename: () => setLaneDialog({ type: "rename", lane }),
                     onMoveCards: (delta) => {
                       const destination = lanes[laneIndex + delta];
@@ -845,9 +851,13 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
           </main>
           <DragOverlay>
             {activeLane ? (
-              <div className="paper-lane lane-column-width p-2 opacity-90">
+              <div
+                className={`paper-lane lane-column-width p-2 opacity-90 ${laneColorModifier(activeLane.color) ?? ""}`}
+              >
                 <div className="lane-head">
-                  <h2 className="lane-name">{activeLane.name}</h2>
+                  <h2 className={`lane-name ${KIND_INK[activeLane.kind]}`}>
+                    {activeLane.name}
+                  </h2>
                 </div>
               </div>
             ) : active ? (
