@@ -277,3 +277,94 @@ async function dragOneLaneTwoPositions(page: import("@playwright/test").Page) {
   await page.keyboard.press("Escape");
   expect(await order()).toEqual(after);
 }
+
+test("a done lane can be renamed, and its key does not change", async ({
+  page,
+}) => {
+  const { data: board } = await admin
+    .from("boards")
+    .select("id")
+    .eq("slug", "backlog")
+    .single();
+  const { data: done } = await admin
+    .from("lanes")
+    .select("id, name")
+    .eq("board_id", board!.id)
+    .eq("kind", "done")
+    .single();
+  const originalName = done!.name;
+
+  try {
+    await page.goto(BOARD);
+    const lane = page.locator('[data-lane="done"]');
+    await lane.getByRole("button", { name: /^Manage / }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+
+    const input = page.getByLabel("Lane name");
+    await expect(input).toBeEditable();
+    await input.fill("Zenbox");
+    await page.getByRole("button", { name: /save|rename/i }).click();
+
+    await expect(lane.locator(".lane-name")).toHaveText("Zenbox");
+    await page.reload();
+    // The key is the identity: the selector still finds it.
+    await expect(page.locator('[data-lane="done"] .lane-name')).toHaveText(
+      "Zenbox",
+    );
+  } finally {
+    // Restore the shared board's lane name and verify it actually landed —
+    // a stray in-flight write here would leave every later spec asserting
+    // against "Zenbox" instead of the seeded name.
+    await page.waitForLoadState("networkidle").catch(() => {});
+    const { error } = await admin
+      .from("lanes")
+      .update({ name: originalName })
+      .eq("id", done!.id);
+    expect(error).toBeNull();
+    await expect
+      .poll(async () => {
+        const { data } = await admin
+          .from("lanes")
+          .select("name")
+          .eq("id", done!.id)
+          .single();
+        return data?.name;
+      })
+      .toBe(originalName);
+  }
+});
+
+test("protected lanes offer no Remove, ordinary lanes do", async ({ page }) => {
+  await page.goto(BOARD);
+  // The archive lane is hidden unless the Archived filter is on.
+  await page.getByLabel("archived").check();
+  for (const key of ["unsorted", "done", "archive"]) {
+    await page
+      .locator(`[data-lane="${key}"]`)
+      .getByRole("button", { name: /^Manage / })
+      .click();
+    await expect(page.getByRole("menuitem", { name: "Remove" })).toHaveCount(0);
+    await page.getByRole("menu").press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    // The closing menu's overlay briefly intercepts pointer events on the
+    // next lane's Manage button; let its exit animation finish.
+    await page.waitForTimeout(600);
+  }
+  await page
+    .locator('[data-lane="now"]')
+    .getByRole("button", { name: /^Manage / })
+    .click();
+  await expect(page.getByRole("menuitem", { name: "Remove" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
+test("the archive lane has a manage menu at all", async ({ page }) => {
+  await page.goto(BOARD);
+  await page.getByLabel("archived").check();
+  await expect(
+    page.locator('[data-lane="archive"]').getByRole("button", {
+      name: /^Manage /,
+    }),
+  ).toBeVisible();
+});
