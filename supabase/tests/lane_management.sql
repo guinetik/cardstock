@@ -108,4 +108,104 @@ begin
 end
 $$;
 
+-- reorder_lanes: dense renumber from a caller-supplied order, no kind guard.
+do $$
+declare
+  v_board uuid;
+  v_ids uuid[];
+  v_positions int[];
+begin
+  select b.id into v_board from public.boards b
+  where exists (
+    select 1 from public.lanes
+    where board_id = b.id and kind = 'archive'
+  )
+  limit 1;
+
+  select array_agg(id order by position) into v_ids
+  from public.lanes where board_id = v_board;
+
+  -- Reverse the whole board. If any kind guard survives, this raises.
+  perform public.reorder_lanes(
+    v_board,
+    (select array_agg(id order by position desc)
+     from public.lanes where board_id = v_board)
+  );
+
+  select array_agg(position order by position) into v_positions
+  from public.lanes where board_id = v_board;
+  if v_positions <> (select array_agg(g) from generate_series(0, array_length(v_ids, 1) - 1) g)
+  then
+    raise exception 'reorder_lanes must renumber densely from 0';
+  end if;
+
+  if (select id from public.lanes where board_id = v_board and position = 0)
+     <> v_ids[array_length(v_ids, 1)]
+  then
+    raise exception 'reorder_lanes must honour the supplied order';
+  end if;
+
+  -- An archive lane must be reorderable like any other.
+  if not exists (
+    select 1 from public.lanes
+    where board_id = v_board and kind = 'archive' and position = 0
+  ) then
+    raise exception 'archive must be free to move';
+  end if;
+
+  -- Restore.
+  perform public.reorder_lanes(v_board, v_ids);
+end $$;
+
+-- reorder_lanes rejects a short array.
+do $$
+declare v_board uuid; v_one uuid;
+begin
+  select b.id into v_board from public.boards b
+  where exists (
+    select 1 from public.lanes
+    where board_id = b.id and kind = 'archive'
+  )
+  limit 1;
+  select id into v_one from public.lanes where board_id = v_board limit 1;
+  begin
+    perform public.reorder_lanes(v_board, array[v_one]);
+    raise exception 'expected a short lane order to be rejected';
+  exception when others then
+    if sqlerrm not like 'Lane order must list every lane%' then raise; end if;
+  end;
+end $$;
+
+-- reorder_lanes rejects a repeated id.
+do $$
+declare v_board uuid; v_ids uuid[]; v_dup uuid[];
+begin
+  select b.id into v_board from public.boards b
+  where exists (
+    select 1 from public.lanes
+    where board_id = b.id and kind = 'archive'
+  )
+  limit 1;
+  select array_agg(id order by position) into v_ids
+  from public.lanes where board_id = v_board;
+  v_dup := v_ids;
+  v_dup[1] := v_ids[2];
+  begin
+    perform public.reorder_lanes(v_board, v_dup);
+    raise exception 'expected a repeated lane to be rejected';
+  exception when others then
+    if sqlerrm not like 'Lane order repeats a lane%' then raise; end if;
+  end;
+end $$;
+
+-- move_work_lane is gone.
+do $$
+begin
+  if exists (
+    select 1 from pg_proc where proname = 'move_work_lane'
+  ) then
+    raise exception 'move_work_lane should have been dropped';
+  end if;
+end $$;
+
 rollback;
