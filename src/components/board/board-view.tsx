@@ -31,8 +31,8 @@ import {
   deleteLane,
   moveAllLaneCards,
   moveCard,
-  moveLane,
   refreshBoard,
+  reorderLanes,
   savePrefs,
   sortLaneCards,
   updateCard,
@@ -97,6 +97,11 @@ const COLLAPSE_LANES_ON_DRAG = false;
 const SPRING_MS = 450;
 /** Grace before a sprung lane closes once the card leaves the board. */
 const SPRING_LEAVE_MS = 250;
+
+// Mirrors delete_work_lane's guard. These three are resolved by `kind`
+// lookup at runtime (archiveCard finds the archive lane, and the inbox on
+// restore), so removing one breaks a feature rather than raising.
+const PROTECTED_KINDS = new Set<Lane["kind"]>(["inbox", "done", "archive"]);
 
 export interface Me {
   email: string;
@@ -480,12 +485,21 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     return null;
   }
 
-  async function shiftLane(laneId: string, delta: -1 | 1) {
-    setLaneBusy(laneId);
+  async function reorderLanesTo(orderedIds: string[]) {
     setError(null);
-    const result = await moveLane(laneId, delta);
-    setLaneBusy(null);
+    const previous = lanes;
+    // Optimistic, exactly as moveCard is: the drag already showed the
+    // result, so re-rendering from the server would flicker.
+    setLanes((prev) => {
+      const by = new Map(prev.map((l) => [l.id, l]));
+      return orderedIds.flatMap((id, index) => {
+        const lane = by.get(id);
+        return lane ? [{ ...lane, position: index }] : [];
+      });
+    });
+    const result = await reorderLanes(data.board.id, orderedIds);
     if (!result.ok) {
+      setLanes(previous);
       setError(result.error);
       return;
     }
@@ -739,50 +753,36 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
                   lane.kind === "archive" && !filters.showArchived
                 }
                 onAddCard={() => setCardLane(lane)}
-                manage={
-                  lane.kind !== "archive"
-                    ? {
-                        disabled: laneBusy !== null,
-                        canEditName: lane.kind === "work",
-                        canMoveLaneLeft:
-                          lane.kind === "work" &&
-                          laneIndex > 0 &&
-                          lanes[laneIndex - 1]?.kind !== "archive",
-                        canMoveLaneRight:
-                          lane.kind === "work" &&
-                          laneIndex < lanes.length - 1 &&
-                          lanes[laneIndex + 1]?.kind !== "archive",
-                        canMoveCardsLeft:
-                          laneIndex > 0 &&
-                          lanes[laneIndex - 1]?.kind !== "archive",
-                        canMoveCardsRight:
-                          laneIndex < lanes.length - 1 &&
-                          lanes[laneIndex + 1]?.kind !== "archive",
-                        canSortCards: lane.kind !== "inbox",
-                        onRename: () => setLaneDialog({ type: "rename", lane }),
-                        onMoveLane: (delta) => void shiftLane(lane.id, delta),
-                        onMoveCards: (delta) => {
-                          const destination = lanes[laneIndex + delta];
-                          if (!destination || destination.kind === "archive")
-                            return;
-                          setLaneAction({
-                            type: "move-cards",
-                            lane,
-                            destination,
-                            cardCount: byLane.get(lane.id)?.length ?? 0,
-                          });
-                        },
-                        onSortCards: (direction) =>
-                          setLaneAction({
-                            type: "sort-cards",
-                            lane,
-                            direction,
-                            cardCount: byLane.get(lane.id)?.length ?? 0,
-                          }),
-                        onDelete: () => setLaneDialog({ type: "delete", lane }),
-                      }
-                    : undefined
-                }
+                manage={{
+                  disabled: laneBusy !== null,
+                  canEditName: true,
+                  canDelete: !PROTECTED_KINDS.has(lane.kind),
+                  canMoveCardsLeft:
+                    laneIndex > 0 && lanes[laneIndex - 1]?.kind !== "archive",
+                  canMoveCardsRight:
+                    laneIndex < lanes.length - 1 &&
+                    lanes[laneIndex + 1]?.kind !== "archive",
+                  canSortCards: lane.kind !== "inbox",
+                  onRename: () => setLaneDialog({ type: "rename", lane }),
+                  onMoveCards: (delta) => {
+                    const destination = lanes[laneIndex + delta];
+                    if (!destination || destination.kind === "archive") return;
+                    setLaneAction({
+                      type: "move-cards",
+                      lane,
+                      destination,
+                      cardCount: byLane.get(lane.id)?.length ?? 0,
+                    });
+                  },
+                  onSortCards: (direction) =>
+                    setLaneAction({
+                      type: "sort-cards",
+                      lane,
+                      direction,
+                      cardCount: byLane.get(lane.id)?.length ?? 0,
+                    }),
+                  onDelete: () => setLaneDialog({ type: "delete", lane }),
+                }}
               />
             ))}
             <button

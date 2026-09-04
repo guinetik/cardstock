@@ -347,27 +347,22 @@ export async function updateLane(
   return { ok: true, lanes: await laneList(c.db, lane.board_id) };
 }
 
-export async function moveLane(
-  laneId: string,
-  delta: -1 | 1,
+export async function reorderLanes(
+  boardId: string,
+  orderedIds: string[],
 ): Promise<LaneMutationResult> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Not signed in." };
-  if (!UUID.test(laneId) || (delta !== -1 && delta !== 1))
-    return { ok: false, error: "Invalid lane movement." };
-  const { data: lane } = await c.db
-    .from("lanes")
-    .select("board_id")
-    .eq("id", laneId)
-    .maybeSingle();
-  if (!lane) return { ok: false, error: "Lane not found." };
-  const { error } = await c.db.rpc("move_work_lane", {
-    p_lane_id: laneId,
-    p_delta: delta,
+  if (!UUID.test(boardId)) return { ok: false, error: "Invalid board." };
+  if (orderedIds.length === 0 || !orderedIds.every((id) => UUID.test(id)))
+    return { ok: false, error: "Invalid lane order." };
+  const { error } = await c.db.rpc("reorder_lanes", {
+    p_board_id: boardId,
+    p_ordered_ids: orderedIds,
   });
   if (error) return { ok: false, error: error.message };
   refreshBoards();
-  return { ok: true, lanes: await laneList(c.db, lane.board_id) };
+  return { ok: true, lanes: await laneList(c.db, boardId) };
 }
 
 export async function deleteLane(

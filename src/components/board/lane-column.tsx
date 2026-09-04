@@ -77,13 +77,11 @@ export function LaneColumn(props: {
   manage?: {
     disabled: boolean;
     canEditName: boolean;
-    canMoveLaneLeft: boolean;
-    canMoveLaneRight: boolean;
+    canDelete: boolean;
     canMoveCardsLeft: boolean;
     canMoveCardsRight: boolean;
     canSortCards: boolean;
     onRename: () => void;
-    onMoveLane: (delta: -1 | 1) => void;
     onMoveCards: (delta: -1 | 1) => void;
     onSortCards: (direction: "asc" | "desc") => void;
     onDelete: () => void;
@@ -180,24 +178,8 @@ export function LaneColumn(props: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={props.manage.onRename}>
-                  <Pencil /> {props.manage.canEditName ? "Edit" : "Edit color"}
+                  <Pencil /> Edit
                 </DropdownMenuItem>
-                {props.manage.canEditName && (
-                  <>
-                    <DropdownMenuItem
-                      disabled={!props.manage.canMoveLaneLeft}
-                      onClick={() => props.manage?.onMoveLane(-1)}
-                    >
-                      <ArrowLeft /> Move lane left
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={!props.manage.canMoveLaneRight}
-                      onClick={() => props.manage?.onMoveLane(1)}
-                    >
-                      <ArrowRight /> Move lane right
-                    </DropdownMenuItem>
-                  </>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={
@@ -232,8 +214,8 @@ export function LaneColumn(props: {
                     </DropdownMenuItem>
                   </>
                 )}
-                {props.manage.canEditName && <DropdownMenuSeparator />}
-                {props.manage.canEditName && (
+                {props.manage.canDelete && <DropdownMenuSeparator />}
+                {props.manage.canDelete && (
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={props.manage.onDelete}
