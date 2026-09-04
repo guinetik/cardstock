@@ -334,12 +334,10 @@ export async function updateLane(
     return { ok: false, error: "Invalid color." };
   const { data: lane } = await c.db
     .from("lanes")
-    .select("board_id, kind")
+    .select("board_id")
     .eq("id", laneId)
     .maybeSingle();
   if (!lane) return { ok: false, error: "Lane not found." };
-  if (hasName && lane.kind !== "work")
-    return { ok: false, error: "Only work lanes can be renamed." };
   const changes: { name?: string; color?: CardColor | null } = {};
   if (hasName) changes.name = clean!;
   if (hasColor) changes.color = patch.color ?? null;

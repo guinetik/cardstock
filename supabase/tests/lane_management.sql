@@ -313,3 +313,19 @@ begin
 
   delete from public.boards where id = v_board;
 end $$;
+
+-- A done lane's name is writable at the table level (RLS lets project
+-- members write lanes directly; the rename guard lived only in the
+-- server action, and Task 4 removes it there).
+do $$
+declare v_board uuid; v_done uuid; v_key text;
+begin
+  select id into v_board from public.boards limit 1;
+  select id, key into v_done, v_key
+  from public.lanes where board_id = v_board and kind = 'done' limit 1;
+  if v_done is null then return; end if;
+  update public.lanes set name = 'Zenbox' where id = v_done;
+  if (select key from public.lanes where id = v_done) <> v_key then
+    raise exception 'renaming a lane must not touch its key';
+  end if;
+end $$;
