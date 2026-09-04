@@ -169,3 +169,80 @@ test("lane colors reach the project map and lane-wide actions persist", async ({
   await expect(leftColumn.locator("[data-id]")).toHaveCount(4);
   await expect(leftColumn).toHaveClass(/lane-color--blue/);
 });
+
+test("a lane can be dragged across two positions", async ({ page }) => {
+  const { data: board } = await admin
+    .from("boards")
+    .select("id")
+    .eq("slug", "backlog")
+    .single();
+  const { data: seeded } = await admin
+    .from("lanes")
+    .select("id, key")
+    .eq("board_id", board!.id)
+    .order("position");
+  const seededOrder = (seeded ?? []).map((l) => l.id);
+  expect(seededOrder.length).toBeGreaterThan(2);
+
+  // The board is shared seed data and this test reorders it for real, so the
+  // restore has to survive a failure: a half-done reorder would leave every
+  // later spec asserting the wrong lane order.
+  try {
+    await dragOneLaneTwoPositions(page);
+  } finally {
+    const { error } = await admin.rpc("reorder_lanes", {
+      p_board_id: board!.id,
+      p_ordered_ids: seededOrder,
+    });
+    expect(error).toBeNull();
+  }
+});
+
+async function dragOneLaneTwoPositions(page: import("@playwright/test").Page) {
+  const order = async () =>
+    page
+      .locator("[data-lane]")
+      .evaluateAll((els) => els.map((el) => el.getAttribute("data-lane")));
+  const before = await order();
+  expect(before.length).toBeGreaterThan(2);
+
+  const handle = page.locator(
+    `[data-lane="${before[0]}"] [data-testid="lane-drag-handle"]`,
+  );
+  const target = page.locator(`[data-lane="${before[2]}"] .lane-head`);
+  const from = (await handle.boundingBox())!;
+  const to = (await target.boundingBox())!;
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  // Two moves: the first clears the 6px activation constraint, the second is
+  // the actual travel. A single jump can land before dnd-kit arms its sensor.
+  await page.mouse.move(from.x + 20, from.y + from.height / 2, { steps: 5 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+    steps: 20,
+  });
+  await page.mouse.up();
+
+  await expect.poll(async () => (await order())[0]).not.toBe(before[0]);
+
+  await page.reload();
+  await expect(page.locator("[data-lane]").first()).toBeVisible();
+  const after = await order();
+  expect(after.length).toBe(before.length);
+  // Two positions, not one short: the lane lands where it was dropped.
+  expect(after[0]).toBe(before[1]);
+  expect(after[1]).toBe(before[2]);
+  expect(after[2]).toBe(before[0]);
+  // The header's other controls are 6px from the grip and must still be
+  // buttons, not drag targets.
+  const head = page.locator(`[data-lane="${before[1]}"]`);
+  await head.getByRole("button", { name: /^Add card to / }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await head.getByRole("button", { name: /^Manage / }).click();
+  await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  // Nothing moved: those clicks were clicks, not drags.
+  expect(await order()).toEqual(after);
+}

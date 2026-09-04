@@ -14,7 +14,12 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import {
+  arrayMove,
+  horizontalListSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -76,11 +81,25 @@ import { useCardEventNotifications } from "./use-card-event-notifications";
  * closestCorners matching the dragged card's own sortable rect.
  */
 const boardCollisionDetection: CollisionDetection = (args) => {
-  const pointerHits = pointerWithin(args);
+  // A lane in hand only ever lands on another lane, so the cards drop out of
+  // the running entirely. Without this the pointer sits over a card most of
+  // the time and `over` comes back as a card id, which leaves the sortable
+  // with no index to shift towards — the lane would follow the cursor and
+  // then snap back.
+  const scoped =
+    args.active.data.current?.type === "lane"
+      ? {
+          ...args,
+          droppableContainers: args.droppableContainers.filter(
+            (container) => container.data.current?.type === "lane",
+          ),
+        }
+      : args;
+  const pointerHits = pointerWithin(scoped);
   if (pointerHits.length > 0) {
     return pointerHits;
   }
-  return closestCorners(args);
+  return closestCorners(scoped);
 };
 
 /**
@@ -135,6 +154,8 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     ),
   );
   const [active, setActive] = useState<Card | null>(null);
+  /** The lane in hand, when the drag is a lane rather than a card. */
+  const [activeLane, setActiveLane] = useState<Lane | null>(null);
   // The lane the card was picked up from, and the one currently sprung open.
   const [dragFrom, setDragFrom] = useState<string | null>(null);
   const [sprung, setSprung] = useState<string | null>(null);
@@ -195,6 +216,10 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  // Stable identity: SortableContext rebuilds its whole context value when
+  // this array changes, which re-renders every lane.
+  const laneIds = useMemo(() => lanes.map((l) => l.id), [lanes]);
 
   const byLane = useMemo(() => {
     const m = new Map<string, Card[]>();
@@ -273,12 +298,17 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   function endDrag() {
     clearSpringTimer();
     hoverLane.current = null;
+    setActiveLane(null);
     setActive(null);
     setDragFrom(null);
     setSprung(null);
   }
 
   function onDragStart(e: DragStartEvent) {
+    if (e.active.data.current?.type === "lane") {
+      setActiveLane(lanes.find((l) => l.id === e.active.id) ?? null);
+      return;
+    }
     const card = cards.find((c) => c.id === e.active.id) ?? null;
     setActive(card);
     setDragFrom(card?.lane_id ?? null);
@@ -287,6 +317,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   }
 
   function onDragOver(e: DragOverEvent) {
+    // Lanes have no cross-container case, and the spring-open would fight a
+    // lane drag: it collapses every lane but one.
+    if (e.active.data.current?.type === "lane") return;
     const { active, over } = e;
     springTowards(over ? findLane(String(over.id)) : null);
     if (!over) return;
@@ -312,6 +345,20 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
 
   function onDragEnd(e: DragEndEvent) {
     const { active, over } = e;
+    if (active.data.current?.type === "lane") {
+      setActiveLane(null);
+      if (!over) return;
+      const overLaneId = findLane(String(over.id));
+      if (!overLaneId || overLaneId === active.id) return;
+      const ids = lanes.map((l) => l.id);
+      const from = ids.indexOf(String(active.id));
+      const to = ids.indexOf(overLaneId);
+      if (from < 0 || to < 0 || from === to) return;
+      // The RPC insists on the whole board, so the array is every lane —
+      // including the archive lane the filter may be hiding.
+      void reorderLanesTo(arrayMove(ids, from, to));
+      return;
+    }
     endDrag();
     if (!over) return;
     const laneId = findLane(String(over.id));
@@ -723,60 +770,68 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
             className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:px-6"
             aria-label="Priority lanes"
           >
-            {lanes.map((lane, laneIndex) => (
-              <LaneColumn
-                key={lane.id}
-                lane={lane}
-                cards={byLane.get(lane.id) ?? []}
-                visible={visible}
-                groups={data.groups}
-                view={viewFor(lane.id)}
-                onView={(v) => changeLaneView(lane.id, v)}
-                onPatch={patch}
-                onArchive={archive}
-                pinned={pinned}
-                onPin={pin}
-                projectSlug={data.project.slug}
-                boardSlug={data.board.slug}
-                today={today}
-                watchDays={watchDays}
-                gates={gates}
-                hiddenByDefault={
-                  lane.kind === "archive" && !filters.showArchived
-                }
-                onAddCard={() => setCardLane(lane)}
-                manage={{
-                  disabled: laneBusy !== null,
-                  canEditName: true,
-                  canDelete: !PROTECTED_KINDS.has(lane.kind),
-                  canMoveCardsLeft:
-                    laneIndex > 0 && lanes[laneIndex - 1]?.kind !== "archive",
-                  canMoveCardsRight:
-                    laneIndex < lanes.length - 1 &&
-                    lanes[laneIndex + 1]?.kind !== "archive",
-                  canSortCards: lane.kind !== "inbox",
-                  onRename: () => setLaneDialog({ type: "rename", lane }),
-                  onMoveCards: (delta) => {
-                    const destination = lanes[laneIndex + delta];
-                    if (!destination || destination.kind === "archive") return;
-                    setLaneAction({
-                      type: "move-cards",
-                      lane,
-                      destination,
-                      cardCount: byLane.get(lane.id)?.length ?? 0,
-                    });
-                  },
-                  onSortCards: (direction) =>
-                    setLaneAction({
-                      type: "sort-cards",
-                      lane,
-                      direction,
-                      cardCount: byLane.get(lane.id)?.length ?? 0,
-                    }),
-                  onDelete: () => setLaneDialog({ type: "delete", lane }),
-                }}
-              />
-            ))}
+            <SortableContext
+              items={laneIds}
+              strategy={horizontalListSortingStrategy}
+            >
+              {lanes.map((lane, laneIndex) => (
+                <LaneColumn
+                  key={lane.id}
+                  lane={lane}
+                  cards={byLane.get(lane.id) ?? []}
+                  visible={visible}
+                  groups={data.groups}
+                  view={viewFor(lane.id)}
+                  onView={(v) => changeLaneView(lane.id, v)}
+                  onPatch={patch}
+                  onArchive={archive}
+                  pinned={pinned}
+                  onPin={pin}
+                  projectSlug={data.project.slug}
+                  boardSlug={data.board.slug}
+                  today={today}
+                  watchDays={watchDays}
+                  gates={gates}
+                  hiddenByDefault={
+                    lane.kind === "archive" && !filters.showArchived
+                  }
+                  onAddCard={() => setCardLane(lane)}
+                  manage={{
+                    disabled: laneBusy !== null,
+                    canEditName: true,
+                    canDelete: !PROTECTED_KINDS.has(lane.kind),
+                    canMoveCardsLeft:
+                      laneIndex > 0 && lanes[laneIndex - 1]?.kind !== "archive",
+                    canMoveCardsRight:
+                      laneIndex < lanes.length - 1 &&
+                      lanes[laneIndex + 1]?.kind !== "archive",
+                    canSortCards: lane.kind !== "inbox",
+                    onRename: () => setLaneDialog({ type: "rename", lane }),
+                    onMoveCards: (delta) => {
+                      const destination = lanes[laneIndex + delta];
+                      if (!destination || destination.kind === "archive")
+                        return;
+                      setLaneAction({
+                        type: "move-cards",
+                        lane,
+                        destination,
+                        cardCount: byLane.get(lane.id)?.length ?? 0,
+                      });
+                    },
+                    onSortCards: (direction) =>
+                      setLaneAction({
+                        type: "sort-cards",
+                        lane,
+                        direction,
+                        cardCount: byLane.get(lane.id)?.length ?? 0,
+                      }),
+                    onDelete: () => setLaneDialog({ type: "delete", lane }),
+                  }}
+                />
+              ))}
+            </SortableContext>
+            {/* Outside the SortableContext on purpose: it is not a sortable
+                item, and listing it would corrupt the index math. */}
             <button
               type="button"
               className="flex min-h-28 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground hover:border-foreground/30 hover:bg-muted/30 hover:text-foreground disabled:opacity-50"
@@ -787,7 +842,13 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
             </button>
           </main>
           <DragOverlay>
-            {active ? (
+            {activeLane ? (
+              <div className="paper-lane lane-column-width p-2 opacity-90">
+                <div className="lane-head">
+                  <h2 className="lane-name">{activeLane.name}</h2>
+                </div>
+              </div>
+            ) : active ? (
               <CardItem
                 card={active}
                 groups={data.groups}
