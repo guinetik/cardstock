@@ -343,12 +343,17 @@ test("protected lanes offer no Remove, ordinary lanes do", async ({ page }) => {
       .locator(`[data-lane="${key}"]`)
       .getByRole("button", { name: /^Manage / })
       .click();
+    // Prove the menu actually opened before trusting an absence inside it —
+    // every lane can be renamed, so "Edit" is always there to check against.
+    await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Remove" })).toHaveCount(0);
     await page.getByRole("menu").press("Escape");
     await expect(page.getByRole("menu")).toHaveCount(0);
-    // The closing menu's overlay briefly intercepts pointer events on the
-    // next lane's Manage button; let its exit animation finish.
-    await page.waitForTimeout(600);
+    // The closing menu's exit-animation overlay can still intercept a click
+    // on the very next lane's Manage button for a moment after the menu
+    // itself is gone from the accessibility tree. Wait on the overlay
+    // element directly rather than a flat sleep.
+    await expect(page.locator('[data-base-ui-inert=""]')).toHaveCount(0);
   }
   await page
     .locator('[data-lane="now"]')
