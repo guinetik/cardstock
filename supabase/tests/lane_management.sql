@@ -113,7 +113,10 @@ do $$
 declare
   v_board uuid;
   v_ids uuid[];
+  v_reversed uuid[];
   v_positions int[];
+  v_archive uuid;
+  v_archive_expected int;
 begin
   select b.id into v_board from public.boards b
   where exists (
@@ -125,12 +128,15 @@ begin
   select array_agg(id order by position) into v_ids
   from public.lanes where board_id = v_board;
 
+  select id into v_archive
+  from public.lanes where board_id = v_board and kind = 'archive';
+
+  select array_agg(id order by position desc) into v_reversed
+  from public.lanes where board_id = v_board;
+  v_archive_expected := array_position(v_reversed, v_archive) - 1;
+
   -- Reverse the whole board. If any kind guard survives, this raises.
-  perform public.reorder_lanes(
-    v_board,
-    (select array_agg(id order by position desc)
-     from public.lanes where board_id = v_board)
-  );
+  perform public.reorder_lanes(v_board, v_reversed);
 
   select array_agg(position order by position) into v_positions
   from public.lanes where board_id = v_board;
@@ -145,12 +151,14 @@ begin
     raise exception 'reorder_lanes must honour the supplied order';
   end if;
 
-  -- An archive lane must be reorderable like any other.
-  if not exists (
-    select 1 from public.lanes
-    where board_id = v_board and kind = 'archive' and position = 0
-  ) then
-    raise exception 'archive must be free to move';
+  -- An archive lane must be reorderable like any other: it should land
+  -- exactly where the supplied order put it, regardless of where it
+  -- started. (Not "at position 0" — that would only hold because archive
+  -- happens to seed at the highest position; the point of this change is
+  -- that it no longer has to.)
+  if (select position from public.lanes where id = v_archive) <> v_archive_expected
+  then
+    raise exception 'archive must be free to move to its ordered position';
   end if;
 
   -- Restore.
@@ -195,6 +203,29 @@ begin
     raise exception 'expected a repeated lane to be rejected';
   exception when others then
     if sqlerrm not like 'Lane order repeats a lane%' then raise; end if;
+  end;
+end $$;
+
+-- reorder_lanes rejects a lane that belongs to another board.
+do $$
+declare v_board uuid; v_ids uuid[]; v_foreign uuid[];
+begin
+  select b.id into v_board from public.boards b
+  where exists (
+    select 1 from public.lanes
+    where board_id = b.id and kind = 'archive'
+  )
+  limit 1;
+  select array_agg(id order by position) into v_ids
+  from public.lanes where board_id = v_board;
+  v_foreign := v_ids;
+  -- Same length, still all-distinct, but names a lane from no board at all.
+  v_foreign[1] := gen_random_uuid();
+  begin
+    perform public.reorder_lanes(v_board, v_foreign);
+    raise exception 'expected a foreign lane id to be rejected';
+  exception when others then
+    if sqlerrm not like 'Lane order names a lane from another board%' then raise; end if;
   end;
 end $$;
 
