@@ -470,15 +470,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   ): Promise<string | null> {
     setLaneBusy(laneId);
     setError(null);
-    const lane = lanes.find((candidate) => candidate.id === laneId);
-    if (!lane) {
-      setLaneBusy(null);
-      return "Lane not found.";
-    }
-    const result = await updateLane(laneId, {
-      ...(lane.kind === "work" ? { name } : {}),
-      color,
-    });
+    const result = await updateLane(laneId, { name, color });
     setLaneBusy(null);
     if (!result.ok) return result.error;
     setLanes(result.lanes);
