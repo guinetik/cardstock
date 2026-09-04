@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { normaliseEmail } from "@/lib/assignee";
 import { loadBoard } from "@/lib/board-data";
 import { type CardColor, isCardColor } from "@/lib/card-color";
 import { isCardStatus, normalizeNeeds } from "@/lib/card-status";
@@ -40,6 +41,7 @@ export interface CreateCardInput {
   status?: Card["status"];
   epicId?: string | null;
   epic?: string;
+  assigneeId?: string | null;
   area?: string;
   priority?: Card["priority"];
   effort?: Card["effort"];
@@ -217,7 +219,7 @@ export async function createCard(
       .from("cards")
       .insert({ ...row, external_id: String(nextId + attempt) })
       .select(
-        "id, external_id, title, summary, status, epic, epic_id, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at, color",
+        "id, external_id, title, summary, status, epic, epic_id, area, assignee_id, assignee, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at, color",
       )
       .single();
     card = result.data;
@@ -239,6 +241,25 @@ export async function createCard(
       return { ok: false, error: error.message };
     }
   }
+  // Routed through `assignCard` rather than written into the insert, so the
+  // roster check and the history line exist on exactly one path. A rejected
+  // assignee leaves a created, unassigned card rather than no card at all.
+  // `card` was selected before this call, so it still reads the pre-assignment
+  // `assignee_id`/`assignee` (both null) — re-read them below once the write
+  // has actually landed, or callers merging `result.card` straight into local
+  // state (board-view's `addCard`) would silently show the card unassigned.
+  if (input.assigneeId) {
+    const assignResult = await assignCard(card.id as string, input.assigneeId);
+    if (assignResult.ok) {
+      const { data: assigned } = await c.db
+        .from("cards")
+        .select("assignee_id, assignee")
+        .eq("id", card.id)
+        .maybeSingle();
+      if (assigned) card = { ...card, ...assigned };
+    }
+  }
+
   await c.db.from("card_events").insert({
     card_id: card.id,
     actor: c.me.email,
@@ -702,6 +723,75 @@ export async function savePrefs(
     .update({ prefs: { ...(c.me.prefs as Record<string, unknown>), ...prefs } })
     .eq("id", c.me.id);
   if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
+ * Hand a card to somebody on its project, or take it back.
+ *
+ * Writes the FK and the tracker text in one patch so exported frontmatter
+ * always mirrors the assignment, exactly as `assignCardEpic` does. The roster
+ * check here is the only one there is — the database deliberately allows an
+ * off-roster email so that import can carry a file naming someone not yet
+ * invited.
+ */
+export async function assignCard(
+  cardId: string,
+  memberId: string | null,
+): Promise<Result> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
+  if (memberId !== null && !UUID.test(memberId))
+    return { ok: false, error: "Invalid person." };
+
+  let email: string | null = null;
+  if (memberId) {
+    const { data: card } = await c.db
+      .from("cards")
+      .select("board_id, boards!inner(project_id)")
+      .eq("id", cardId)
+      .maybeSingle();
+    const projectId = (
+      card as unknown as { boards?: { project_id: string } } | null
+    )?.boards?.project_id;
+    if (!projectId) return { ok: false, error: "Card not found." };
+    const { data: membership } = await c.db
+      .from("project_members")
+      .select("members!inner(email)")
+      .eq("project_id", projectId)
+      .eq("member_id", memberId)
+      .maybeSingle();
+    const found = (
+      membership as unknown as { members?: { email: string } } | null
+    )?.members?.email;
+    if (!found)
+      return { ok: false, error: "That person is not on this project." };
+    // `sheetFromFrontmatter` lowercases via `normaliseEmail` and `diffSheets`
+    // compares case-sensitively; writing a mixed-case `members.email` here
+    // verbatim would make every import see a changed assignee and every
+    // export rewrite the line for no real change.
+    email = normaliseEmail(found);
+  }
+
+  const { error } = await c.db
+    .from("cards")
+    .update({ assignee_id: memberId, assignee: email })
+    .eq("id", cardId);
+  if (error) return { ok: false, error: error.message };
+
+  // One key, not the two-column patch: the history formatter turns
+  // `{assignee}` into a sentence, while `{assignee_id, assignee}` would read
+  // "changed assignee_id and changed assignee".
+  await c.db.from("card_events").insert({
+    card_id: cardId,
+    actor: c.me.email,
+    kind: "edited",
+    payload: { assignee: email },
+  });
+
+  revalidatePath("/p/[project]/b/[board]", "page");
+  revalidatePath("/p/[project]/b/[board]/c/[externalId]", "page");
   return { ok: true };
 }
 

@@ -246,7 +246,7 @@ export function findPerson(
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `bun test src/lib/assignee.test.ts`
-Expected: PASS, 8 tests.
+Expected: PASS, 7 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -401,7 +401,16 @@ git commit -m "feat: read and write the assignee frontmatter key"
 
 **Interfaces:**
 - Consumes: `CardSheet.assignee` (Task 3), `Person` (Task 2).
-- Produces: `ExistingCard.assignee: string | null` and `ExistingCard.assignee_id: string | null`; `BoardState.members: Person[]`; a `columnsFor` branch writing `{ assignee: … }`.
+- Produces: `BoardState.members: Person[]`; a `columnsFor` branch writing `{ assignee: … }`.
+
+**Already done in Task 3 — do not redo:** `ExistingCard.assignee` /
+`ExistingCard.assignee_id` exist, `board-state.ts`'s cards `select(…)` already
+carries both columns, and `sheetFromCard` already returns `assignee: card.assignee`.
+Task 3's fix round pulled these forward, because leaving them until now made an
+export between the two commits strip a stated `assignee:` line and rebase the
+loss into `source_text`. Steps 3-5 below are written against the original state;
+apply only the parts not already present, and say in your report which were
+already there.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -516,7 +525,7 @@ import type { Person } from "@/lib/assignee";
 
 - [ ] **Step 5: Read and write it in the planner**
 
-In `src/lib/import/plan.ts`, add to the object returned by `sheetFromCard`, after `area: card.area ?? "",`:
+In `src/lib/import/plan.ts`, `sheetFromCard` already returns `assignee: card.assignee` (Task 3). Widen it to prefer the member's live email:
 
 ```ts
     // Prefer the member's current email over the stored text: the owner may
@@ -789,15 +798,39 @@ git commit -m "feat: add the assignCard server action"
 - Consumes: `assignCard` (Task 7), `BoardData.people` (Task 6), `findPerson` / `personLabel` (Task 2).
 - Produces: a `people: Person[]` prop on the card editor.
 
-- [ ] **Step 1: Pass the roster in**
+- [ ] **Step 1: Extract the roster load, then pass it in**
 
-In `page.tsx`, find where `epics` is passed to the editor component and pass the roster the same way, from the loaded board data:
+`page.tsx` is a thin wrapper: it renders `<CardSheet>`, and `card-sheet.tsx` is
+the server component that runs its own queries (including the `epics` one) and
+renders `<CardEditor>`. It never sees `BoardData`, so there is no `data.people`
+to hand down — the roster has to be queried there.
 
-```tsx
-  people={data.people}
+Rather than write the roster query and its shaping a third time (`board-data.ts`
+and `import/board-state.ts` already have one each, and the Task 6 review flagged
+the drift risk), extract it once. In `src/lib/board-data.ts`, pull the roster
+query and shaping out of `loadBoard` into an exported function beside it:
+
+```ts
+/**
+ * A project's roster as `Person[]`, sorted by label.
+ *
+ * Shared so the board, the card page, and anything else that offers people to
+ * pick from order and label them identically — three copies of this shaping
+ * would drift the first time the rule changes.
+ */
+export async function loadProjectRoster(
+  db: SupabaseClient,
+  projectId: string,
+): Promise<Person[]> {
 ```
 
-Add `people: Person[];` to the editor's props interface, with `import type { Person } from "@/lib/assignee";`.
+Move the existing body into it verbatim, have `loadBoard` call it, and confirm
+the board still returns the same `people`. Then in `card-sheet.tsx`, call it
+alongside the existing `epics` query and pass `people={people}` to
+`<CardEditor>`.
+
+Add `people: Person[];` to `CardEditor`'s props interface, with
+`import type { Person } from "@/lib/assignee";`.
 
 - [ ] **Step 2: Add the select**
 
@@ -894,32 +927,39 @@ git commit -m "feat: assign a card from the card page"
 
 Append to `src/lib/filters.test.ts`, using whatever card fixture factory the file already defines:
 
+`matches` takes four arguments — `matches(card, filters, groups, lanes)`. Assignee
+matching depends on neither groups nor lanes, so these tests pass empty arrays,
+the way the file's other single-criterion tests do.
+
 ```ts
 const MEMBER = "11111111-1111-4111-8111-111111111111";
 
 test("filtering by a person keeps only their cards", () => {
-  const mine = card({ assignee_id: MEMBER, assignee: "joao@example.test" });
-  const theirs = card({ assignee_id: null, assignee: null });
+  const mine = task({ assignee_id: MEMBER, assignee: "joao@example.test" });
+  const theirs = task({ assignee_id: null, assignee: null });
   const f = { ...emptyFilters(), assignee: MEMBER };
-  expect(matches(mine, f)).toBe(true);
-  expect(matches(theirs, f)).toBe(false);
+  expect(matches(mine, f, [], [])).toBe(true);
+  expect(matches(theirs, f, [], [])).toBe(false);
 });
 
 test("unassigned means no assignee at all", () => {
   const f = { ...emptyFilters(), assignee: ASSIGNEE_FILTER_NONE };
-  expect(matches(card({ assignee_id: null, assignee: null }), f)).toBe(true);
+  expect(matches(task({ assignee_id: null, assignee: null }), f, [], [])).toBe(
+    true,
+  );
   expect(
-    matches(card({ assignee_id: MEMBER, assignee: "joao@example.test" }), f),
+    matches(task({ assignee_id: MEMBER, assignee: "joao@example.test" }), f, [], []),
   ).toBe(false);
 });
 
 test("a card whose file names an off-roster person is assigned, not unassigned", () => {
   // The FK is null because nobody matched, but somebody's name is on it.
-  const stranger = card({ assignee_id: null, assignee: "stranger@nowhere.test" });
-  expect(matches(stranger, { ...emptyFilters(), assignee: ASSIGNEE_FILTER_NONE })).toBe(
+  const stranger = task({ assignee_id: null, assignee: "stranger@nowhere.test" });
+  const none = { ...emptyFilters(), assignee: ASSIGNEE_FILTER_NONE };
+  expect(matches(stranger, none, [], [])).toBe(false);
+  expect(matches(stranger, { ...emptyFilters(), assignee: MEMBER }, [], [])).toBe(
     false,
   );
-  expect(matches(stranger, { ...emptyFilters(), assignee: MEMBER })).toBe(false);
 });
 
 test("an assignee filter counts as filtering", () => {
@@ -928,7 +968,9 @@ test("an assignee filter counts as filtering", () => {
 });
 ```
 
-Import `ASSIGNEE_FILTER_NONE` alongside the existing imports.
+Import `ASSIGNEE_FILTER_NONE` alongside the existing imports. The `Partial<Card>`
+fixture factory in this file is named `task`, not `card` (`card` is a different
+two-argument helper) — use `task`.
 
 - [ ] **Step 2: Run them to verify they fail**
 
@@ -1212,25 +1254,29 @@ git commit -m "feat: assign a card as it is created"
 
 Append to `src/lib/card-history.test.ts`, following the shape of the tests already there:
 
+The file's fixture helper is `ev(partial)`, and `formatCardEvent` takes three
+arguments — `formatCardEvent(row, lanes, opts)` — with `lanes` and `opts` already
+defined at the top of the file. Follow that idiom:
+
 ```ts
 test("an assignment names the person", () => {
   const line = formatCardEvent(
-    event({ kind: "edited", payload: { assignee: "joao@example.test" } }),
-    [],
+    ev({ kind: "edited", payload: { assignee: "joao@example.test" } }),
+    lanes,
+    opts,
   );
   expect(line.facts).toBe("assigned this to Joao");
 });
 
 test("clearing the assignee says so", () => {
   const line = formatCardEvent(
-    event({ kind: "edited", payload: { assignee: null } }),
-    [],
+    ev({ kind: "edited", payload: { assignee: null } }),
+    lanes,
+    opts,
   );
   expect(line.facts).toBe("unassigned this");
 });
 ```
-
-Use whatever `event(…)` fixture helper the file defines; if there is none, build the `card_events` row literal the way the neighbouring tests do.
 
 - [ ] **Step 2: Run them to verify they fail**
 
@@ -1279,78 +1325,45 @@ git commit -m "feat: write assignment into the card history"
 
 - [ ] **Step 1: Write the e2e spec**
 
-Create `e2e/assignee.spec.ts`. `createMember`, `attachToProject`, `dropMember`, `signIn`, and `projectId` already exist in `e2e/support/sign-in.ts`; read that file for their exact signatures before writing.
+Create `e2e/assignee.spec.ts`.
 
-```ts
-import { expect, test } from "@playwright/test";
-import {
-  attachToProject,
-  createMember,
-  dropMember,
-  projectId,
-  signIn,
-} from "./support/sign-in";
+**Facts verified against the repo — use these, not the values an earlier draft of
+this plan guessed:**
 
-/**
- * Handing a card to somebody. The roster comes from `project_members`, so the
- * fixture invites a second person into the demo project and takes them out
- * again — the select must never offer somebody who is not on the folder.
- */
+- The board path is `/p/demo/b/backlog`. Existing specs declare it as
+  `const BOARD = process.env.E2E_BOARD_PATH ?? "/p/demo/b/backlog";` — do the same.
+- `attachToProject(email, slug, role)` takes the project **slug** (`"demo"`), not
+  a project id. Do not wrap it in `projectId(...)`.
+- There is no `data-testid="card"` in this codebase. Cards are located as
+  `[data-lane="now"] [data-id] article` (see `e2e/card-peek-fields.spec.ts`) or
+  `[data-lane="unsorted"] [data-id]` (see `e2e/board.spec.ts`). Use the existing
+  idiom.
+- `e2e/global-setup.ts` calls `resetDemoBoard()`, which imports `examples/tracker`,
+  so the board has cards when the suite starts. A spec that mutates cards and
+  needs a known state can call `resetDemoBoard()` itself in `test.beforeAll` —
+  several specs do.
+- `createMember(email, password)`, `dropMember(email)`, and `signIn(page)` are in
+  `e2e/support/sign-in.ts`. `createMember` sets `display_name` to `"E2E user"`,
+  so a roster option for that member is labelled **`E2E user`**, not the email —
+  `personLabel` prefers the display name. Select and assert accordingly.
+- `playwright.config.ts` sets `reuseExistingServer: true`, so the suite attaches
+  to an already-running dev server rather than fighting for port 3000.
 
-const TEAMMATE = "assignee-teammate@example.test";
-const PASSWORD = "correct horse battery";
+Write three tests, following the file idiom above:
 
-test.beforeAll(async () => {
-  await createMember(TEAMMATE, PASSWORD);
-  await attachToProject(TEAMMATE, await projectId("demo"), "member");
-});
+1. **A card is handed to somebody and the choice sticks.** Sign in, open a card's
+   page, select the teammate in the Assignee select, reload, assert the selection
+   survived.
+2. **The history records who it went to.** After assigning, reload the card page
+   and assert a history line matching `/assigned this to/i` is visible.
+3. **Filtering by a person narrows the board.** Assign one card, go to the board,
+   open the Assignee filter menu, choose that person, and assert the visible card
+   count drops to exactly the assigned card — and that it was more than that
+   before.
 
-test.afterAll(async () => {
-  await dropMember(TEAMMATE);
-});
-
-test("a card is handed to somebody and the choice sticks", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/p/demo/b/tracker");
-  await page.locator("[data-testid='card']").first().click();
-  const select = page.getByLabel("Assignee");
-  await expect(select).toHaveValue("");
-  await select.selectOption({ label: TEAMMATE });
-  await expect(page.getByText("Saved")).toBeVisible();
-  await page.reload();
-  await expect(page.getByLabel("Assignee")).toHaveValue(/.+/);
-  await expect(
-    page.getByLabel("Assignee").locator("option:checked"),
-  ).toHaveText(TEAMMATE);
-});
-
-test("the history records who it went to", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/p/demo/b/tracker");
-  await page.locator("[data-testid='card']").first().click();
-  await page.getByLabel("Assignee").selectOption({ label: TEAMMATE });
-  await expect(page.getByText("Saved")).toBeVisible();
-  await page.reload();
-  await expect(page.getByText(/assigned this to/i).first()).toBeVisible();
-});
-
-test("filtering by a person narrows the board", async ({ page }) => {
-  await signIn(page);
-  await page.goto("/p/demo/b/tracker");
-  const before = await page.locator("[data-testid='card']").count();
-  await page.locator("[data-testid='card']").first().click();
-  await page.getByLabel("Assignee").selectOption({ label: TEAMMATE });
-  await expect(page.getByText("Saved")).toBeVisible();
-
-  await page.goto("/p/demo/b/tracker");
-  await page.locator("details[data-key='assignee'] summary").click();
-  await page.getByRole("button", { name: TEAMMATE, exact: true }).click();
-  await expect(page.locator("[data-testid='card']")).toHaveCount(1);
-  expect(before).toBeGreaterThan(1);
-});
-```
-
-Adjust the board URL, the card locator, and the sign-in helper calls to match what the other specs in `e2e/` actually use — read `e2e/board.spec.ts` and `e2e/card-peek-fields.spec.ts` first. The assertions are the contract; the selectors follow the house pattern.
+The assertions above are the contract. The selectors are yours to match against
+the specs already in `e2e/`; read `e2e/board.spec.ts` and
+`e2e/card-peek-fields.spec.ts` first and follow what they do.
 
 - [ ] **Step 2: Run the e2e spec**
 

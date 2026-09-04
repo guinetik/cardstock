@@ -84,6 +84,11 @@ export function sheetFromCard(
     status: card.status,
     epic: card.epic ?? "",
     area: card.area ?? "",
+    // Prefer the member's current email over the stored text: the owner may
+    // have corrected an address, and the export should carry the live one.
+    assignee:
+      state.members.find((m) => m.memberId === card.assignee_id)?.email ??
+      card.assignee,
     tags: refs,
     raisedBy: card.raised_by,
     raisedOn: card.raised_on,
@@ -122,6 +127,7 @@ function columnsFor(
   set("title", () => ({ title: sheet.title }));
   set("status", () => ({ status: sheet.status }));
   set("area", () => ({ area: sheet.area }));
+  set("assignee", () => ({ assignee: sheet.assignee }));
   set("raised_by", () => ({ raised_by: sheet.raisedBy }));
   set("raised", () => ({ raised_on: sheet.raisedOn }));
   set("shipped", () => ({ shipped_on: sheet.shippedOn }));

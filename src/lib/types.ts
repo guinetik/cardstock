@@ -1,3 +1,4 @@
+import type { Person } from "@/lib/assignee";
 import type { CardColor } from "./card-color";
 
 export type LaneKind =
@@ -47,6 +48,9 @@ export interface Card {
   epic_id: string | null;
   area: string | null;
   raised_by: string | null;
+  assignee_id: string | null;
+  /** The assignee's email. Set even when `assignee_id` is null (an off-roster file). */
+  assignee: string | null;
   raised_on: string | null;
   shipped_on: string | null;
   needs: string | null;
@@ -116,6 +120,8 @@ export interface BoardData {
   groups: TagGroup[];
   epics: Pick<Epic, "id" | "source_name" | "outcome">[];
   cards: Card[];
+  /** This board's project roster, for the assignee select and filter. */
+  people: Person[];
 }
 
 export const PRIORITY_LABEL: Record<1 | 2 | 3, string> = {

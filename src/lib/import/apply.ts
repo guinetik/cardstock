@@ -7,6 +7,7 @@
  * error carries the counts, and the caller says so out loud.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { findPerson } from "@/lib/assignee";
 import type { BoardState, Plan } from "./types";
 
 function fail(what: string, error: { message: string } | null): never {
@@ -124,6 +125,14 @@ async function fileThePlan(
     return data.id;
   }
 
+  // Unlike an epic, a person is never created by an import. An email that
+  // matches nobody leaves the FK null and keeps the text, so a sheet written
+  // before someone was invited still says who it is for.
+  const memberByEmail = (email: unknown): string | null =>
+    typeof email === "string"
+      ? (findPerson(state.members, email)?.memberId ?? null)
+      : null;
+
   // Rank: append after the last card in the lane when the file gives none.
   const maxRank = new Map<string, number>();
   for (const c of state.cards.values())
@@ -148,6 +157,8 @@ async function fileThePlan(
     };
     if (row.patch.epic !== undefined)
       columns.epic_id = await epic(row.patch.epic);
+    if ("assignee" in columns)
+      columns.assignee_id = memberByEmail(columns.assignee);
     if (row.patch.laneKey) {
       const lid = laneId.get(row.patch.laneKey);
       if (!lid) throw new Error(`lane ${row.patch.laneKey} was not created`);

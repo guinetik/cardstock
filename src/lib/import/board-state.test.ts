@@ -18,6 +18,9 @@ function fakeDb(responses: Record<string, { data: unknown; error: unknown }>) {
         order() {
           return builder;
         },
+        maybeSingle() {
+          return builder;
+        },
         // biome-ignore lint/suspicious/noThenProperty: mimics supabase-js's thenable PostgrestBuilder, which loadBoardState awaits directly.
         then(
           resolve: (v: unknown) => unknown,
@@ -64,5 +67,20 @@ describe("loadBoardState", () => {
     expect("card_tags" in one).toBe(false);
     expect("card_links" in one).toBe(false);
     expect(state.cards.get("2")!.has_source_text).toBe(false);
+  });
+  test("a project member survives the roster load", async () => {
+    const db = fakeDb({
+      boards: { data: { project_id: "proj-1" }, error: null },
+      project_members: {
+        data: [
+          { members: { id: "m1", email: "ana@x.test", display_name: "Ana" } },
+        ],
+        error: null,
+      },
+    });
+    const state = await loadBoardState(db, "board-1");
+    expect(state.members).toEqual([
+      { memberId: "m1", email: "ana@x.test", displayName: "Ana" },
+    ]);
   });
 });

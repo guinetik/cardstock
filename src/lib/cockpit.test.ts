@@ -22,6 +22,8 @@ const card = (patch: Partial<Card> = {}): Card => ({
   epic_id: "e1",
   area: null,
   raised_by: null,
+  assignee_id: null,
+  assignee: null,
   raised_on: "2026-01-01",
   shipped_on: null,
   needs: null,

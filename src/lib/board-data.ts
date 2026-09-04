@@ -1,8 +1,48 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
+import { type Person, personLabel } from "@/lib/assignee";
 import { resolveBoardGates } from "@/lib/gates";
 import { supabaseServer } from "@/lib/supabase/server";
 import { timelineMilestones } from "@/lib/timeline";
 import type { BoardData, Card, Epic, Lane, TagGroup } from "@/lib/types";
+
+/**
+ * A project's roster as `Person[]`, sorted by label.
+ *
+ * Shared so the board, the card page, and anything else that offers people to
+ * pick from order and label them identically — three copies of this shaping
+ * would drift the first time the rule changes.
+ */
+export async function loadProjectRoster(
+  db: SupabaseClient,
+  projectId: string,
+): Promise<Person[]> {
+  const { data: memberships } = await db
+    .from("project_members")
+    .select("members(id, email, display_name)")
+    .eq("project_id", projectId);
+
+  return (
+    (memberships ?? []) as unknown as {
+      members: {
+        id: string;
+        email: string;
+        display_name: string | null;
+      } | null;
+    }[]
+  )
+    .map((row) => row.members)
+    .filter(
+      (m): m is { id: string; email: string; display_name: string | null } =>
+        m != null,
+    )
+    .map((m) => ({
+      memberId: m.id,
+      email: m.email,
+      displayName: m.display_name,
+    }))
+    .sort((a, b) => personLabel(a).localeCompare(personLabel(b)));
+}
 
 /** Everything the board page needs, in one round-trip set. RLS scopes it to the member's projects. */
 export async function loadBoard(
@@ -31,6 +71,7 @@ export async function loadBoard(
     { data: cardTags },
     { data: moves },
     { data: epics },
+    people,
   ] = await Promise.all([
     db
       .from("lanes")
@@ -47,7 +88,7 @@ export async function loadBoard(
     db
       .from("cards")
       .select(
-        "id, external_id, title, summary, status, epic, epic_id, area, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at, color",
+        "id, external_id, title, summary, status, epic, epic_id, area, assignee_id, assignee, raised_by, raised_on, shipped_on, needs, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, audience, archived_at, archived_by, created_at, updated_at, color",
       )
       .eq("board_id", board.id)
       .order("rank"),
@@ -67,6 +108,7 @@ export async function loadBoard(
       .select("id, source_name, outcome")
       .eq("board_id", board.id)
       .order("source_name"),
+    loadProjectRoster(db, project.id),
   ]);
 
   const tagsByCard = new Map<string, string[]>();
@@ -105,5 +147,6 @@ export async function loadBoard(
       built_at: builtAt.get(c.id) ?? null,
       delivered_at: c.shipped_on ?? deliveredAt.get(c.id) ?? null,
     })) as Card[],
+    people,
   };
 }

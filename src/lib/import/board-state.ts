@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadProjectRoster } from "@/lib/board-data";
 import type { BoardState, ExistingCard } from "./types";
 
 /** Everything the planner compares against, from the database, through whatever client the caller holds. */
@@ -11,6 +12,7 @@ export async function loadBoardState(
     { data: groups, error: groupsError },
     { data: cards, error: cardsError },
     { data: epics, error: epicsError },
+    { data: board, error: boardError },
   ] = await Promise.all([
     db
       .from("lanes")
@@ -25,10 +27,11 @@ export async function loadBoardState(
     db
       .from("cards")
       .select(
-        "id, external_id, title, status, epic, area, raised_by, raised_on, shipped_on, needs, summary, summary_edited_at, body_md, body_edited_at, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, color, source_hash, source_text, frontmatter_extra, card_tags(tag_id), card_links!card_links_from_card_fkey(to_card, kind)",
+        "id, external_id, title, status, epic, area, assignee, assignee_id, raised_by, raised_on, shipped_on, needs, summary, summary_edited_at, body_md, body_edited_at, lane_id, rank, priority, effort, planned_start_date, target_date, target_label, archived_at, archived_by, color, source_hash, source_text, frontmatter_extra, card_tags(tag_id), card_links!card_links_from_card_fkey(to_card, kind)",
       )
       .eq("board_id", boardId),
     db.from("epics").select("id, source_name").eq("board_id", boardId),
+    db.from("boards").select("project_id").eq("id", boardId).maybeSingle(),
   ]);
   // An empty `?? []` fallback on error would hand the planner an empty
   // board state and every card would come back "new" — the exact thing a
@@ -38,6 +41,12 @@ export async function loadBoardState(
     throw new Error(`board state: tag_groups: ${groupsError.message}`);
   if (cardsError) throw new Error(`board state: cards: ${cardsError.message}`);
   if (epicsError) throw new Error(`board state: epics: ${epicsError.message}`);
+  if (boardError) throw new Error(`board state: board: ${boardError.message}`);
+  if (!board) throw new Error(`board state: board: no board for ${boardId}`);
+  // The shared shaping used by the board and card pages on every load — one
+  // path from `project_members` to `Person[]`, so import can't drift from
+  // what the UI offers as roster.
+  const members = await loadProjectRoster(db, board.project_id as string);
   const idToExternal = new Map(
     (cards ?? []).map((c) => [c.id as string, c.external_id as string]),
   );
@@ -72,5 +81,6 @@ export async function loadBoardState(
     epics: new Map(
       (epics ?? []).map((e) => [e.source_name as string, e.id as string]),
     ),
+    members,
   };
 }

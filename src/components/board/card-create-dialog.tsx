@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { type Person, personLabel } from "@/lib/assignee";
 import type { CardColor } from "@/lib/card-color";
 import { CARD_STATUSES, type CardStatus } from "@/lib/card-status";
 import type { Epic, Lane, TagGroup } from "@/lib/types";
@@ -49,6 +50,7 @@ export function CardCreateDialog(props: {
   boardId: string;
   groups: TagGroup[];
   epics: Pick<Epic, "id" | "source_name" | "outcome">[];
+  people: Person[];
   /** Board's new-card markdown skeleton; pre-fills the description. */
   bodyTemplate: string;
   onClose: () => void;
@@ -78,6 +80,7 @@ function CardCreateForm(
   const [bodyMarkdown, setBodyMarkdown] = useState(props.bodyTemplate);
   const [status, setStatus] = useState("backlog");
   const [epicId, setEpicId] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [area, setArea] = useState("");
   const [priority, setPriority] = useState("");
   const [effort, setEffort] = useState("");
@@ -110,6 +113,7 @@ function CardCreateForm(
       bodyMarkdown,
       status,
       epicId: epicId || null,
+      assigneeId: assigneeId || null,
       area,
       priority: priority ? (Number(priority) as 1 | 2 | 3) : null,
       effort: (effort || null) as "L" | "M" | "H" | null,
@@ -223,6 +227,25 @@ function CardCreateForm(
                     {selectedEpic.outcome}
                   </span>
                 )}
+              </label>
+              <label htmlFor="new-card-assignee">
+                <span className={label}>Assignee</span>
+                <select
+                  id="new-card-assignee"
+                  className={field}
+                  value={assigneeId}
+                  onChange={(event) => setAssigneeId(event.target.value)}
+                  disabled={busy}
+                >
+                  {/* Defaults to nobody, not to you: filing a card is not the
+                      same as taking it. */}
+                  <option value="">Unassigned</option>
+                  {props.people.map((person) => (
+                    <option key={person.memberId} value={person.memberId}>
+                      {personLabel(person)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label htmlFor="new-card-area">
                 <span className={label}>Area</span>
