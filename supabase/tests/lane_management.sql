@@ -240,3 +240,39 @@ begin
 end $$;
 
 rollback;
+
+-- delete_work_lane: protected kinds are inbox/done/archive; others go.
+do $$
+declare
+  v_board uuid;
+  v_dest uuid;
+  v_waiting uuid;
+  v_protected record;
+begin
+  select id into v_board from public.boards limit 1;
+  select id into v_dest from public.lanes
+  where board_id = v_board and kind = 'work' limit 1;
+
+  for v_protected in
+    select id, kind from public.lanes
+    where board_id = v_board and kind in ('inbox', 'done', 'archive')
+  loop
+    begin
+      perform public.delete_work_lane(v_protected.id, v_dest);
+      raise exception 'expected kind % to be protected', v_protected.kind;
+    exception when others then
+      if sqlerrm not like '%cannot be removed%' then raise; end if;
+    end;
+  end loop;
+
+  -- A non-work, non-protected lane must now be removable.
+  insert into public.lanes (board_id, key, name, position, kind, sla_days)
+  values (v_board, 'test-waiting', 'Test waiting', 99, 'waiting', 5)
+  returning id into v_waiting;
+
+  perform public.delete_work_lane(v_waiting, v_dest);
+
+  if exists (select 1 from public.lanes where id = v_waiting) then
+    raise exception 'a waiting lane must be removable';
+  end if;
+end $$;
