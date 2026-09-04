@@ -21,6 +21,19 @@ export type LaneDialogMode =
   | { type: "delete"; lane: Lane }
   | null;
 
+export function laneDialogCopy(
+  mode: Exclude<LaneDialogMode, null>,
+  cardCount: number,
+): string {
+  if (mode.type === "add")
+    return "We’ll make an ID from this name. The ID never changes, so it’s safe to use in your markdown.";
+  // Every lane, not just work lanes: the display name is free precisely
+  // because the ID it sits on is not.
+  if (mode.type === "rename")
+    return "The ID is what you write in a card’s frontmatter. You can change the display name or color here — the ID stays the same.";
+  return `${cardCount} card${cardCount === 1 ? "" : "s"} will be moved before the lane is removed.`;
+}
+
 export function LaneCrudDialog(props: {
   mode: LaneDialogMode;
   lanes: Lane[];
@@ -105,16 +118,7 @@ function LaneDialogForm(
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {mode.type === "add" &&
-              "We’ll make an ID from this name. The ID never changes, so it’s safe to use in your markdown."}
-            {mode.type === "rename" &&
-              mode.lane.kind === "work" &&
-              "The ID is what you write in a card’s frontmatter. You can change the display name or color here — the ID stays the same."}
-            {mode.type === "rename" &&
-              mode.lane.kind !== "work" &&
-              "Built-in lane names and IDs stay fixed, but their color can be changed."}
-            {mode.type === "delete" &&
-              `${props.cardCount} card${props.cardCount === 1 ? "" : "s"} will be moved before the lane is removed.`}
+            {laneDialogCopy(mode, props.cardCount)}
           </DialogDescription>
         </DialogHeader>
 
@@ -130,7 +134,6 @@ function LaneDialogForm(
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 disabled={busy}
-                readOnly={mode.type === "rename" && mode.lane.kind !== "work"}
               />
             </label>
             {mode.type === "rename" && (
@@ -196,9 +199,7 @@ function LaneDialogForm(
               : mode.type === "add"
                 ? "Add lane"
                 : mode.type === "rename"
-                  ? mode.lane.kind === "work"
-                    ? "Save name"
-                    : "Save color"
+                  ? "Save name"
                   : "Move cards and remove"}
           </Button>
           <Button

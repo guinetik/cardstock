@@ -169,3 +169,207 @@ test("lane colors reach the project map and lane-wide actions persist", async ({
   await expect(leftColumn.locator("[data-id]")).toHaveCount(4);
   await expect(leftColumn).toHaveClass(/lane-color--blue/);
 });
+
+test("a lane can be dragged across two positions", async ({ page }) => {
+  const { data: board } = await admin
+    .from("boards")
+    .select("id")
+    .eq("slug", "backlog")
+    .single();
+  const { data: seeded } = await admin
+    .from("lanes")
+    .select("id, key")
+    .eq("board_id", board!.id)
+    .order("position");
+  const seededOrder = (seeded ?? []).map((l) => l.id);
+  expect(seededOrder.length).toBeGreaterThan(2);
+
+  // The board is shared seed data and this test reorders it for real, so the
+  // restore has to survive a failure: a half-done reorder would leave every
+  // later spec asserting the wrong lane order.
+  try {
+    await dragOneLaneTwoPositions(page);
+  } finally {
+    // Let any reorder the page still has in flight land first, or it would
+    // overwrite the restore a moment after it.
+    await page.waitForLoadState("networkidle").catch(() => {});
+    const { error } = await admin.rpc("reorder_lanes", {
+      p_board_id: board!.id,
+      p_ordered_ids: seededOrder,
+    });
+    expect(error).toBeNull();
+  }
+});
+
+async function dragOneLaneTwoPositions(page: import("@playwright/test").Page) {
+  const order = async () =>
+    page
+      .locator("[data-lane]")
+      .evaluateAll((els) => els.map((el) => el.getAttribute("data-lane")));
+  const before = await order();
+  expect(before.length).toBeGreaterThan(3);
+
+  const handle = page.locator(
+    `[data-lane="${before[0]}"] [data-testid="lane-drag-handle"]`,
+  );
+  const target = page.locator(`[data-lane="${before[2]}"] .lane-head`);
+  const from = (await handle.boundingBox())!;
+  const to = (await target.boundingBox())!;
+
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  // Two moves: the first clears the 6px activation constraint, the second is
+  // the actual travel. A single jump can land before dnd-kit arms its sensor.
+  await page.mouse.move(from.x + 20, from.y + from.height / 2, { steps: 5 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, {
+    steps: 20,
+  });
+  await page.mouse.up();
+
+  await expect.poll(async () => (await order())[0]).not.toBe(before[0]);
+
+  await page.reload();
+  await expect(page.locator("[data-lane]").first()).toBeVisible();
+  const after = await order();
+  expect(after.length).toBe(before.length);
+  // Two positions, not one short: the lane lands where it was dropped.
+  expect(after[0]).toBe(before[1]);
+  expect(after[1]).toBe(before[2]);
+  expect(after[2]).toBe(before[0]);
+  // The grip is the ONLY thing that listens. Press one of the header's other
+  // buttons and travel far enough to arm the 6px sensor, the way a shaky hand
+  // on the add-card button would: if the listeners ever migrate onto
+  // .lane-head or onto the <section>, this drags the lane and the order moves.
+  const head = page.locator(`[data-lane="${after[1]}"]`);
+  const addCard = head.getByRole("button", { name: /^Add card to / });
+  const far = page.locator(`[data-lane="${after[3]}"] .lane-head`);
+  const addBox = (await addCard.boundingBox())!;
+  const farBox = (await far.boundingBox())!;
+  await page.mouse.move(
+    addBox.x + addBox.width / 2,
+    addBox.y + addBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(addBox.x + 20, addBox.y + addBox.height / 2, {
+    steps: 5,
+  });
+  await page.mouse.move(
+    farBox.x + farBox.width / 2,
+    farBox.y + farBox.height / 2,
+    {
+      steps: 20,
+    },
+  );
+  await page.mouse.up();
+  expect(await order()).toEqual(after);
+  // That press-and-travel may or may not have opened the dialog; either way,
+  // leave nothing behind.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // And the buttons are still buttons: onClick reaches them.
+  await addCard.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await head.getByRole("button", { name: /^Manage / }).click();
+  await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  expect(await order()).toEqual(after);
+}
+
+test("a done lane can be renamed, and its key does not change", async ({
+  page,
+}) => {
+  const { data: board } = await admin
+    .from("boards")
+    .select("id")
+    .eq("slug", "backlog")
+    .single();
+  const { data: done } = await admin
+    .from("lanes")
+    .select("id, name")
+    .eq("board_id", board!.id)
+    .eq("kind", "done")
+    .single();
+  const originalName = done!.name;
+
+  try {
+    await page.goto(BOARD);
+    const lane = page.locator('[data-lane="done"]');
+    await lane.getByRole("button", { name: /^Manage / }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+
+    const input = page.getByLabel("Lane name");
+    await expect(input).toBeEditable();
+    await input.fill("Zenbox");
+    await page.getByRole("button", { name: /save|rename/i }).click();
+
+    await expect(lane.locator(".lane-name")).toHaveText("Zenbox");
+    await page.reload();
+    // The key is the identity: the selector still finds it.
+    await expect(page.locator('[data-lane="done"] .lane-name')).toHaveText(
+      "Zenbox",
+    );
+  } finally {
+    // Restore the shared board's lane name and verify it actually landed —
+    // a stray in-flight write here would leave every later spec asserting
+    // against "Zenbox" instead of the seeded name.
+    await page.waitForLoadState("networkidle").catch(() => {});
+    const { error } = await admin
+      .from("lanes")
+      .update({ name: originalName })
+      .eq("id", done!.id);
+    expect(error).toBeNull();
+    await expect
+      .poll(async () => {
+        const { data } = await admin
+          .from("lanes")
+          .select("name")
+          .eq("id", done!.id)
+          .single();
+        return data?.name;
+      })
+      .toBe(originalName);
+  }
+});
+
+test("protected lanes offer no Remove, ordinary lanes do", async ({ page }) => {
+  await page.goto(BOARD);
+  // The archive lane is hidden unless the Archived filter is on.
+  await page.getByLabel("archived").check();
+  for (const key of ["unsorted", "done", "archive"]) {
+    await page
+      .locator(`[data-lane="${key}"]`)
+      .getByRole("button", { name: /^Manage / })
+      .click();
+    // Prove the menu actually opened before trusting an absence inside it —
+    // every lane can be renamed, so "Edit" is always there to check against.
+    await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Remove" })).toHaveCount(0);
+    await page.getByRole("menu").press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    // The closing menu's exit-animation overlay can still intercept a click
+    // on the very next lane's Manage button for a moment after the menu
+    // itself is gone from the accessibility tree. Wait on the overlay
+    // element directly rather than a flat sleep.
+    await expect(page.locator('[data-base-ui-inert=""]')).toHaveCount(0);
+  }
+  await page
+    .locator('[data-lane="now"]')
+    .getByRole("button", { name: /^Manage / })
+    .click();
+  await expect(page.getByRole("menuitem", { name: "Remove" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
+test("the archive lane has a manage menu at all", async ({ page }) => {
+  await page.goto(BOARD);
+  await page.getByLabel("archived").check();
+  await expect(
+    page.locator('[data-lane="archive"]').getByRole("button", {
+      name: /^Manage /,
+    }),
+  ).toBeVisible();
+});

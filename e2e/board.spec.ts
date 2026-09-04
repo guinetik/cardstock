@@ -305,8 +305,34 @@ test("work lanes can be created, renamed, reordered and removed", async ({
     .evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute("data-lane")),
     );
-  await lane.getByRole("button", { name: `Manage ${renamed} lane` }).click();
-  await page.getByRole("menuitem", { name: "Move left" }).click();
+  // Reordering is a drag now, not a menu item: dragging is the metaphor the
+  // whole board runs on, and lanes were the one thing that broke it.
+  const grip = lane.getByTestId("lane-drag-handle");
+  const neighbour = page.locator(
+    `[data-lane="${before[before.indexOf(key) - 1]}"] .lane-head`,
+  );
+  // The new lane sits at the right edge of a horizontally scrolling board, so
+  // bring it into view before measuring: boundingBox does not scroll.
+  await grip.scrollIntoViewIfNeeded();
+  await neighbour.scrollIntoViewIfNeeded();
+  const gripBox = (await grip.boundingBox())!;
+  const neighbourBox = (await neighbour.boundingBox())!;
+  await page.mouse.move(
+    gripBox.x + gripBox.width / 2,
+    gripBox.y + gripBox.height / 2,
+  );
+  await page.mouse.down();
+  // The first move only clears the 6px activation distance; the second is the
+  // travel. One jump can land before dnd-kit arms its sensor.
+  await page.mouse.move(gripBox.x - 20, gripBox.y + gripBox.height / 2, {
+    steps: 5,
+  });
+  await page.mouse.move(
+    neighbourBox.x + neighbourBox.width / 2,
+    neighbourBox.y + neighbourBox.height / 2,
+    { steps: 20 },
+  );
+  await page.mouse.up();
   await expect
     .poll(async () =>
       page

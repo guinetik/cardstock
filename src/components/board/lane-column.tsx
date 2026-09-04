@@ -1,12 +1,14 @@
 "use client";
-import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
+  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft,
   ArrowRight,
+  GripVertical,
   Maximize2,
   Minus,
   MoreHorizontal,
@@ -14,6 +16,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { createContext, type ReactNode, useContext, useMemo } from "react";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
 import {
   DropdownMenu,
@@ -40,7 +43,7 @@ const KIND_RULE: Record<Lane["kind"], string> = {
   archive: "lane-head--soft",
 };
 
-const KIND_INK: Record<Lane["kind"], string> = {
+export const KIND_INK: Record<Lane["kind"], string> = {
   inbox: "text-[var(--color-grey)]",
   work: "text-[var(--color-ink)]",
   waiting: "text-[var(--pen-amber)]",
@@ -51,6 +54,101 @@ const KIND_INK: Record<Lane["kind"], string> = {
 
 const TOOL =
   "rounded-[var(--radius-btn)] p-0.5 text-[var(--color-grey-faint)] hover:bg-[var(--fill-subtle)] hover:text-[var(--color-ink)]";
+
+/**
+ * The grip's drag handlers, handed down from the lane's <section> to the one
+ * button in the header that is allowed to start a lane drag.
+ *
+ * They travel by context rather than by prop because the hook that makes them
+ * has to live *above* the cards, in a component whose `children` are handed to
+ * it already rendered. That is not a style choice: calling `useSortable` in
+ * the component that also builds the card list re-renders every card under it
+ * on dnd-kit's clock, which was enough to make an in-flight edit to a card
+ * field vanish before React saw the change event.
+ *
+ * A context provider is exactly the kind of thing a parent bailout does not
+ * stop: consumers re-render straight through it. So nothing below the grip
+ * — in particular nothing in the card subtree — may read `LaneDragContext`;
+ * doing so would silently defeat the protection this comment describes.
+ */
+type LaneDragHandle = Pick<
+  ReturnType<typeof useSortable>,
+  "attributes" | "listeners" | "setActivatorNodeRef"
+>;
+const LaneDragContext = createContext<LaneDragHandle | null>(null);
+
+/**
+ * One lane's <section>: the board's horizontal sortable item, and the drop
+ * target its cards land in. `children` arrive already built, so dnd-kit's
+ * re-renders stop at this boundary.
+ */
+function SortableLane(props: {
+  lane: Lane;
+  className: string;
+  overClassName: string;
+  children: ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    isOver,
+    isDragging,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: props.lane.id, data: { type: "lane" } });
+  const handle = useMemo(
+    () => ({ attributes, listeners, setActivatorNodeRef }),
+    [attributes, listeners, setActivatorNodeRef],
+  );
+  return (
+    <section
+      data-lane={props.lane.key}
+      ref={setNodeRef}
+      // transform *and* transition, exactly as SortableCard does: a lane that
+      // snapped into place while a card glided would be the same broken
+      // metaphor from the other side.
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : undefined,
+      }}
+      className={`${props.className} ${isOver ? props.overClassName : ""}`}
+    >
+      <LaneDragContext.Provider value={handle}>
+        {props.children}
+      </LaneDragContext.Provider>
+    </section>
+  );
+}
+
+/**
+ * The one control in the lane header that starts a lane drag.
+ *
+ * The header also carries add-card, collapse, maximise and menu buttons, and
+ * the pointer sensor arms after 6px — nowhere near enough to keep a click on
+ * one of those from becoming a drag. So the grip is the only thing that
+ * listens.
+ */
+function LaneGrip({ lane }: { lane: Lane }) {
+  const handle = useContext(LaneDragContext);
+  if (!handle) return null;
+  return (
+    <button
+      type="button"
+      className={`${TOOL} cursor-grab touch-none active:cursor-grabbing`}
+      data-testid="lane-drag-handle"
+      title={`Reorder ${lane.name} lane`}
+      aria-label={`Reorder ${lane.name} lane`}
+      ref={handle.setActivatorNodeRef}
+      {...handle.attributes}
+      {...handle.listeners}
+    >
+      <GripVertical size={13} />
+    </button>
+  );
+}
 
 /**
  * Renders one kanban column and its droppable card list.
@@ -76,21 +174,17 @@ export function LaneColumn(props: {
   onAddCard: () => void;
   manage?: {
     disabled: boolean;
-    canEditName: boolean;
-    canMoveLaneLeft: boolean;
-    canMoveLaneRight: boolean;
+    canDelete: boolean;
     canMoveCardsLeft: boolean;
     canMoveCardsRight: boolean;
     canSortCards: boolean;
     onRename: () => void;
-    onMoveLane: (delta: -1 | 1) => void;
     onMoveCards: (delta: -1 | 1) => void;
     onSortCards: (direction: "asc" | "desc") => void;
     onDelete: () => void;
   };
 }) {
   const { lane, cards, visible, view } = props;
-  const { setNodeRef, isOver } = useDroppable({ id: lane.id });
   const shown = cards.filter(visible);
   const count =
     shown.length === cards.length
@@ -112,10 +206,10 @@ export function LaneColumn(props: {
 
   if (min) {
     return (
-      <section
-        data-lane={lane.key}
-        ref={setNodeRef}
-        className={`paper-lane lane-spine flex h-full shrink-0 flex-col items-center gap-2 self-stretch py-2 ${width} ${colorClass} ${isOver ? "paper-lane--over" : ""}`}
+      <SortableLane
+        lane={lane}
+        overClassName="paper-lane--over"
+        className={`paper-lane lane-spine flex h-full shrink-0 flex-col items-center gap-2 self-stretch py-2 ${width} ${colorClass}`}
       >
         <h2 className={`lane-name ${KIND_INK[lane.kind]}`}>{lane.name}</h2>
         <span
@@ -130,16 +224,18 @@ export function LaneColumn(props: {
           aria-label={`Expand ${lane.name}`}
           onClick={() => props.onView("")}
         />
-      </section>
+      </SortableLane>
     );
   }
 
   return (
-    <section
-      data-lane={lane.key}
-      className={`paper-lane flex h-full shrink-0 flex-col gap-2 self-stretch p-2 ${width} ${colorClass} ${drawer ? "paper-lane--drawer" : ""} ${isOver ? "paper-lane--over" : ""}`}
+    <SortableLane
+      lane={lane}
+      overClassName="paper-lane--over"
+      className={`paper-lane flex h-full shrink-0 flex-col gap-2 self-stretch p-2 ${width} ${colorClass} ${drawer ? "paper-lane--drawer" : ""}`}
     >
       <div className={`lane-head ${KIND_RULE[lane.kind]}`}>
+        <LaneGrip lane={lane} />
         <h2 className={`lane-name ${KIND_INK[lane.kind]}`}>{lane.name}</h2>
         <span
           className="font-mono text-[11px] text-[var(--color-grey-faint)]"
@@ -180,24 +276,8 @@ export function LaneColumn(props: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={props.manage.onRename}>
-                  <Pencil /> {props.manage.canEditName ? "Edit" : "Edit color"}
+                  <Pencil /> Edit
                 </DropdownMenuItem>
-                {props.manage.canEditName && (
-                  <>
-                    <DropdownMenuItem
-                      disabled={!props.manage.canMoveLaneLeft}
-                      onClick={() => props.manage?.onMoveLane(-1)}
-                    >
-                      <ArrowLeft /> Move lane left
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={!props.manage.canMoveLaneRight}
-                      onClick={() => props.manage?.onMoveLane(1)}
-                    >
-                      <ArrowRight /> Move lane right
-                    </DropdownMenuItem>
-                  </>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={
@@ -232,8 +312,8 @@ export function LaneColumn(props: {
                     </DropdownMenuItem>
                   </>
                 )}
-                {props.manage.canEditName && <DropdownMenuSeparator />}
-                {props.manage.canEditName && (
+                {props.manage.canDelete && <DropdownMenuSeparator />}
+                {props.manage.canDelete && (
                   <DropdownMenuItem
                     variant="destructive"
                     onClick={props.manage.onDelete}
@@ -275,7 +355,6 @@ export function LaneColumn(props: {
         strategy={verticalListSortingStrategy}
       >
         <div
-          ref={setNodeRef}
           className={`flex min-h-[160px] flex-1 flex-col overflow-y-auto ${drawer ? "gap-0" : "gap-2"} ${view === "max" ? "grid grid-cols-2 content-start gap-2" : ""}`}
         >
           {cards.map((c) => (
@@ -299,6 +378,6 @@ export function LaneColumn(props: {
           ))}
         </div>
       </SortableContext>
-    </section>
+    </SortableLane>
   );
 }
