@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
 import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
+import { CardReferenceText } from "@/components/card-reference-text";
 import { EpicLabel } from "@/components/epic-label";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
 import { CARD_STATUSES, statusChipClass } from "@/lib/card-status";
@@ -108,6 +109,10 @@ export function CardItem(props: {
   const detail = props.projectSlug
     ? `/p/${props.projectSlug}/b/${props.boardSlug}/c/${card.external_id}`
     : "#";
+  const boardPath =
+    props.projectSlug && props.boardSlug
+      ? `/p/${props.projectSlug}/b/${props.boardSlug}`
+      : null;
   const age =
     props.watchDays != null && props.gates
       ? cardAgeState(
@@ -367,7 +372,13 @@ export function CardItem(props: {
               <>
                 <span className="field-label">Note</span>
                 <p className="line-clamp-3 text-[13px] leading-snug text-[var(--color-ink2)]">
-                  {card.summary}
+                  {boardPath ? (
+                    <CardReferenceText boardPath={boardPath}>
+                      {card.summary}
+                    </CardReferenceText>
+                  ) : (
+                    card.summary
+                  )}
                 </p>
               </>
             )}

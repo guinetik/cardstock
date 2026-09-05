@@ -1,10 +1,10 @@
 "use client";
-import { marked } from "marked";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { addCardComment } from "@/app/p/[project]/b/[board]/actions";
 import { Portrait } from "@/components/portrait";
 import { Button } from "@/components/ui/button";
+import { renderCardMarkdown } from "@/lib/card-references";
 import type { IssueComment } from "@/lib/issue-body";
 
 const WIKILINK = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
@@ -14,14 +14,14 @@ const WIKILINK = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
  *
  * @param text - Comment body without `>` prefixes.
  */
-function commentHtml(text: string): string {
-  return marked.parse(
+function commentHtml(text: string, boardPath: string): string {
+  return renderCardMarkdown(
     text.replace(
       WIKILINK,
       (_m: string, t: string, l?: string) => `**${l ?? t}**`,
     ),
-    { async: false, gfm: true },
-  ) as string;
+    boardPath,
+  );
 }
 
 /**
@@ -34,11 +34,13 @@ function commentHtml(text: string): string {
  */
 export function IssueComments({
   cardId,
+  boardPath,
   memberEmail,
   comments,
   leftover,
 }: {
   cardId: string;
+  boardPath: string;
   memberEmail: string;
   comments: IssueComment[];
   leftover: string;
@@ -86,7 +88,9 @@ export function IssueComments({
               </p>
               <div
                 className="prose prose-sm mt-1 max-w-none"
-                dangerouslySetInnerHTML={{ __html: commentHtml(c.text) }}
+                dangerouslySetInnerHTML={{
+                  __html: commentHtml(c.text, boardPath),
+                }}
               />
             </div>
           </li>
@@ -97,7 +101,7 @@ export function IssueComments({
           className="prose prose-sm mt-4 max-w-none"
           data-testid="comment-leftover"
           dangerouslySetInnerHTML={{
-            __html: commentHtml(leftover),
+            __html: commentHtml(leftover, boardPath),
           }}
         />
       ) : null}
@@ -123,7 +127,9 @@ export function IssueComments({
               Post
             </Button>
             {msg && (
-              <output className="text-xs text-[var(--color-grey)]">{msg}</output>
+              <output className="text-xs text-[var(--color-grey)]">
+                {msg}
+              </output>
             )}
           </div>
         </div>

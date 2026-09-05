@@ -1,10 +1,10 @@
-import { marked } from "marked";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CardHistory } from "@/components/board/card-history";
 import { EpicLabel } from "@/components/epic-label";
 import { loadProjectRoster } from "@/lib/board-data";
 import { parseCardColor } from "@/lib/card-color";
+import { renderCardMarkdown } from "@/lib/card-references";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
@@ -92,13 +92,14 @@ export async function CardSheet({
   const people = await loadProjectRoster(db, b.project_id);
   const lane = (lanes ?? []).find((l) => l.id === card.lane_id);
   const issue = splitIssueBody(card.body_md);
-  const html = marked.parse(
+  const boardPath = `/p/${project}/b/${board}`;
+  const html = renderCardMarkdown(
     issue.body.replace(
       WIKILINK,
       (_m: string, t: string, l?: string) => `**${l ?? t}**`,
     ),
-    { async: false, gfm: true },
-  ) as string;
+    boardPath,
+  );
   const backHref =
     from === "cockpit"
       ? `/p/${project}/b/${board}/cockpit${typeof epic === "string" ? `/${encodeURIComponent(epic)}` : ""}`
@@ -236,6 +237,7 @@ export async function CardSheet({
 
       <IssueComments
         cardId={card.id}
+        boardPath={boardPath}
         memberEmail={me.email}
         comments={issue.comments}
         leftover={issue.leftover}
