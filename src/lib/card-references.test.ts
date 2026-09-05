@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  cardReferenceIds,
   cardReferenceParts,
   linkCardReferencesInHtml,
   renderCardMarkdown,
@@ -21,6 +22,13 @@ describe("card references", () => {
   test("does not treat word suffixes or URL fragments as references", () => {
     expect(cardReferenceParts("release#12 https://example.test/#34")).toEqual([
       { type: "text", value: "release#12 https://example.test/#34" },
+    ]);
+  });
+
+  test("lists each referenced card once in first-seen order", () => {
+    expect(cardReferenceIds("See #12, #3, then #12 again.")).toEqual([
+      "12",
+      "3",
     ]);
   });
 

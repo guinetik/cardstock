@@ -8,6 +8,12 @@ export type CardReferencePart =
   | { type: "text"; value: string }
   | { type: "reference"; externalId: string };
 
+export interface CardReferencePreview {
+  external_id: string;
+  title: string;
+  summary: string | null;
+}
+
 /** Split prose into ordinary text and board-local `#123` card references. */
 export function cardReferenceParts(text: string): CardReferencePart[] {
   const parts: CardReferencePart[] = [];
@@ -31,6 +37,17 @@ export function cardReferenceParts(text: string): CardReferencePart[] {
   }
 
   return parts.length > 0 ? parts : [{ type: "text", value: text }];
+}
+
+/** Unique card numbers named by a piece of prose, in first-seen order. */
+export function cardReferenceIds(text: string): string[] {
+  return [
+    ...new Set(
+      cardReferenceParts(text)
+        .filter((part) => part.type === "reference")
+        .map((part) => part.externalId),
+    ),
+  ];
 }
 
 /** Canonical page URL for a numbered card on a board. */

@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CardHistory } from "@/components/board/card-history";
+import { CardReferenceScope } from "@/components/card-reference-scope";
 import { EpicLabel } from "@/components/epic-label";
 import { loadProjectRoster } from "@/lib/board-data";
 import { parseCardColor } from "@/lib/card-color";
-import { renderCardMarkdown } from "@/lib/card-references";
+import {
+  type CardReferencePreview,
+  cardReferenceIds,
+  renderCardMarkdown,
+} from "@/lib/card-references";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
@@ -53,12 +58,21 @@ export async function CardSheet({
     .eq("external_id", externalId)
     .maybeSingle();
   if (!card) notFound();
+  const referenceIds = cardReferenceIds(card.body_md ?? "");
+  const referenceCardsPromise = referenceIds.length
+    ? db
+        .from("cards")
+        .select("external_id, title, summary")
+        .eq("board_id", b.id)
+        .in("external_id", referenceIds)
+    : Promise.resolve({ data: [] as CardReferencePreview[] });
   const [
     { data: lanes },
     { data: groups },
     { data: tags },
     { data: links },
     { data: events },
+    { data: referenceCards },
   ] = await Promise.all([
     db
       .from("lanes")
@@ -83,6 +97,7 @@ export async function CardSheet({
       .eq("card_id", card.id)
       .order("at", { ascending: false })
       .limit(50),
+    referenceCardsPromise,
   ]);
   const { data: epics } = await db
     .from("epics")
@@ -107,7 +122,14 @@ export async function CardSheet({
   const Root = inModal ? "div" : "main";
 
   return (
-    <Root className="paper-card paper-card--static mx-auto w-full max-w-4xl p-6">
+    <Root
+      className="paper-card paper-card--static mx-auto w-full max-w-4xl p-6"
+      data-card-reference-scope={`card-sheet-${card.id}`}
+    >
+      <CardReferenceScope
+        cards={referenceCards ?? []}
+        scope={`card-sheet-${card.id}`}
+      />
       {!inModal && (
         <Link
           href={backHref}

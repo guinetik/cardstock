@@ -43,6 +43,7 @@ import {
   updateCard,
   updateLane,
 } from "@/app/p/[project]/b/[board]/actions";
+import { CardReferenceScope } from "@/components/card-reference-scope";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CardColor } from "@/lib/card-color";
 import { laneColorModifier } from "@/lib/card-color";
@@ -701,7 +702,10 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
+    <div
+      className="flex h-full min-h-0 flex-1 flex-col"
+      data-card-reference-scope="board"
+    >
       <header className="flex flex-wrap items-end gap-x-5 gap-y-2 px-4 pt-5 pb-3 sm:px-6">
         <div>
           <a
@@ -820,6 +824,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         onClose={() => setCardLane(null)}
         onCreate={addCard}
       />
+      <CardReferenceScope cards={cards} scope="board" />
       <TooltipProvider delay={300}>
         <DndContext
           id="board-dnd"
