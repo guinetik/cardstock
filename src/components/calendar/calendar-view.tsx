@@ -495,6 +495,9 @@ export function CalendarView(props: {
                 <Link className="paper-link" href={`${boardBase}/timeline`}>
                   Timeline
                 </Link>
+                <Link className="paper-link" href={`${boardBase}/priorities`}>
+                  Priorities
+                </Link>
                 <Link className="paper-link" href={`${boardBase}/manage`}>
                   Manage
                 </Link>
@@ -509,6 +512,12 @@ export function CalendarView(props: {
               >
                 <Link className="paper-link" href={projectHref}>
                   Project
+                </Link>
+                <Link
+                  className="paper-link"
+                  href={`/p/${props.projectSlug}/priorities`}
+                >
+                  Priorities
                 </Link>
               </nav>
             )}

@@ -101,6 +101,9 @@ export function EpicDetail({
             <Link className="paper-link" href={`${boardHref}/calendar`}>
               Calendar
             </Link>
+            <Link className="paper-link" href={`${boardHref}/priorities`}>
+              Priorities
+            </Link>
             <Link className="paper-link" href={`${boardHref}/manage`}>
               Manage
             </Link>
