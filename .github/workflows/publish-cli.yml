@@ -35,6 +35,7 @@ jobs:
           test "$GITHUB_REF_NAME" = "cli-v$version" || { echo '::error::Tag does not match CLI version'; exit 1; }
       - run: bun install --frozen-lockfile
       - run: bun run check:packages
+      - run: bun test packages/core/test
       - run: bun run --cwd packages/cli test
       - name: Pack and verify the installable CLI
         run: |

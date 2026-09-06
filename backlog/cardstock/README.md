@@ -12,8 +12,16 @@ Run them from the repo root, and deliberately — `sync.py` rewrites tracker fil
 py -3 backlog/sync.py --hosted --check     # writes nothing
 py -3 backlog/sync.py --hosted             # import, then export
 py -3 backlog/sync.py --hosted --seed      # apply lanes and tag groups
-py -3 backlog/validate_tracker.py          # scheme rules
+bun run cli validate                      # scheme rules from cardstock.json
+py -3 backlog/validate_tracker.py          # legacy parity check during migration
 ```
+
+The root `cardstock.json` now embeds this board's scheme and mapping for CLI
+validation. The legacy `board.json` and mapping/seed files remain in use by the
+Python sync path until #17/#18 provide remote sync and #19 proves round-trip
+parity. During that transition, keep rule changes consistent in both
+configurations. The new CLI importer can preview conversion with
+`bun run cli init --from backlog/board.json --out cardstock.migrated.json --dry-run`.
 
 ## Concurrent edits: agents and the board
 

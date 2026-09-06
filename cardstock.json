@@ -2,5 +2,88 @@
   "version": 1,
   "project": "cardstock",
   "board": "cardstock-dev",
-  "tracker": "backlog/tracker"
+  "tracker": "backlog/tracker",
+  "scheme": {
+    "required_keys": ["id", "title", "status", "epic", "area", "tags"],
+    "required_tags": [],
+    "statuses": [
+      "backlog",
+      "blocked",
+      "wip",
+      "held",
+      "built",
+      "handed",
+      "shipped",
+      "done"
+    ],
+    "closed_statuses": ["shipped", "done"],
+    "lanes": [
+      "unsorted",
+      "now",
+      "next",
+      "later",
+      "nice-to-have",
+      "parked",
+      "building",
+      "shipped",
+      "done",
+      "archive"
+    ],
+    "lanes_for_status": {
+      "wip": ["now"],
+      "built": ["building"],
+      "handed": ["building"],
+      "shipped": ["shipped"],
+      "done": ["done", "archive"]
+    },
+    "now_lane_requires_status": "wip",
+    "epics": [
+      "Board & cards",
+      "Planning & reporting",
+      "Data & round-trip",
+      "Projects & access",
+      "Platform & deploy",
+      "Docs & onboarding"
+    ],
+    "areas": ["Platform", "UI", "Copy", "Data"],
+    "base_tags": [],
+    "tag_groups": {
+      "kind": {
+        "cardinality": "exactly-one",
+        "tags": ["bug", "enhancement", "nice-to-have", "question", "internal"]
+      },
+      "surface": {
+        "cardinality": "at-most-one",
+        "tags": [
+          "board",
+          "card",
+          "planning",
+          "timeline",
+          "calendar",
+          "project",
+          "import-export",
+          "sign-in",
+          "admin"
+        ]
+      }
+    },
+    "sizes": ["H", "M", "L"],
+    "priorities": ["1", "2", "3"],
+    "required_sections": ["## Ask", "## Status"],
+    "scheme_doc": "backlog/tracker/README-scheme.md"
+  },
+  "mapping": {
+    "$comment": "cardstock tag mapping for the Cardstock dev board. Tags resolve against the board's own tag groups; this file only adds group aliases, overrides and the audience rule. The cardstock scheme uses bare tags in two groups, so there is nothing to alias.",
+    "group_aliases": {},
+    "by_tag": {},
+    "by_epic": {},
+    "by_area": {},
+    "audience_internal_when": {
+      "tags": ["internal"],
+      "epics": []
+    }
+  },
+  "provisioning": {
+    "seed": "backlog/cardstock/seed.cardstock.sql"
+  }
 }

@@ -27,7 +27,8 @@ npm pack ./packages/cli
 ```
 
 The packed executable embeds the version from its own package.json. It supports
-`init`, `validate`, `--help`, and `--version` (`-v`). See the CLI README for usage
+`init` (including legacy configuration import), `validate`, `login`, `logout`,
+`--help`, and `--version` (`-v`). See the CLI README for usage
 and exit codes. `bun run --cwd packages/cli test` builds and tests the Node CLI.
 The npm package contains the compiled executable, manifest, README and license.
 Do not add Next.js or workspace runtime dependencies to its published manifest.
@@ -84,6 +85,24 @@ Current-version mode creates only a tag. The helper checks/builds locally; the
 workflow verifies the npm installation with Node before publication. npm versions
 are immutable: do not tag an already published version expecting it to republish.
 Web deployment and CLI versioning are independent.
+
+## Tracker configuration migration
+
+Core owns the optional scheme and mapping schemas and pure board validation.
+The CLI handles legacy JSON reads, path rebasing and exclusive destination
+creation. `yaml` is bundled into the executable for strict scheme validation;
+there is no new runtime installation requirement for CLI users.
+
+Run `bun test packages/core/test` for scheme rules and
+`bun run --cwd packages/cli test` for Node command integration, including all three
+legacy board configurations and synthetic Markdown. The fixtures are local and
+contain no credentials or private card content. To run the same integration suite
+against an installed tarball, set `CARDSTOCK_TEST_ENTRY` to its absolute
+`dist/index.js` path, then run `node --test packages/cli/test/cli.test.mjs`.
+
+This stage preserves mapping configuration but does not add remote sync or retire
+the Python clients. Mapping execution through the API and three-way sync remain
+separate implementation stages.
 
 ## Board API
 

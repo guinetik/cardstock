@@ -1,0 +1,338 @@
+[
+  {
+    "name": "cardstock",
+    "board": {
+      "project": "cardstock",
+      "board": "cardstock-dev",
+      "tracker": "tracker",
+      "seed": "cardstock/seed.cardstock.sql",
+      "mapping": "cardstock/mapping.json",
+      "scheme": {
+        "required_keys": ["id", "title", "status", "epic", "area", "tags"],
+        "required_tags": [],
+        "statuses": [
+          "backlog",
+          "blocked",
+          "wip",
+          "held",
+          "built",
+          "handed",
+          "shipped",
+          "done"
+        ],
+        "closed_statuses": ["shipped", "done"],
+        "lanes": [
+          "unsorted",
+          "now",
+          "next",
+          "later",
+          "nice-to-have",
+          "parked",
+          "building",
+          "shipped",
+          "done",
+          "archive"
+        ],
+        "lanes_for_status": {
+          "wip": ["now"],
+          "built": ["building"],
+          "handed": ["building"],
+          "shipped": ["shipped"],
+          "done": ["done", "archive"]
+        },
+        "now_lane_requires_status": "wip",
+        "epics": [
+          "Board & cards",
+          "Planning & reporting",
+          "Data & round-trip",
+          "Projects & access",
+          "Platform & deploy",
+          "Docs & onboarding"
+        ],
+        "areas": ["Platform", "UI", "Copy", "Data"],
+        "base_tags": [],
+        "tag_groups": {
+          "kind": {
+            "cardinality": "exactly-one",
+            "tags": [
+              "bug",
+              "enhancement",
+              "nice-to-have",
+              "question",
+              "internal"
+            ]
+          },
+          "surface": {
+            "cardinality": "at-most-one",
+            "tags": [
+              "board",
+              "card",
+              "planning",
+              "timeline",
+              "calendar",
+              "project",
+              "import-export",
+              "sign-in",
+              "admin"
+            ]
+          }
+        },
+        "sizes": ["H", "M", "L"],
+        "priorities": ["1", "2", "3"],
+        "required_sections": ["## Ask", "## Status"],
+        "scheme_doc": "backlog/tracker/README-scheme.md"
+      }
+    },
+    "mapping": {
+      "$comment": "cardstock tag mapping for the Cardstock dev board. Tags resolve against the board's own tag groups; this file only adds group aliases, overrides and the audience rule. The cardstock scheme uses bare tags in two groups, so there is nothing to alias.",
+      "group_aliases": {},
+      "by_tag": {},
+      "by_epic": {},
+      "by_area": {},
+      "audience_internal_when": {
+        "tags": ["internal"],
+        "epics": []
+      }
+    }
+  },
+  {
+    "name": "designer",
+    "board": {
+      "project": "staffeto",
+      "board": "designer",
+      "tracker": "tracker",
+      "seed": "cardstock/seed.staffeto.sql",
+      "mapping": "cardstock/mapping.json",
+      "scheme": {
+        "required_keys": ["id", "title", "status", "epic", "area", "tags"],
+        "required_tags": ["tracker-item"],
+        "statuses": [
+          "backlog",
+          "blocked",
+          "wip",
+          "held",
+          "built",
+          "handed",
+          "shipped",
+          "done"
+        ],
+        "closed_statuses": ["shipped", "done"],
+        "lanes": [
+          "unsorted",
+          "now",
+          "next",
+          "later",
+          "built",
+          "gate-2",
+          "gate-3",
+          "gate-4",
+          "nice-to-have",
+          "parked",
+          "process",
+          "needs-hap",
+          "done",
+          "archive"
+        ],
+        "lanes_for_status": {
+          "wip": ["now"],
+          "built": ["built", "gate-2", "gate-3"],
+          "handed": ["built", "gate-2", "gate-3"],
+          "shipped": ["gate-4"],
+          "done": ["done", "archive"]
+        },
+        "now_lane_requires_status": "wip",
+        "epics": [
+          "Designer Wizard",
+          "Validation Tables",
+          "Terminations",
+          "Position ID Sync",
+          "New Hire",
+          "Runtime & operations",
+          "Access, login & support",
+          "Website & marketplace",
+          "Engineering (internal)"
+        ],
+        "areas": [
+          "Designer",
+          "Runtime",
+          "Platform",
+          "Copy",
+          "Support",
+          "UI",
+          "Meta"
+        ],
+        "base_tags": ["designer", "tracker-item"],
+        "tag_groups": {
+          "integration": {
+            "cardinality": "at-least-one",
+            "tags": [
+              "int:terminations",
+              "int:validation-tables",
+              "int:position-id-sync",
+              "int:new-hire",
+              "int:employee-updates",
+              "int:rehire",
+              "int:direct-deposit",
+              "cross-cutting"
+            ]
+          },
+          "step": {
+            "cardinality": "any",
+            "tags": [
+              "step-1",
+              "step-2",
+              "step-3",
+              "step-4",
+              "step-5",
+              "step-6",
+              "step-7",
+              "step-8",
+              "home",
+              "live-integrations",
+              "login",
+              "runtime",
+              "logs",
+              "email",
+              "spec-doc"
+            ]
+          },
+          "kind": {
+            "cardinality": "exactly-one",
+            "tags": [
+              "bug",
+              "enhancement",
+              "nice-to-have",
+              "new-integration",
+              "question",
+              "internal"
+            ]
+          },
+          "objective": {
+            "cardinality": "any",
+            "tags": [
+              "self-serve",
+              "internal-ui",
+              "claude-marketplace",
+              "website"
+            ]
+          }
+        },
+        "sizes": ["H", "M", "L"],
+        "priorities": ["1", "2", "3"],
+        "required_sections": ["## Ask", "## Status"],
+        "scheme_doc": "delivery/designer/tracker/README-scheme.md"
+      }
+    },
+    "mapping": {
+      "$comment": "cardstock tag mapping for the Designer board. Tags resolve against the board's own tag groups; this file only adds group aliases, overrides and the audience rule.",
+      "group_aliases": {
+        "int": "area"
+      },
+      "by_tag": {},
+      "by_epic": {},
+      "by_area": {},
+      "audience_internal_when": {
+        "tags": ["internal"],
+        "epics": ["engineering (internal)"]
+      }
+    }
+  },
+  {
+    "name": "website",
+    "board": {
+      "project": "staffeto",
+      "board": "website",
+      "tracker": "tracker",
+      "seed": "cardstock/seed.staffeto.sql",
+      "mapping": "cardstock/mapping.json",
+      "scheme": {
+        "required_keys": ["id", "title", "status", "epic", "area", "tags"],
+        "required_tags": [],
+        "statuses": [
+          "backlog",
+          "blocked",
+          "wip",
+          "held",
+          "built",
+          "handed",
+          "shipped",
+          "done"
+        ],
+        "closed_statuses": ["shipped", "done"],
+        "lanes": [
+          "unsorted",
+          "now",
+          "next",
+          "later",
+          "built",
+          "gate-2",
+          "gate-3",
+          "gate-4",
+          "nice-to-have",
+          "parked",
+          "process",
+          "needs-hap",
+          "done",
+          "archive"
+        ],
+        "lanes_for_status": {
+          "wip": ["now"],
+          "built": ["built", "gate-2", "gate-3"],
+          "handed": ["built", "gate-2", "gate-3"],
+          "shipped": ["gate-4"],
+          "done": ["done", "archive"]
+        },
+        "now_lane_requires_status": "wip",
+        "epics": [
+          "Site build & deploy",
+          "Pages & visuals",
+          "Copy & content",
+          "Sign-in & access",
+          "Leads & analytics"
+        ],
+        "areas": ["Platform", "UI", "Copy", "general"],
+        "base_tags": [],
+        "tag_groups": {
+          "kind": {
+            "cardinality": "exactly-one",
+            "tags": [
+              "bug",
+              "enhancement",
+              "nice-to-have",
+              "question",
+              "internal",
+              "process"
+            ]
+          },
+          "page": {
+            "cardinality": "at-most-one",
+            "tags": [
+              "home",
+              "connector",
+              "sign-in",
+              "footer",
+              "admin",
+              "legal",
+              "contact"
+            ]
+          }
+        },
+        "sizes": ["H", "M", "L"],
+        "priorities": ["1", "2", "3"],
+        "required_sections": ["## Ask", "## Status"],
+        "scheme_doc": "delivery/website/tracker/README-scheme.md"
+      }
+    },
+    "mapping": {
+      "$comment": "cardstock tag mapping for the Website board. Tags resolve against the board's own tag groups; this file only adds group aliases, overrides and the audience rule. The website scheme uses bare tags in two groups, so there is nothing to alias.",
+      "group_aliases": {},
+      "by_tag": {},
+      "by_epic": {},
+      "by_area": {},
+      "audience_internal_when": {
+        "tags": ["internal"],
+        "epics": []
+      }
+    }
+  }
+]
