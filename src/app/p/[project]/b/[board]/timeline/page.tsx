@@ -226,6 +226,9 @@ export default async function TimelinePage(
           <Link className="paper-link" href={`${back}/calendar`}>
             Calendar
           </Link>
+          <Link className="paper-link" href={`${back}/priorities`}>
+            Priorities
+          </Link>
           <Link className="paper-link" href={`${back}/manage`}>
             Manage
           </Link>

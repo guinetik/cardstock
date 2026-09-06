@@ -164,6 +164,9 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
             <Link className="paper-link" href={`${href}/calendar`}>
               Calendar
             </Link>
+            <Link className="paper-link" href={`${href}/priorities`}>
+              Priorities
+            </Link>
           </nav>
         </div>
         <div className="letterhead-aside">

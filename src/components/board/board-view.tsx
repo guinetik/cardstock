@@ -745,6 +745,12 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
           </a>
           <a
             className="paper-link"
+            href={`/p/${data.project.slug}/b/${data.board.slug}/priorities`}
+          >
+            Priorities
+          </a>
+          <a
+            className="paper-link"
             href={`/p/${data.project.slug}/b/${data.board.slug}/manage`}
           >
             Manage

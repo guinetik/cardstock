@@ -85,6 +85,9 @@ export default async function BoardManagePage(
             <Link className="paper-link" href={`${boardHref}/calendar`}>
               Calendar
             </Link>
+            <Link className="paper-link" href={`${boardHref}/priorities`}>
+              Priorities
+            </Link>
             <Link className="paper-link" href={projectHref}>
               Project
             </Link>

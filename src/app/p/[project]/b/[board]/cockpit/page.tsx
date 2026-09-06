@@ -50,6 +50,9 @@ export default async function CockpitPage(props: {
           >
             Calendar
           </Link>
+          <Link className="paper-link" href={`${boardBase}/priorities`}>
+            Priorities
+          </Link>
           <Link className="paper-link" href={`${boardBase}/manage`}>
             Manage
           </Link>
