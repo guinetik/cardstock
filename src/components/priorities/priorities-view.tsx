@@ -378,7 +378,7 @@ export function PrioritiesView(props: PrioritiesViewProps) {
         is red alert.
       </p>
 
-      <div className="mt-3 flex flex-col gap-4 lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-6">
+      <div className="mt-3 flex flex-col gap-4 lg:grid lg:grid-cols-[396px_minmax(0,1fr)] lg:items-start lg:gap-6">
         <section className="paper-well flex flex-col p-4 lg:col-start-2 lg:row-start-1">
           {([1, 2, 3] as const).map((band) => {
             const rows = bands[band];
