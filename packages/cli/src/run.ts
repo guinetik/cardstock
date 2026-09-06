@@ -19,6 +19,17 @@ init writes cardstock.json without replacing an existing file.
 validate discovers cardstock.json in this directory or its parents and checks <id>.md files.
 login opens Cardstock in a browser and stores its credential outside the repository.`;
 
+const LOGIN_HELP = `Usage: cardstock login [--remote <url>] [--no-browser]
+
+Sign in through Cardstock in your browser and save a personal access token.
+Pass --remote, or set remote in cardstock.json with cardstock init.
+--no-browser prints the approval URL instead of opening it.`;
+
+const LOGOUT_HELP = `Usage: cardstock logout [--remote <url>]
+
+Revoke the saved personal access token and remove it from this computer.
+Pass --remote, or set remote in cardstock.json with cardstock init.`;
+
 async function findConfig(cwd: string): Promise<string> {
   let directory = path.resolve(cwd);
   while (true) {
@@ -80,6 +91,16 @@ export async function run(args: string[], cwd: string): Promise<number> {
       return 0;
     }
     const command = args[0];
+    if (args.length === 2 && ["--help", "-h"].includes(args[1])) {
+      if (command === "login") {
+        console.log(LOGIN_HELP);
+        return 0;
+      }
+      if (command === "logout") {
+        console.log(LOGOUT_HELP);
+        return 0;
+      }
+    }
     if (command === "init") {
       const { values } = parseArgs({
         args: args.slice(1),

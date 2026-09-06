@@ -48,6 +48,21 @@ bun run db:dev-password                    # OWNER_EMAIL, password admin123
 
 Resetting a forgotten password is not built yet — it needs mail. Until then, clear the account in the Supabase dashboard and let the person onboard again.
 
+## CLI sign-in
+
+Install the CLI, then sign in to a hosted Cardstock board:
+
+```sh
+npm install -g @guinetik/cardstock-cli
+cardstock login --remote https://your-cardstock.example
+```
+
+The command opens a browser approval page for your existing Cardstock account.
+After approval, it stores a personal access token in your user configuration
+directory, outside the repository. Use `cardstock logout --remote
+https://your-cardstock.example` to revoke and remove that credential. Run
+`cardstock login --help` for its options, including `--no-browser`.
+
 ## ETL
 
 | Command | What it does |

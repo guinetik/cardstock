@@ -110,3 +110,14 @@ test("configuration errors and unsupported arguments fail without writes", async
   assert.equal(empty.status, 2);
   assert.match(JSON.parse(empty.stdout).error, /No <id>.md files/);
 });
+
+test("help documents browser sign-in and its options", async () => {
+  const cwd = await mkdtemp(path.join(os.tmpdir(), "cardstock-help-"));
+  const general = cli(cwd, "--help");
+  assert.equal(general.status, 0, general.stderr);
+  assert.match(general.stdout, /login --remote <url> \[--no-browser\]/);
+  const login = cli(cwd, "login", "--help");
+  assert.equal(login.status, 0, login.stderr);
+  assert.match(login.stdout, /Sign in through Cardstock in your browser/);
+  assert.match(login.stdout, /--no-browser/);
+});
