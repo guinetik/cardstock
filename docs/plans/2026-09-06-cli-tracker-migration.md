@@ -27,9 +27,13 @@ adds a separate v3 apply function so incomplete deployments fail before writes.
 Finish/reconcile pending journals before upgrading; retain old baselines so existing
 internal audience can be downloaded safely. Default/omitted audience is `all`.
 
-Remaining: production migration/deployment and hosted generic-field smoke test,
-installed CLI release, client configuration/runbook cutover and retiring shims.
-No production changes are performed as part of this local implementation.
+Deployed in b9a2002 after Joao applied the migration. Hosted CLI smoke passed on
+2026-09-06: temporary area, epic and audience values uploaded from the primary
+checkout, downloaded to an independent tracker, then restored and verified clean
+in both trackers. No internal tag was required. See tracker #19 for evidence.
+
+Remaining: installed CLI release, client configuration/runbook cutover and
+retiring shims. Reproducing Designer's validation conventions is not a gate.
 
 ## Historical outcome and boundary
 
