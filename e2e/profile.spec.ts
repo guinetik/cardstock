@@ -31,12 +31,15 @@ test("a member can open their profile, rename themselves, and see their folders"
       page.getByRole("button", { name: "Change portrait" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "My cardstock" }),
+      page.getByRole("heading", { name: "my cardstock" }),
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Demo" })).toBeVisible();
 
     const name = `Profile ${Date.now()}`;
-    await page.getByLabel("Name").fill(name);
+    await page
+      .getByRole("region", { name: "identity" })
+      .getByLabel("Name")
+      .fill(name);
     await page.getByRole("button", { name: "Save name" }).click();
     await expect(page.getByRole("status")).toContainText("Name saved");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);

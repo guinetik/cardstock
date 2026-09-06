@@ -256,6 +256,19 @@ describe("paper components", () => {
     expect(css).toContain(
       ".folder:not(.folder--section):has(.folder-tab:is(:hover, :focus-visible))",
     );
+    // Direct child so a dossier nested in a section (profile stock) keeps
+    // its own Newsreader tab instead of inheriting the quiet Plex one.
+    expect(css).toContain(".folder--section > .folder-tab");
+    expect(css).not.toContain(".folder--section .folder-tab {");
+  });
+
+  test("profile tokens and prefs are slips on the section stock", () => {
+    expect(css).toContain(".token-secret");
+    expect(css).toContain(".token-fields");
+    expect(css).toContain(".prefs");
+    expect(css).toContain(".pref");
+    expect(css).toContain(".folder--section .folders .folder-tab");
+    expect(css).toContain(".folder--section .folders .folder-body");
   });
 
   test("board binders chart lanes as a miniature board", () => {

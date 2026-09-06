@@ -67,8 +67,8 @@ export function NotificationSettings({
   }
 
   return (
-    <div className="max-w-xl">
-      <label className="flex items-baseline gap-2.5">
+    <div className="prefs">
+      <label className="pref">
         <input
           type="checkbox"
           checked={prefs.enabled}
@@ -76,25 +76,20 @@ export function NotificationSettings({
           onChange={(event) => void toggleEnabled(event.target.checked)}
         />
         <span>
-          <span className="block text-sm font-medium">
-            Notify me about board activity
-          </span>
-          <span className="block text-xs text-[var(--color-grey)]">
+          <span className="pref-label">Notify me about board activity</span>
+          <span className="pref-hint">
             While a board tab is open, teammates&apos; changes show as system
             notifications. Off by default; your own actions never notify you.
           </span>
         </span>
       </label>
 
-      <fieldset
-        className="mt-3 ml-6 grid gap-2 border-l border-[var(--border-hairline)] pl-4"
-        disabled={busy || !prefs.enabled}
-      >
+      <fieldset className="prefs-kinds" disabled={busy || !prefs.enabled}>
         <legend className="sr-only">Which activity</legend>
         {KINDS.map((kind) => (
           <label
             key={kind.key}
-            className={`flex items-baseline gap-2.5 ${prefs.enabled ? "" : "opacity-50"}`}
+            className={`pref${prefs.enabled ? "" : " opacity-50"}`}
           >
             <input
               type="checkbox"
@@ -107,10 +102,8 @@ export function NotificationSettings({
               }
             />
             <span>
-              <span className="block text-sm">{kind.label}</span>
-              <span className="block text-xs text-[var(--color-grey)]">
-                {kind.hint}
-              </span>
+              <span className="pref-label">{kind.label}</span>
+              <span className="pref-hint">{kind.hint}</span>
             </span>
           </label>
         ))}

@@ -116,7 +116,12 @@ The project page is a **letterhead** plus a stack of section folders
 blurb, then the view links (Calendar). The `.folder-stamp` in the margin
 carries the filed card count — written once. Each chapter below is its own manila file with a quiet
 Plex tab (`boards`, `people`, `concepts`, `settings`); the tab does not lift
-the folder. Binders live only in Boards — wide `.binder`s with a **lane microcosm**
+the folder. Profile is the same machine: letterhead (name, email, portrait),
+then `identity`, `notifications`, `cli tokens`, `my cardstock`. Nested project
+dossiers in that last chapter keep their own Newsreader tab — section rules
+target the direct child — and sit as white files in the manila drawer. CLI
+mint is a blank roster cover; issued tokens are wide binders; the plaintext is
+a one-shot carbon (`.token-secret`) that vanishes on reload. Binders live only in Boards — wide `.binder`s with a **lane microcosm**
 (`.lane-map`): one row of columns that shrink together (no scrollport),
 drawer vs panel stock, three cards filling a row. Untinted slips use the
 cockpit pens (queued, moving, late, blocked, delivered); a card's own tint

@@ -1228,7 +1228,7 @@
   .folder-tab:is(:hover, :focus-visible) {
     padding-top: 0.7rem;
   }
-  .folder--section .folder-tab:is(:hover, :focus-visible) {
+  .folder--section > .folder-tab:is(:hover, :focus-visible) {
     padding-top: 0.5rem;
   }
   .folder-tab:focus-visible {
@@ -1660,7 +1660,7 @@
   .folder--section + .folder--section {
     margin-top: 1.25rem;
   }
-  .folder--section .folder-tab {
+  .folder--section > .folder-tab {
     font-family: var(--font-sys);
     font-size: 13px;
     font-weight: 600;
@@ -1668,7 +1668,7 @@
     text-transform: none;
     cursor: default;
   }
-  .folder--section .folder-tab > h2 {
+  .folder--section > .folder-tab > h2 {
     font-family: inherit;
     font-size: inherit;
     font-weight: inherit;
@@ -1685,11 +1685,18 @@
     letter-spacing: 0.06em;
     color: var(--color-grey);
   }
-  .folder--section .folder-body {
+  .folder--section > .folder-body {
     padding: 1.1rem 1.25rem 1.25rem;
   }
   .folder--section .folder-aside {
     justify-content: flex-end;
+  }
+  /* Nested dossiers (profile stock) sit as white files in the manila drawer. */
+  .folder--section .folders .folder-tab {
+    background: var(--surface-card);
+  }
+  .folder--section .folders .folder-body {
+    background: var(--surface-card);
   }
   .graph-board {
     margin: 0 0 0.45rem;
@@ -2050,6 +2057,149 @@
   .roster-invite-note {
     grid-column: 1 / -1;
     font-size: 12.5px;
+  }
+
+  /*
+   * ------------------------------------------------------ the profile desk
+   * Identity, notifications and CLI keys are chapters of the same letterhead.
+   * Mint is a blank cover; issued tokens are wide binders; the plaintext is
+   * a one-shot carbon that vanishes on reload.
+   */
+  .identity-fields,
+  .token-fields {
+    display: grid;
+    gap: 0.55rem 0.7rem;
+    align-items: end;
+  }
+  .identity-fields {
+    grid-template-columns: minmax(0, 1fr) auto;
+    max-width: 28rem;
+  }
+  .token-fields {
+    grid-template-columns: minmax(0, 1.6fr) 7.5rem auto;
+  }
+  .identity-fields label,
+  .token-fields label {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .identity-fields :is(input),
+  .token-fields :is(input) {
+    height: 2rem;
+    width: 100%;
+    padding: 0 0.55rem;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-input);
+    color: var(--color-ink);
+    font-size: 13px;
+  }
+  .identity-fields :is(input):focus-visible,
+  .token-fields :is(input):focus-visible {
+    outline: 2px solid var(--pen-blue);
+    outline-offset: 2px;
+  }
+  .token-hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--color-grey);
+  }
+  .identity-note {
+    display: block;
+    margin-top: 0.7rem;
+    max-width: 36rem;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--color-grey);
+  }
+  .token-secret {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem 1rem;
+    align-items: start;
+    margin: 0.85rem 0 0;
+    padding: 0.75rem 0.85rem;
+    background: var(--surface-card);
+    border: 1px dashed var(--pen-red);
+    border-radius: var(--radius-card);
+  }
+  .token-secret strong {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--pen-red);
+  }
+  .token-secret code {
+    display: block;
+    margin-top: 0.4rem;
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-ink-strong);
+  }
+  .token-slip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.85rem;
+    align-items: center;
+  }
+  .token-when {
+    margin-top: 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-grey);
+  }
+  .prefs {
+    display: grid;
+    max-width: 36rem;
+  }
+  .pref {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border-hairline);
+  }
+  .prefs-kinds {
+    margin: 0;
+    padding: 0 0 0 1.65rem;
+    border: 0;
+  }
+  .prefs-kinds .pref {
+    padding: 0.55rem 0;
+  }
+  .prefs-kinds .pref:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+  .pref input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 0.95rem;
+    height: 0.95rem;
+    margin-top: 0.2rem;
+    accent-color: var(--color-ink);
+  }
+  .pref-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .pref-hint {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--color-grey);
   }
 
   /*
@@ -2746,6 +2896,11 @@
   .roster-invite-go {
     justify-self: start;
   }
+  .identity-fields,
+  .token-fields,
+  .token-secret {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 40rem) {
@@ -2771,6 +2926,12 @@
   .roster-meta {
     grid-column: 1 / -1;
     padding-top: 0.35rem;
+  }
+  .token-slip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .token-slip .roster-meta {
+    grid-column: 1;
   }
 }
 
