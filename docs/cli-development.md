@@ -121,3 +121,15 @@ The API uses `unauthenticated` (401), `forbidden` (403), `not_found` (404),
 `invalid_request` (422), and `conflict` (409). See
 [`docs/specs/2026-09-06-authenticated-board-api-design.md`](specs/2026-09-06-authenticated-board-api-design.md)
 for the rationale and compatibility rules.
+
+### Browser sign-in
+
+Run `cardstock login --remote https://your-cardstock.example` to authorize the
+CLI through an existing Cardstock browser session. The CLI starts a ten-minute,
+single-use device request, opens its approval page, and polls until approval.
+It stores the resulting personal access token in the operating system's user
+configuration directory, never beside `cardstock.json` or the tracker.
+
+`cardstock logout --remote …` revokes the stored token from the website and
+removes its local copy. A token can also be revoked from **Profile → CLI
+tokens**.

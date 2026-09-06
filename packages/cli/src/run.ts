@@ -1,19 +1,23 @@
+import { spawn } from "node:child_process";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { parseConfig, validateTracker } from "@cardstock/core";
 import { version } from "../package.json";
+import { credentialFor, removeCredential, saveCredential } from "./credentials";
 
 const HELP = `Usage: cardstock <command>
 
   init --project <slug> --board <slug> [--dir tracker] [--remote <url>]
   validate [--config <file>] [--json]
+  login --remote <url> [--no-browser]
+  logout --remote <url>
   --version, -v
   --help, -h
 
 init writes cardstock.json without replacing an existing file.
 validate discovers cardstock.json in this directory or its parents and checks <id>.md files.
-Validation is offline; authentication and remote sync are not available yet.`;
+login opens Cardstock in a browser and stores its credential outside the repository.`;
 
 async function findConfig(cwd: string): Promise<string> {
   let directory = path.resolve(cwd);
@@ -33,6 +37,33 @@ async function findConfig(cwd: string): Promise<string> {
     directory = parent;
   }
 }
+
+async function remoteFor(cwd: string, explicit?: string): Promise<string> {
+  if (explicit) return explicit.replace(/\/$/, "");
+  const config = parseConfig(
+    JSON.parse(await readFile(await findConfig(cwd), "utf8")),
+  );
+  if (!config.remote)
+    throw new Error(
+      "No remote configured. Pass --remote <url> or run init with --remote.",
+    );
+  return config.remote.replace(/\/$/, "");
+}
+
+function openBrowser(url: string) {
+  const command =
+    process.platform === "win32"
+      ? "cmd"
+      : process.platform === "darwin"
+        ? "open"
+        : "xdg-open";
+  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
+  const child = spawn(command, args, { detached: true, stdio: "ignore" });
+  child.unref();
+}
+
+const wait = (milliseconds: number) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export async function run(args: string[], cwd: string): Promise<number> {
   const json = args[0] === "validate" && args.includes("--json");
@@ -110,6 +141,82 @@ export async function run(args: string[], cwd: string): Promise<number> {
         );
       }
       return report.ok ? 0 : 1;
+    }
+    if (command === "login") {
+      const { values } = parseArgs({
+        args: args.slice(1),
+        options: {
+          remote: { type: "string" },
+          "no-browser": { type: "boolean" },
+        },
+      });
+      const remote = await remoteFor(cwd, values.remote);
+      const start = await fetch(`${remote}/api/v1/cli/login`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          deviceName: `Cardstock CLI on ${process.platform}`,
+        }),
+      });
+      if (!start.ok) throw new Error("Could not start Cardstock sign-in.");
+      const request = (await start.json()) as {
+        deviceCode: string;
+        verificationUriComplete: string;
+        expiresIn: number;
+        interval: number;
+      };
+      console.log(
+        `Open ${request.verificationUriComplete} and approve Cardstock CLI.`,
+      );
+      if (!values["no-browser"]) openBrowser(request.verificationUriComplete);
+      const deadline = Date.now() + request.expiresIn * 1000;
+      while (Date.now() < deadline) {
+        await wait(request.interval * 1000);
+        const response = await fetch(`${remote}/api/v1/cli/login/poll`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ deviceCode: request.deviceCode }),
+        });
+        if (response.status === 204) continue;
+        if (!response.ok)
+          throw new Error("Cardstock sign-in could not be completed.");
+        const credential = (await response.json()) as {
+          token: string;
+          email: string;
+        };
+        await saveCredential({
+          remote,
+          token: credential.token,
+          email: credential.email,
+          createdAt: new Date().toISOString(),
+        });
+        console.log(`Signed in to ${remote} as ${credential.email}.`);
+        return 0;
+      }
+      throw new Error("Cardstock sign-in expired. Run cardstock login again.");
+    }
+    if (command === "logout") {
+      const { values } = parseArgs({
+        args: args.slice(1),
+        options: { remote: { type: "string" } },
+      });
+      const remote = await remoteFor(cwd, values.remote);
+      const credential = await credentialFor(remote);
+      if (!credential) {
+        console.log(`Not signed in to ${remote}.`);
+        return 0;
+      }
+      const response = await fetch(`${remote}/api/v1/cli/logout`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${credential.token}` },
+      });
+      if (!response.ok)
+        throw new Error(
+          "Cardstock could not revoke this credential. It remains stored locally.",
+        );
+      await removeCredential(remote);
+      console.log(`Signed out of ${remote}.`);
+      return 0;
     }
     throw new Error(`Unknown command: ${command}. Run cardstock --help.`);
   } catch (error) {
