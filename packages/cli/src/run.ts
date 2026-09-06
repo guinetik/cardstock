@@ -6,6 +6,7 @@ import { parseConfig, validateTracker } from "@cardstock/core";
 import { version } from "../package.json";
 import { findConfig } from "./config";
 import { credentialFor, removeCredential, saveCredential } from "./credentials";
+import { DELETE_HELP, deleteCards } from "./delete";
 import { INIT_HELP, init } from "./init";
 import { PREVIEW_HELP, preview } from "./preview";
 import { executeSync } from "./sync-execute";
@@ -19,6 +20,7 @@ const HELP = `Usage: cardstock <command>
   sync [--dry-run] [--config <file>] [--remote <url>] [--json]
                  [--ours <id>[:<field>]] [--theirs <id>[:<field>]]
   baseline [--config <file>] [--remote <url>] [--json]
+  delete <id> [<id> ...] | --file <path> [--dry-run] [--json]
   sync --resume | --abort [--recover-lock] [--remote <url>] [--json]
   login --remote <url> [--no-browser]
   logout --remote <url>
@@ -69,8 +71,9 @@ const wait = (milliseconds: number) =>
 
 export async function run(args: string[], cwd: string): Promise<number> {
   const json =
-    ["validate", "init", "status", "sync", "baseline"].includes(args[0]) &&
-    args.includes("--json");
+    ["validate", "init", "status", "sync", "baseline", "delete"].includes(
+      args[0],
+    ) && args.includes("--json");
   try {
     if (args.length === 1 && ["--version", "-v"].includes(args[0])) {
       console.log(version);
@@ -85,6 +88,10 @@ export async function run(args: string[], cwd: string): Promise<number> {
     }
     const command = args[0];
     if (args.length === 2 && ["--help", "-h"].includes(args[1])) {
+      if (command === "delete") {
+        console.log(DELETE_HELP);
+        return 0;
+      }
       if (["status", "sync", "baseline"].includes(command)) {
         console.log(PREVIEW_HELP);
         return 0;
@@ -105,6 +112,7 @@ export async function run(args: string[], cwd: string): Promise<number> {
     if (command === "init") {
       return await init(args.slice(1), cwd);
     }
+    if (command === "delete") return await deleteCards(args.slice(1), cwd);
     if (command === "sync" && !args.slice(1).some((arg) => arg === "--dry-run"))
       return await executeSync(args.slice(1), cwd);
     if (["status", "sync", "baseline"].includes(command))

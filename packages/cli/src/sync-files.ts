@@ -96,7 +96,7 @@ export async function replaceState(
 export async function publishLocal(
   file: string,
   before: string | null,
-  after: string,
+  after: string | null,
   operation: string,
 ) {
   const backup = `${file}.cardstock-${operation}.before`;
@@ -115,6 +115,31 @@ export async function publishLocal(
     !(current === null && saved === before && before !== null)
   )
     throw new Error(`Local file changed; preserve it and inspect ${file}`);
+  if (after === null) {
+    if (current !== null) {
+      if (saved !== null)
+        throw new Error(`An original is already preserved at ${backup}`);
+      await rename(file, backup);
+      if ((await readOptional(backup)) !== before) {
+        try {
+          await link(backup, file);
+        } catch {
+          /* Preserve new files and backup. */
+        }
+        throw new Error(
+          `Local edit raced deletion; original preserved at ${backup}`,
+        );
+      }
+    }
+    if (
+      (await readOptional(file)) !== null ||
+      (before !== null && (await readOptional(backup)) !== before)
+    )
+      throw new Error(
+        `Concurrent local edit detected; inspect ${file} and ${backup}`,
+      );
+    return;
+  }
   const staged = await readOptional(temp);
   if (staged !== null && staged !== after)
     throw new Error(`Unexpected staging content: ${temp}`);

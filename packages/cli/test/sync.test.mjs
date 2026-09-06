@@ -41,7 +41,7 @@ async function setup(t) {
     writes: 0,
     receipts: new Map(),
     hook: null,
-    protocol: 3,
+    protocol: 4,
     drop: false,
     revision: 0,
   };
@@ -100,6 +100,7 @@ async function setup(t) {
           cardId: current?.cardId ?? randomUUID(),
           revision: `2026-09-06T00:00:${String(++state.revision).padStart(2, "0")}.000Z`,
           markdown: change.markdown,
+          ...(change.deleted ? { deleted: true } : {}),
         };
         state.cards = state.cards
           .filter((card) => card.externalId !== change.externalId)
@@ -111,7 +112,7 @@ async function setup(t) {
         });
         state.writes++;
       }
-      const receipt = { protocol: 3, operationId: body.operationId, applied };
+      const receipt = { protocol: 4, operationId: body.operationId, applied };
       state.receipts.set(body.operationId, receipt);
       if (state.drop) {
         state.drop = false;
@@ -207,6 +208,194 @@ test("sync merges disjoint edits, publishes both sides and advances a clean base
   );
   assert.equal(c.state.writes, 1);
   assert.equal((await c.cli("status")).data.clean, true);
+});
+
+test("delete previews named IDs only, preserves backups, and never recreates tombstones", async (t) => {
+  const c = await setup(t);
+  const baseline = await c.baseline();
+  await writeFile(path.join(c.tracker, "2.md"), sheet(2));
+  const before = await readFile(baseline, "utf8");
+  const preview = await c.cli("delete", "1", "--dry-run");
+  assert.equal(preview.code, 0, preview.stdout);
+  assert.deepEqual(
+    preview.data.cards.map((card) => card.externalId),
+    ["1"],
+  );
+  assert.equal(preview.data.cards[0].action, "delete_remote");
+  assert.equal(c.state.writes, 0);
+  assert.equal(await readFile(baseline, "utf8"), before);
+  const result = await c.cli("delete", "1");
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(c.state.cards[0].deleted, true);
+  assert.equal(c.state.writes, 1);
+  assert.equal(result.data.remaining.uploads, 1); // #2 was not silently uploaded.
+  assert.equal((await readdir(c.tracker)).includes("1.md"), false);
+  const backup = (await readdir(c.tracker)).find(
+    (file) => file.startsWith("1.md.cardstock-") && file.endsWith(".before"),
+  );
+  assert.equal(await readFile(path.join(c.tracker, backup), "utf8"), sheet());
+  assert.equal((await c.cli("delete", "1")).code, 0);
+  assert.equal(c.state.writes, 1);
+  await writeFile(path.join(c.tracker, "1.md"), sheet());
+  const resurrect = await c.cli("sync", "--dry-run");
+  assert.equal(resurrect.code, 1, resurrect.stdout);
+  assert.equal(resurrect.data.counts.conflicts, 1);
+});
+
+test("bulk deletion accepts an explicit ID file and rejects ambiguous input before writes", async (t) => {
+  const c = await setup(t);
+  await c.baseline();
+  for (const args of [
+    [],
+    ["0"],
+    ["../1"],
+    ["1", "1"],
+    ["9007199254740993"],
+    ["1", "--ours", "2"],
+  ]) {
+    assert.equal((await c.cli("delete", ...args)).code, 2);
+  }
+  const list = path.join(c.cwd, "deletions.txt");
+  await writeFile(list, "# Reviewed deletion list\n\n1\n");
+  assert.equal((await c.cli("delete", "1", "--file", list)).code, 2);
+  const result = await c.cli("delete", "--file", list);
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(c.state.writes, 1);
+  assert.equal((await c.cli("status")).data.clean, true);
+});
+
+test("delete vs hosted edits requires a whole-card choice and keeps the chosen side", async (t) => {
+  const c = await setup(t);
+  await c.baseline();
+  c.state.cards[0].markdown += "Hosted edit.\n";
+  c.state.cards[0].revision = "edited";
+  const blocked = await c.cli("delete", "1");
+  assert.equal(blocked.code, 1, blocked.stdout);
+  assert.equal(c.state.writes, 0);
+  const keep = await c.cli("delete", "1", "--theirs", "1");
+  assert.equal(keep.code, 0, keep.stdout);
+  assert.match(
+    await readFile(path.join(c.tracker, "1.md"), "utf8"),
+    /Hosted edit/,
+  );
+  c.state.cards[0].markdown += "Another edit.\n";
+  c.state.cards[0].revision = "edited-again";
+  const deleted = await c.cli("delete", "1", "--ours", "1");
+  assert.equal(deleted.code, 0, deleted.stdout);
+  assert.equal(c.state.cards[0].deleted, true);
+});
+
+test("remote deletion removes unchanged local copies but conflicts with local edits", async (t) => {
+  const c = await setup(t);
+  await c.baseline();
+  c.state.cards[0].deleted = true;
+  c.state.cards[0].revision = "deleted";
+  await writeFile(path.join(c.tracker, "1.md"), `${sheet()}Local edit.\n`);
+  const blocked = await c.cli("sync");
+  assert.equal(blocked.code, 1, blocked.stdout);
+  const restored = await c.cli("sync", "--ours", "1");
+  assert.equal(restored.code, 0, restored.stdout);
+  assert.equal(!!c.state.cards[0].deleted, false);
+  assert.match(c.state.cards[0].markdown, /Local edit/);
+  c.state.cards[0].deleted = true;
+  c.state.cards[0].revision = "deleted-again";
+  const deleted = await c.cli("sync");
+  assert.equal(deleted.code, 0, deleted.stdout);
+  assert.equal((await readdir(c.tracker)).includes("1.md"), false);
+  assert.equal((await c.cli("status")).data.clean, true);
+});
+
+test("lost delete responses resume the same operation and preserve concurrent edits", async (t) => {
+  const c = await setup(t);
+  await c.baseline();
+  c.state.drop = true;
+  const first = await c.cli("delete", "1");
+  assert.equal(first.code, 2);
+  assert.equal(c.state.writes, 1);
+  await writeFile(path.join(c.tracker, "1.md"), `${sheet()}Concurrent edit.\n`);
+  const blocked = await c.cli("sync", "--resume");
+  assert.equal(blocked.code, 2, blocked.stdout);
+  assert.match(
+    await readFile(path.join(c.tracker, "1.md"), "utf8"),
+    /Concurrent edit/,
+  );
+  await writeFile(path.join(c.tracker, "1.md"), sheet());
+  const resumed = await c.cli("sync", "--resume");
+  assert.equal(resumed.code, 0, resumed.stdout);
+  assert.equal(c.state.writes, 1);
+  assert.equal((await c.cli("status")).data.clean, true);
+});
+
+test("bulk deletion resumes after a per-card deletion checkpoint", async (t) => {
+  const c = await setup(t);
+  c.state.cards.push({
+    externalId: "2",
+    cardId: randomUUID(),
+    revision: "r2",
+    markdown: sheet(2),
+  });
+  await writeFile(path.join(c.tracker, "2.md"), sheet(2));
+  const baseline = await c.baseline();
+  let killed = false;
+  c.state.hook = async (req) => {
+    if (!killed && req.method === "GET" && c.state.writes) {
+      const saved = JSON.parse(await readFile(baseline, "utf8"));
+      if (saved.cards.find((card) => card.externalId === "1")?.deleted) {
+        killed = true;
+        c.state.child.kill("SIGKILL");
+      }
+    }
+  };
+  assert.equal((await c.cli("delete", "1", "2")).code, null);
+  assert.equal(await readFile(path.join(c.tracker, "2.md"), "utf8"), sheet(2));
+  const resumed = await c.cli("sync", "--resume", "--recover-lock");
+  assert.equal(resumed.code, 0, resumed.stdout);
+  assert.equal(resumed.data.clean, true);
+  assert.equal(c.state.writes, 2);
+  assert.equal(
+    (await readdir(c.tracker)).filter((file) => file.endsWith(".before"))
+      .length,
+    2,
+  );
+});
+
+test("new clients reject protocol 3 before deleting or modifying anything", async (t) => {
+  const c = await setup(t);
+  const baseline = await c.baseline();
+  const before = await readFile(baseline, "utf8");
+  c.state.protocol = 3;
+  assert.equal((await c.cli("delete", "1", "--dry-run")).code, 2);
+  assert.equal((await c.cli("delete", "1")).code, 2);
+  assert.equal(c.state.writes, 0);
+  assert.equal(await readFile(baseline, "utf8"), before);
+  assert.equal(await readFile(path.join(c.tracker, "1.md"), "utf8"), sheet());
+});
+
+test("a stale deletion request preserves the live card and its local file", async (t) => {
+  const c = await setup(t);
+  await c.baseline();
+  c.state.hook = async (req) => {
+    if (req.method === "POST") c.state.cards[0].revision = "concurrent-edit";
+  };
+  const result = await c.cli("delete", "1");
+  assert.equal(result.code, 2, result.stdout);
+  assert.match(result.data.error, /revision changed/);
+  assert.equal(c.state.writes, 0);
+  assert.equal(!!c.state.cards[0].deleted, false);
+  assert.equal(await readFile(path.join(c.tracker, "1.md"), "utf8"), sheet());
+});
+
+test("first contact with tombstones records absence without downloading deleted files", async (t) => {
+  const c = await setup(t);
+  c.state.cards[0].deleted = true;
+  await rm(path.join(c.tracker, "1.md"));
+  const synced = await c.cli("sync");
+  assert.equal(synced.code, 0, synced.stdout);
+  assert.equal(synced.data.clean, true);
+  assert.equal(c.state.writes, 0);
+  assert.deepEqual(await readdir(c.tracker), []);
+  const state = JSON.parse(await readFile(synced.data.baseline.path, "utf8"));
+  assert.equal(state.cards[0].deleted, true);
 });
 
 test("conflicts write nothing until explicit ours or theirs is chosen", async (t) => {
@@ -359,7 +548,7 @@ test("unsupported server cannot receive writes; legacy baseline adoption is expl
   c.state.protocol = 2;
   assert.equal((await c.cli("sync")).code, 2);
   assert.equal(c.state.writes, 0);
-  c.state.protocol = 3;
+  c.state.protocol = 4;
   const baseline = JSON.parse(await readFile(file, "utf8"));
   delete baseline.cards[0].cardId;
   await writeFile(file, JSON.stringify(baseline));

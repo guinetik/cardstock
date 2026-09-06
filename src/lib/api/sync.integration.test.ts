@@ -76,11 +76,11 @@ describe.skipIf(!local)("transactional CLI sync", () => {
     revision: string | null = null,
   ) => ({ externalId: String(id), markdown, cardId, revision });
   const apply = (
-    cards: ReturnType<typeof request>[],
+    cards: (ReturnType<typeof request> & { deleted?: boolean })[],
     operation = randomUUID(),
     actor = member,
   ) =>
-    db.rpc("cli_apply_sync_v3", {
+    db.rpc("cli_apply_sync_v4", {
       p_board: board,
       p_member: actor,
       p_operation: operation,
@@ -237,7 +237,7 @@ describe.skipIf(!local)("transactional CLI sync", () => {
     );
     expect(
       (
-        await anon.rpc("cli_apply_sync_v3", {
+        await anon.rpc("cli_apply_sync_v4", {
           p_board: board,
           p_member: member,
           p_operation: randomUUID(),
@@ -550,11 +550,139 @@ describe.skipIf(!local)("transactional CLI sync", () => {
       result = await cli("status");
       expect(result.code, result.stdout).toBe(0);
       expect(JSON.parse(result.stdout).clean).toBe(true);
+      // An independent checkout has its own baseline but uses the same real API.
+      const secondRoot = path.join(cwd, "second");
+      const secondTracker = path.join(secondRoot, "tracker");
+      const secondConfig = path.join(secondRoot, "cardstock.json");
+      await mkdir(secondTracker, { recursive: true });
+      await writeFile(
+        secondConfig,
+        await readFile(path.join(cwd, "cardstock.json"), "utf8"),
+      );
+      result = await cli("sync", "--config", secondConfig);
+      expect(result.code, result.stdout).toBe(0);
+      expect(JSON.parse(result.stdout).clean).toBe(true);
+      const secondTarget = path.join(secondTracker, "4.md");
+      const survivor = `${await readFile(secondTarget, "utf8")}Second checkout edit.\n`;
+      await writeFile(secondTarget, survivor);
+      result = await cli("delete", "4", "--dry-run");
+      expect(result.code, result.stdout).toBe(0);
+      expect(JSON.parse(result.stdout).cards[0].action).toBe("delete_remote");
+      result = await cli("delete", "4");
+      expect(result.code, result.stdout).toBe(0);
+      expect(
+        (await snapshot()).cards.find((card) => card.externalId === "4")
+          ?.deleted,
+      ).toBe(true);
+      result = await cli("sync", "--config", secondConfig);
+      expect(result.code, result.stdout).toBe(1);
+      expect(JSON.parse(result.stdout).counts.conflicts).toBe(1);
+      result = await cli("sync", "--config", secondConfig, "--ours", "4");
+      expect(result.code, result.stdout).toBe(0);
+      expect(
+        (await snapshot()).cards.find((card) => card.externalId === "4")
+          ?.cardId,
+      ).toBe(row.cardId);
+      result = await cli("sync");
+      expect(result.code, result.stdout).toBe(0);
+      expect(await readFile(target, "utf8")).toBe(survivor);
+      result = await cli("delete", "4");
+      expect(result.code, result.stdout).toBe(0);
+      result = await cli("sync", "--config", secondConfig);
+      expect(result.code, result.stdout).toBe(0);
+      expect(JSON.parse(result.stdout).clean).toBe(true);
+      expect(
+        await readFile(secondTarget, "utf8").catch((error) => error.code),
+      ).toBe("ENOENT");
+      // Unchanged deleted cards stay deleted on both checkouts.
+      expect(JSON.parse((await cli("status")).stdout).clean).toBe(true);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       await rm(cwd, { recursive: true, force: true });
     }
   }, 30000);
+
+  test("deletion is atomic, revision-checked, idempotent and reserves identity", async () => {
+    expect((await apply([request(701), request(702)])).error).toBeNull();
+    const first = (await snapshot()).cards.find(
+      (card) => card.externalId === "701",
+    )!;
+    const second = (await snapshot()).cards.find(
+      (card) => card.externalId === "702",
+    )!;
+    const deletion = {
+      ...request(701, first.markdown, first.cardId, first.revision),
+      deleted: true,
+    };
+    const stale = await apply([
+      deletion,
+      {
+        ...request(702, second.markdown, second.cardId, "stale"),
+        deleted: true,
+      },
+    ]);
+    expect(stale.error?.code).toBe("23514");
+    expect(
+      (await snapshot()).cards.find((card) => card.externalId === "701")
+        ?.deleted,
+    ).toBeUndefined();
+    const operation = randomUUID();
+    const result = await apply([deletion], operation);
+    expect(result.error).toBeNull();
+    expect((await apply([deletion], operation)).data).toEqual(result.data);
+    expect(
+      (await apply([{ ...deletion, deleted: false }], operation)).error?.code,
+    ).toBe("23514");
+    const dead = (await snapshot()).cards.find(
+      (card) => card.externalId === "701",
+    )!;
+    expect(dead.deleted).toBe(true);
+    expect(dead.cardId).toBe(first.cardId);
+    expect(dead.markdown).toBe(first.markdown);
+    expect(dead.revision).not.toBe(first.revision);
+    expect(
+      (await db.from("cards").select("id").eq("id", first.cardId)).data,
+    ).toHaveLength(0);
+    expect((await apply([request(701)])).error?.code).toBe("23514");
+    const legacy = await db.from("cards").insert({
+      board_id: board,
+      external_id: "701",
+      title: "Accidental resurrection",
+    });
+    expect(legacy.error?.code).toBe("23514");
+    const restore = await apply([
+      request(
+        701,
+        sheet(701, "Explicit survivor."),
+        dead.cardId,
+        dead.revision,
+      ),
+    ]);
+    expect(restore.error).toBeNull();
+    const alive = (await snapshot()).cards.find(
+      (card) => card.externalId === "701",
+    )!;
+    expect(alive.deleted).toBeUndefined();
+    expect(alive.cardId).toBe(first.cardId);
+    expect(alive.markdown).toContain("Explicit survivor.");
+    expect((await apply([deletion])).error?.code).toBe("23514");
+  });
+
+  test("administrator deletes capture tombstones, including cards with tags and links", async () => {
+    const md = sheet(703).replace("tags: [bug]", "tags: [bug]\nrelates: [704]");
+    expect((await apply([request(703, md), request(704)])).error).toBeNull();
+    const first = (await snapshot()).cards.find(
+      (card) => card.externalId === "703",
+    )!;
+    const deletion = await db.from("cards").delete().eq("id", first.cardId);
+    expect(deletion.error).toBeNull();
+    const dead = (await snapshot()).cards.find(
+      (card) => card.externalId === "703",
+    )!;
+    expect(dead.deleted).toBe(true);
+    expect(dead.markdown).toContain("relates: [704]");
+    expect(dead.markdown).toContain("tags: [bug]");
+  });
 });
 
 test("sync wire validation rejects mismatched identity/revision pairs and duplicate IDs", () => {
@@ -567,7 +695,7 @@ test("sync wire validation rejects mismatched identity/revision pairs and duplic
   ).toBe(false);
   expect(
     syncRequestSchema.safeParse({
-      protocol: 3,
+      protocol: 4,
       operationId: randomUUID(),
       cards: [
         {
@@ -587,7 +715,7 @@ test("sync wire validation rejects mismatched identity/revision pairs and duplic
   };
   expect(
     syncRequestSchema.safeParse({
-      protocol: 3,
+      protocol: 4,
       operationId: randomUUID(),
       cards: [card, card],
     }).success,

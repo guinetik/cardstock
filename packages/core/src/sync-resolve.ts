@@ -59,6 +59,20 @@ export function resolveSyncConflicts(
     card.action = card.changes.some((change) => change.direction === "conflict")
       ? "conflict"
       : "update";
+    const existence = card.changes.find(
+      (change) => change.field === "existence",
+    );
+    if (existence && existence.direction !== "conflict") {
+      const ours = existence.direction === "upload";
+      const exists = (ours ? existence.local : existence.remote).value;
+      card.action = exists
+        ? ours
+          ? "restore_remote"
+          : "create_local"
+        : ours
+          ? "delete_remote"
+          : "delete_local";
+    }
   }
   return summarizeSyncPlan(cards);
 }
@@ -71,10 +85,12 @@ export function parseConflictSelections(
     ...ours.map((value) => ({ value, side: "ours" as const })),
     ...theirs.map((value) => ({ value, side: "theirs" as const })),
   ].map(({ value, side }) => {
-    const match = /^([1-9]\d*)(?::(body|frontmatter\..+))?$/.exec(value);
+    const match = /^([1-9]\d*)(?::(existence|body|frontmatter\..+))?$/.exec(
+      value,
+    );
     if (!match)
       throw new Error(
-        `Use --${side} <id> or --${side} <id>:<body|frontmatter.key>`,
+        `Use --${side} <id> or --${side} <id>:<existence|body|frontmatter.key>`,
       );
     return {
       externalId: match[1],

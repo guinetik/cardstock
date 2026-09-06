@@ -15,7 +15,7 @@ import type { CardSheet } from "@/lib/frontmatter/sheet";
 import { writeSheet } from "@/lib/frontmatter/write";
 
 export const syncRequestSchema = z.strictObject({
-  protocol: z.literal(3),
+  protocol: z.literal(4),
   operationId: z.string().uuid(),
   cards: z
     .array(
@@ -25,9 +25,12 @@ export const syncRequestSchema = z.strictObject({
           markdown: z.string().max(2_000_000),
           cardId: z.string().uuid().nullable(),
           revision: z.string().min(1).max(200).nullable(),
+          deleted: z.boolean().optional(),
         })
         .refine(
-          (card) => (card.cardId === null) === (card.revision === null),
+          (card) =>
+            (card.cardId === null) === (card.revision === null) &&
+            (!card.deleted || card.cardId !== null),
           "Quote both identity and revision",
         ),
     )
@@ -45,6 +48,13 @@ export function syncColumns(
   card: z.infer<typeof syncRequestSchema>["cards"][number],
   aliases: Record<string, string>,
 ) {
+  if (card.deleted)
+    return {
+      externalId: card.externalId,
+      cardId: card.cardId,
+      revision: card.revision,
+      deleted: true,
+    };
   const parsed = parseFile(card.markdown);
   const { data: fm, extra } = validateFrontmatter(
     readSyncFrontmatter(card.markdown),
@@ -136,7 +146,7 @@ export async function syncSnapshot(
   project: string,
   board: string,
 ) {
-  const { data, error } = await db.rpc("cli_sync_snapshot", {
+  const { data, error } = await db.rpc("cli_sync_snapshot_v4", {
     p_board: boardId,
   });
   if (error) throw new Error(`Sync snapshot unavailable: ${error.message}`);
@@ -149,6 +159,7 @@ export async function syncSnapshot(
       source: string | null;
       savedProjection: Fields | null;
       projection: Fields;
+      deleted?: boolean;
     }[];
   };
   const cards = raw.cards.map((card) => {
@@ -192,13 +203,14 @@ export async function syncSnapshot(
       cardId: card.cardId,
       revision: card.revision,
       markdown,
+      ...(card.deleted ? { deleted: true } : {}),
     };
   });
   const etag = createHash("sha256")
     .update(stableJson({ cards, tagGroups: raw.tagGroups }))
     .digest("hex");
   return {
-    syncProtocol: 3,
+    syncProtocol: 4,
     project,
     board,
     etag,

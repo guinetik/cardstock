@@ -22,7 +22,11 @@ const intentSchema = z.strictObject({
     local: z.string().nullable(),
     remote: remoteCard.nullable(),
   }),
-  after: z.strictObject({ local: z.string(), remote: z.string() }),
+  after: z.strictObject({
+    local: z.string().nullable(),
+    remote: z.string(),
+    deleted: z.boolean().optional(),
+  }),
   writeLocal: z.boolean(),
   writeRemote: z.boolean(),
   resolutions: z.array(
@@ -63,10 +67,17 @@ function validate(value: unknown): SyncJournal {
     if ((entry.phase === "prepared") !== (entry.remoteVerified === undefined))
       throw new Error("Invalid journal verification state");
     if (
-      (intent.before.local === null && !intent.writeLocal) ||
+      (intent.before.local === null &&
+        intent.after.local !== null &&
+        !intent.writeLocal) ||
       (intent.before.remote === null && !intent.writeRemote)
     )
       throw new Error("Invalid journal creation intent");
+    if (
+      !!intent.after.deleted !== (intent.after.local === null) ||
+      (intent.after.deleted && !intent.before.remote?.cardId)
+    )
+      throw new Error("Invalid journal deletion intent");
     for (const markdown of [
       intent.before.local,
       intent.before.remote?.markdown,
@@ -124,8 +135,10 @@ export function verifyRemote(
     (entry.intent.before.remote?.cardId !== undefined &&
       observed.cardId !== entry.intent.before.remote.cardId) ||
     !observed.revision ||
+    !!observed.deleted !== !!entry.intent.after.deleted ||
     actual.id !== externalId ||
-    stableJson(actual.fields) !== stableJson(expected.fields)
+    (!observed.deleted &&
+      stableJson(actual.fields) !== stableJson(expected.fields))
   )
     throw new Error(
       `Remote outcome differs from the intent for #${externalId}`,
@@ -140,7 +153,7 @@ export function verifyRemote(
 export function verifyLocal(
   journal: SyncJournal,
   externalId: string,
-  observed: string,
+  observed: string | null,
 ): SyncJournal {
   const next = validate(structuredClone(journal));
   const entry = next.entries.find(

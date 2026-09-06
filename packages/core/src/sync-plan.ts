@@ -17,6 +17,8 @@ export interface LocalCard {
   markdown: string;
 }
 export interface RemoteCard {
+  /** A retained snapshot, not a live card. Identity remains reserved. */
+  deleted?: boolean;
   cardId?: string;
   externalId: string;
   revision: string;
@@ -42,6 +44,7 @@ export const remoteSnapshotSchema = z.object({
       cardId: z.string().uuid().optional(),
       revision: z.string().min(1),
       markdown: z.string(),
+      deleted: z.boolean().optional(),
     }),
   ),
 });
@@ -79,6 +82,7 @@ export const baselineSchema = z.strictObject({
       externalId: z.string().regex(/^[1-9]\d*$/),
       revision: z.string().min(1),
       markdown: z.string(),
+      deleted: z.boolean().optional(),
     }),
   ),
 });
@@ -99,7 +103,15 @@ export interface CardPlan {
   externalId: string;
   file: string;
   revision?: string;
-  action: "create_remote" | "create_local" | "update" | "equal" | "conflict";
+  action:
+    | "create_remote"
+    | "create_local"
+    | "update"
+    | "equal"
+    | "conflict"
+    | "delete_remote"
+    | "delete_local"
+    | "restore_remote";
   changes: FieldChange[];
   reason?: string;
 }
@@ -208,6 +220,8 @@ export function planSync(input: {
   baseline?: Baseline;
   vocabulary: Vocabulary;
   mapping?: Config["mapping"];
+  /** Explicit command targets; absence of a file never requests deletion. */
+  deleteIds?: string[];
 }) {
   const locals = new Map<string, { card: LocalCard; fields: Fields }>();
   const remotes = new Map<string, { card: RemoteCard; fields: Fields }>();
@@ -250,10 +264,22 @@ export function planSync(input: {
     bases.set(id, { card, fields });
   }
   const cards: CardPlan[] = [];
+  const deletions = new Set(input.deleteIds ?? []);
+  for (const id of deletions) {
+    if (!remotes.has(id))
+      throw new Error(
+        `Cannot delete #${id}: no remote identity. Sync new cards before deleting them.`,
+      );
+    if (!remotes.get(id)!.card.deleted && !bases.get(id)?.card.cardId)
+      throw new Error(
+        `Cannot delete #${id} without an identity baseline. Sync or baseline the card first.`,
+      );
+  }
   const ids = [
     ...new Set([...locals.keys(), ...remotes.keys(), ...bases.keys()]),
   ].sort((a, b) => Number(a) - Number(b));
   for (const externalId of ids) {
+    if (input.deleteIds && !deletions.has(externalId)) continue;
     const local = locals.get(externalId);
     const remote = remotes.get(externalId);
     const base = bases.get(externalId);
@@ -281,6 +307,52 @@ export function planSync(input: {
         changes: [],
         reason:
           "remote_missing: previously tracked card is absent; no deletion or recreation is inferred",
+      });
+      continue;
+    }
+    if (remote && (remote.card.deleted || deletions.has(externalId))) {
+      const deleting = deletions.has(externalId);
+      if (remote.card.deleted && !local) continue;
+      const conflict = remote.card.deleted
+        ? !deleting &&
+          !!local &&
+          (!base ||
+            base.card.deleted ||
+            stableJson(local.fields) !== stableJson(base.fields))
+        : !base ||
+          base.card.deleted ||
+          stableJson(remote.fields) !== stableJson(base.fields);
+      const change: FieldChange = {
+        field: "existence",
+        direction: conflict
+          ? "conflict"
+          : remote.card.deleted
+            ? "download"
+            : "upload",
+        base: {
+          present: !!base,
+          ...(base ? { value: !base.card.deleted } : {}),
+        },
+        local: { present: true, value: !deleting },
+        remote: { present: true, value: !remote.card.deleted },
+        ...(conflict
+          ? {
+              reason:
+                "delete_vs_edit: choose deletion or the surviving content explicitly",
+            }
+          : {}),
+      };
+      cards.push({
+        externalId,
+        file,
+        revision: remote.card.revision,
+        action: conflict
+          ? "conflict"
+          : remote.card.deleted
+            ? "delete_local"
+            : "delete_remote",
+        changes: [change],
+        reason: deleting ? "explicit_delete" : "remote_deleted",
       });
       continue;
     }
@@ -373,11 +445,14 @@ export function summarizeSyncPlan(cards: CardPlan[]) {
     uploads: cards.filter(
       (card) =>
         card.action === "create_remote" ||
+        card.action === "delete_remote" ||
+        card.action === "restore_remote" ||
         card.changes.some((change) => change.direction === "upload"),
     ).length,
     downloads: cards.filter(
       (card) =>
         card.action === "create_local" ||
+        card.action === "delete_local" ||
         card.changes.some((change) => change.direction === "download"),
     ).length,
     equal: cards.filter((card) =>

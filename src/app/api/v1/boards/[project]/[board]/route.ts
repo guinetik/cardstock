@@ -10,7 +10,7 @@ export const GET = withToken(async ({ db, project, board, canManage }) => {
     project: project.slug,
     board: board.slug,
     canManage,
-    syncProtocol: 3,
+    syncProtocol: 4,
     settings: board.settings,
     etag: boardEtag(state),
     ...boardVocabulary(state),

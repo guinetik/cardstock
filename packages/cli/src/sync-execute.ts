@@ -37,6 +37,7 @@ import {
 export async function executeSync(
   args: string[],
   cwd: string,
+  deleteIds?: string[],
 ): Promise<number> {
   const { values } = parseArgs({
     args,
@@ -135,9 +136,9 @@ export async function executeSync(
     const snapshot = async () => {
       const raw = await getJson(`${url}/sync`, credential.token);
       const meta = remoteMetadataSchema.parse(raw);
-      if (meta.syncProtocol !== 3)
+      if (meta.syncProtocol !== 4)
         throw new Error(
-          "Remote lacks sync protocol 3 (explicit audience); deploy the server and audience migration first",
+          "Remote lacks sync protocol 4 (explicit deletion); deploy the server and deletion migration first",
         );
       const snap = remoteSnapshotSchema.parse(raw);
       if (
@@ -179,6 +180,7 @@ export async function executeSync(
         baseline,
         vocabulary: observed,
         mapping: config.mapping,
+        deleteIds,
       };
       const selections = parseConflictSelections(values.ours, values.theirs);
       const plan = resolveSyncConflicts(planSync(input), selections);
@@ -205,26 +207,33 @@ export async function executeSync(
       const included = new Set(intents.map((intent) => intent.externalId));
       // Agreed cards also get fresh identity/revision baselines, including first contact.
       for (const card of observed.cards) {
+        if (deleteIds && !deleteIds.includes(card.externalId)) continue;
         if (included.has(card.externalId)) continue;
         const mine = local.find(
           (item) => item.file === `${card.externalId}.md`,
         );
-        if (!mine) throw new Error("Missing local intent");
+        if (!mine && !card.deleted) throw new Error("Missing local intent");
         intents.push({
           externalId: card.externalId,
-          file: mine.file,
-          before: { local: mine.markdown, remote: card },
-          after: { local: mine.markdown, remote: card.markdown },
+          file: mine?.file ?? `${card.externalId}.md`,
+          before: { local: mine?.markdown ?? null, remote: card },
+          after: {
+            local: mine?.markdown ?? null,
+            remote: card.markdown,
+            ...(card.deleted ? { deleted: true } : {}),
+          },
           writeLocal: false,
           writeRemote: false,
           resolutions: [],
         });
       }
       const diagnostics = validateTracker(
-        intents.map((intent) => ({
-          name: intent.file,
-          text: intent.after.local,
-        })),
+        intents
+          .filter((intent) => intent.after.local !== null)
+          .map((intent) => ({
+            name: intent.file,
+            text: intent.after.local!,
+          })),
         config.scheme,
       ).diagnostics;
       if (diagnostics.length) {
@@ -237,10 +246,12 @@ export async function executeSync(
       await store.create(journal);
     }
     const recoveryDiagnostics = validateTracker(
-      journal.entries.map(({ intent }) => ({
-        name: intent.file,
-        text: intent.after.local,
-      })),
+      journal.entries
+        .filter(({ intent }) => intent.after.local !== null)
+        .map(({ intent }) => ({
+          name: intent.file,
+          text: intent.after.local!,
+        })),
       config.scheme,
     ).diagnostics;
     if (recoveryDiagnostics.length)
@@ -258,6 +269,7 @@ export async function executeSync(
         cardId: intent.before.remote?.cardId ?? null,
         revision: intent.before.remote?.revision ?? null,
         markdown: intent.after.remote,
+        ...(intent.after.deleted ? { deleted: true } : {}),
       }));
     // Check before dispatch too, not merely after remote writes have already landed.
     for (const { intent } of journal.entries) {
@@ -287,7 +299,7 @@ export async function executeSync(
         redirect: "error",
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
-          protocol: 3,
+          protocol: 4,
           operationId: journal.id,
           cards: writes,
           groupAliases: config.mapping?.group_aliases ?? {},
@@ -304,7 +316,7 @@ export async function executeSync(
       }
       const result = z
         .object({
-          protocol: z.literal(3),
+          protocol: z.literal(4),
           operationId: z.literal(journal.id),
           applied: z.array(
             z.object({
@@ -333,7 +345,8 @@ export async function executeSync(
         !card ||
         !expectedId ||
         card.cardId !== expectedId ||
-        !same(card.markdown, intent.after.remote)
+        !!card.deleted !== !!intent.after.deleted ||
+        (!card.deleted && !same(card.markdown, intent.after.remote))
       )
         throw new Error(
           `Remote #${intent.externalId} differs from the recorded intent; no winner inferred`,
@@ -427,7 +440,7 @@ export async function executeSync(
           verifyLocal(
             journal,
             intent.externalId,
-            (await readOptional(path.join(tracker, intent.file)))!,
+            await readOptional(path.join(tracker, intent.file)),
           ),
         );
       await advance();

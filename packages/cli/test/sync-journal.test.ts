@@ -56,6 +56,35 @@ async function setup() {
 }
 
 describe("sync recovery journal", () => {
+  test("deletion verifies a matching tombstone and an absent file, never a live lookalike", () => {
+    const card = {
+      ...baseline.cards[0],
+      cardId: "00000000-0000-4000-8000-000000000001",
+    };
+    const deletes = materializeSync({
+      local: [{ file: "1.md", markdown: sheet }],
+      remote: [card],
+      baseline: { ...baseline, cards: [card] },
+      vocabulary,
+      deleteIds: ["1"],
+    });
+    const journal = prepareJournal(scope, JSON.stringify(baseline), deletes);
+    expect(() => verifyRemote(journal, "1", card, vocabulary)).toThrow(
+      "differs",
+    );
+    const dead = { ...card, deleted: true, revision: "deleted-r1" };
+    expect(() =>
+      verifyRemote(
+        journal,
+        "1",
+        { ...dead, cardId: "00000000-0000-4000-8000-000000000002" },
+        vocabulary,
+      ),
+    ).toThrow("differs");
+    const remote = verifyRemote(journal, "1", dead, vocabulary);
+    expect(() => verifyLocal(remote, "1", sheet)).toThrow("differs");
+    expect(verifyLocal(remote, "1", null).entries[0].phase).toBe("verified");
+  });
   test("reads are pure; prepare records original bytes, intent and scope without changing baseline", async () => {
     const { directory, store, journal } = await setup();
     expect(await store.read()).toBeNull();

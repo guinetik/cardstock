@@ -22,7 +22,7 @@ export interface SyncIntent {
   externalId: string;
   file: string;
   before: { local: string | null; remote: RemoteCard | null };
-  after: { local: string; remote: string };
+  after: { local: string | null; remote: string; deleted?: boolean };
   writeLocal: boolean;
   writeRemote: boolean;
   resolutions: { field: string; side: "ours" | "theirs" }[];
@@ -210,6 +210,31 @@ export function materializeSync(
   return plan.cards.map((card) => {
     const mine = local.get(card.externalId),
       theirs = remote.get(card.externalId);
+    const existence = card.changes.find(
+      (change) => change.field === "existence",
+    );
+    if (existence) {
+      if (!theirs) throw new Error("Deletion requires a remote identity");
+      const ours = existence.direction === "upload";
+      const deleted = !(ours ? existence.local : existence.remote).value;
+      const text = deleted
+        ? theirs.markdown
+        : ours
+          ? mine?.markdown
+          : theirs.markdown;
+      if (text === undefined) throw new Error("Missing surviving content");
+      return {
+        externalId: card.externalId,
+        file: card.file,
+        before: { local: mine?.markdown ?? null, remote: theirs },
+        after: { local: deleted ? null : text, remote: text, deleted },
+        writeLocal: (mine?.markdown ?? null) !== (deleted ? null : text),
+        writeRemote: deleted !== !!theirs.deleted || (!deleted && ours),
+        resolutions: existence.resolution
+          ? [{ field: "existence", side: existence.resolution }]
+          : [],
+      };
+    }
     const localText = mine?.markdown ?? theirs?.markdown;
     const remoteText = theirs?.markdown ?? mine?.markdown;
     if (localText === undefined || remoteText === undefined)
@@ -271,11 +296,18 @@ export function materializeSync(
 /** Verify semantic agreement without treating newline/alias spelling as edits. */
 export function agreesWithIntent(
   intent: SyncIntent,
-  local: LocalCard,
+  local: LocalCard | null,
   remote: RemoteCard,
   vocabulary: Vocabulary,
   mapping?: Config["mapping"],
 ) {
+  if (
+    remote.externalId !== intent.externalId ||
+    !!remote.deleted !== !!intent.after.deleted
+  )
+    return false;
+  if (intent.after.deleted) return local === null;
+  if (!local || intent.after.local === null) return false;
   if (local.file !== intent.file || remote.externalId !== intent.externalId)
     return false;
   const wanted = comparisonFields(intent.after.local, vocabulary, mapping);

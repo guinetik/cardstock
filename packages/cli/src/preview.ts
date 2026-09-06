@@ -38,7 +38,10 @@ it refuses while local and remote cards differ. Missing baselines never pick a w
 ours means local Markdown; theirs means the hosted board. Selections resolve only
 conflicting fields, preserving unrelated edits on both sides. Repeat flags to select
 cards or fields (for example --ours 17:body --theirs 18:frontmatter.priority).
-Without --dry-run, sync applies the resolved plan through transactional protocol 3.
+An existence conflict is a whole-card delete-versus-edit choice: selecting the
+deleted side deletes; selecting surviving local content restores the hosted card.
+Explicit deletion: cardstock delete <id> --dry-run (see cardstock delete --help).
+Without --dry-run, sync applies the resolved plan through transactional protocol 4.
 sync --resume retries the recorded operation; --abort archives it without rollback.
 --recover-lock reclaims a same-machine lock only when its process has exited.
 --adopt-identities explicitly upgrades a legacy baseline to current immutable IDs.
@@ -92,6 +95,7 @@ export async function preview(
   command: string,
   args: string[],
   cwd: string,
+  deleteIds?: string[],
 ): Promise<number> {
   const { values } = parseArgs({
     args,
@@ -172,7 +176,11 @@ export async function preview(
   let metadata: RemoteMetadata | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     metadata = remoteMetadataSchema.parse(await getJson(url, credential.token));
-    if (metadata.syncProtocol === 2 || metadata.syncProtocol === 3) {
+    if (
+      metadata.syncProtocol === 2 ||
+      metadata.syncProtocol === 3 ||
+      metadata.syncProtocol === 4
+    ) {
       const raw = await getJson(`${url}/sync`, credential.token);
       metadata = remoteMetadataSchema.parse(raw);
       snapshot = remoteSnapshotSchema.parse(raw);
@@ -212,6 +220,10 @@ export async function preview(
   }
   if (!snapshot || !metadata)
     throw new Error("No board snapshot was returned.");
+  if (deleteIds && metadata.syncProtocol !== 4)
+    throw new Error(
+      "Deletion requires sync protocol 4; deploy the deletion migration and server first",
+    );
   if (stableJson(local) !== stableJson(await loadLocal()))
     throw new Error(
       "Tracker files changed while reading the board. Retry the preview.",
@@ -227,6 +239,7 @@ export async function preview(
       baseline,
       vocabulary: metadata,
       mapping: config.mapping,
+      deleteIds,
     }),
     parseConflictSelections(values.ours, values.theirs),
   );

@@ -3,11 +3,14 @@
 Command-line companion for [Cardstock](https://github.com/guinetik/cardstock).
 Initialize tracker configuration, validate Markdown offline, preview changes, and
 sync Markdown with the board using explicit conflict resolution and recovery.
-Apply requires a server deployed with sync protocol 3 and its database migrations.
+Apply requires a server deployed with sync protocol 4 and its database migrations.
 
 Requires Node.js 22 or newer. Bun is only needed by package developers.
 
-## Features in 0.3.0
+## Features in 0.4.0
+
+Version 0.4.0 adds explicit deletion and requires sync protocol 4. Version 0.3.0
+does not support deletion and uses sync protocol 3.
 
 - Portable `cardstock.json` configuration and offline Markdown validation.
 - Browser-approved sign-in; no database credentials or app checkout required.
@@ -16,8 +19,10 @@ Requires Node.js 22 or newer. Bun is only needed by package developers.
   transactional uploads, revision/identity checks and resumable recovery.
 - Free-form areas, board-defined epics and tags, explicit audience classification,
   and preservation of untouched formatting and unknown nested frontmatter.
+- Explicit single/bulk card deletion, retained deletion snapshots, recoverable
+  local backups, and delete-versus-edit conflicts across checkouts.
 
-This release requires sync protocol 3 for writes. Upgrade the server and database
+This release requires sync protocol 4 for writes. Upgrade the server and database
 before upgrading a tracker client; older apply protocols are refused, not silently
 downgraded. See [Generic fields and audience](#generic-fields-and-audience) and
 [Interrupted sync and recovery](#interrupted-sync-and-recovery).
@@ -25,7 +30,7 @@ downgraded. See [Generic fields and audience](#generic-fields-and-audience) and
 ## Install and connect
 
 ```sh
-npm install -g @guinetik/cardstock-cli@0.3.0
+npm install -g @guinetik/cardstock-cli@0.4.0
 cardstock --version
 mkdir tracker
 cardstock init --project acme --board product --dir tracker --remote https://cardstock.example.com
@@ -45,7 +50,7 @@ before applying; never delete a baseline to force a result.
 Or run without a global installation (pin the same version for repeatable use):
 
 ```sh
-npx --yes @guinetik/cardstock-cli@0.3.0 --version
+npx --yes @guinetik/cardstock-cli@0.4.0 --version
 ```
 
 Licensed under GPL-3.0-only; see LICENSE.
@@ -65,6 +70,8 @@ specific tracker and `--remote <url>` overrides its configured server.
 | `sync --json` | Apply both directions and save verified baseline checkpoints. |
 | `sync --ours 19:body --json` | Choose local content for that conflicting field only. |
 | `sync --theirs 19:frontmatter.priority --json` | Choose the board value for that conflicting field only. |
+| `delete 19 --dry-run --json` | Preview explicit deletion of only #19; no writes. |
+| `delete --file deletions.txt --json` | Delete only the listed IDs; retain local backups and remote snapshots. |
 | `sync --resume --json` | Continue the recorded operation, preserving its retry ID. |
 | `sync --abort --json` | Archive an interrupted intent; does not undo completed writes. |
 | `login --no-browser` | Print a browser approval URL for the user. |
@@ -92,7 +99,7 @@ user. `ours` is local Markdown; `theirs` is the board, never an ownership flag.
 
 For automation, read JSON from stdout and keep stderr separate. Preview counts are
 under `counts`; a completed apply reports pending work under `remaining` and remote
-upload IDs under `applied` (downloads are not listed there). Exit 0 means success,
+write IDs under `applied` (including deletions/restorations; downloads are not listed there). Exit 0 means success,
 not necessarily a clean board. Require `ok: true`, `clean: true`, and no diagnostics
 when checking completion. Exit 1 signals conflicts/validation failures; exit 2
 signals configuration, authentication, filesystem, network or execution failure.
@@ -206,7 +213,9 @@ Without a baseline, a local-only card is a proposed upload and a remote-only car
 is a proposed download. Differing existing cards require reconciliation; the CLI
 does not infer which side changed. Different titles under the same ID are flagged
 as a possible identity collision. A previously tracked card disappearing remotely
-is a conflict, never an automatic recreation or deletion. Duplicate IDs and
+without a retained deletion record is a conflict, never an automatic recreation
+or deletion. A confirmed deletion downloads only when the local copy is unchanged;
+local edits require an explicit delete-versus-edit choice. Duplicate IDs and
 filename/ID mismatches fail planning.
 
 Once both sides agree and validation passes, explicitly record their agreed state:
@@ -270,6 +279,78 @@ remote batch. Ambiguous tied lane ranks require a board reorder before applying.
 Nonempty tag/epic/area tag-derivation overrides remain unsupported: put the desired
 tags directly in frontmatter before removing those rules. Normal tag references,
 unambiguous bare tags and group aliases are supported. No alias name is built in.
+
+## Explicit card deletion
+
+Deletion requires the same signed-in board-admin access as other sync writes.
+It never needs database credentials, SQL seeds or a missing-file heuristic.
+
+```sh
+cardstock delete 17 --dry-run --json
+# Review the exact card and action before applying:
+cardstock delete 17 --json
+
+# Bulk: one positive integer card ID per line; blank lines and # comments allowed.
+cardstock delete --file deletions.txt --dry-run --json
+cardstock delete --file deletions.txt --json
+```
+
+You can also pass several IDs: `cardstock delete 17 18`. Choose positional IDs or
+`--file`, not both. Duplicate/invalid IDs and empty lists are errors; at most 1,000
+IDs may be selected. The command affects only those cards, not unrelated pending
+edits. `--config`, `--remote` and `--json` work as for sync. The final `remaining`
+counts cover the whole tracker, so a successful scoped deletion may not be clean.
+
+Deleting a live card requires a saved baseline with its immutable UUID. First sync
+or establish agreement with `baseline`; new local-only cards must be synced before
+this command can delete them. Removing a Markdown file by itself still causes a
+download, **never** a remote delete. Completed tasks should normally be marked done
+or archived, not deleted. Agents must have user authorization for the selected IDs.
+
+Each deleted identity stays reserved remotely with its last sheet snapshot and a
+new revision. Ordinary sync carries that deletion to other checkouts. Unchanged
+local copies move to `17.md.cardstock-<operation>.before`; locally edited copies
+produce an `existence` conflict. The JSON plan reports `delete_remote`,
+`delete_local`, or `restore_remote` explicitly; `existence` values are booleans
+(`false` means deleted). Never interpret an absent API card as a tombstone.
+
+| Conflict | `--ours <id>` | `--theirs <id>` |
+| --- | --- | --- |
+| `delete 17`: hosted card changed since baseline | Delete the hosted card; preserve local bytes in a backup. | Cancel deletion and download the hosted content. |
+| `sync`: hosted deletion versus local content | Restore the local content remotely under the same UUID. | Accept deletion and move the local file to a backup. |
+
+```sh
+cardstock delete 17 --ours 17 --dry-run --json
+cardstock delete 17 --ours 17 --json
+
+# In another checkout with a local edit that should survive a hosted deletion:
+cardstock sync --ours 17 --dry-run --json
+cardstock sync --ours 17 --json
+```
+
+Existence conflicts are whole-card decisions; content-field flags cannot resolve
+them. A replaced UUID is still an identity error, not an ours/theirs choice.
+To restore after accepting a deletion, copy the preserved `.before` file back to
+`17.md`, inspect `status`, then explicitly choose `sync --ours 17`. Simply restoring
+a file never silently recreates the hosted card. Restoration validates current
+lanes/tags and restores sheet content and outgoing links, **not** deleted comments,
+event history or incoming links. Keep administrator backups when full undo matters.
+
+The remote batch is atomic and revision-checked. Repeated requests use the same
+operation receipt; interrupted deletion uses `sync --resume`, not a new delete
+command. `sync --abort` archives intent without undoing an already committed
+deletion. Keep journal archives and `.before` files until results are verified.
+
+Administrator deletions after the migration also create tombstones. Deletions
+before it was installed cannot be reconstructed and remain missing-identity
+conflicts. Tombstones remain until explicit restoration or deletion of the parent
+board; there is no automatic expiry, CLI purge or reuse of deleted IDs.
+
+Deployment: apply `20260916000000_cli_card_deletion.sql`, deploy the protocol-4
+server, then upgrade the CLI. Complete pending operations with their matching
+client/server before upgrading. This release refuses older servers for writes;
+the new server refuses protocol-3 writes. Provisioning remains administrator-only:
+the CLI does not execute `provisioning.seed` or add a `--seed` command.
 
 ## Generic fields and audience
 
