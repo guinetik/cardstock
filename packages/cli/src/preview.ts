@@ -24,9 +24,10 @@ import {
 } from "@cardstock/core";
 import { loadConfig } from "./config";
 import { credentialFor } from "./credentials";
+import { readOptional } from "./sync-files";
 
 export const PREVIEW_HELP = `Usage: cardstock status [--config <file>] [--remote <url>] [--json]
-       cardstock sync --dry-run [--config <file>] [--remote <url>] [--json]
+       cardstock sync [--dry-run] [--config <file>] [--remote <url>] [--json]
                                [--ours <id>[:<field>]] [--theirs <id>[:<field>]]
        cardstock baseline [--config <file>] [--remote <url>] [--json]
 
@@ -37,10 +38,13 @@ it refuses while local and remote cards differ. Missing baselines never pick a w
 ours means local Markdown; theirs means the hosted board. Selections resolve only
 conflicting fields, preserving unrelated edits on both sides. Repeat flags to select
 cards or fields (for example --ours 17:body --theirs 18:frontmatter.priority).
-These choices are preview-only and are not saved. No ownership flags select a winner.
-sync without --dry-run is not implemented yet.`;
+Without --dry-run, sync applies the resolved plan through transactional protocol 2.
+sync --resume retries the recorded operation; --abort archives it without rollback.
+--recover-lock reclaims a same-machine lock only when its process has exited.
+--adopt-identities explicitly upgrades a legacy baseline to current immutable IDs.
+No ownership flags select a winner. Dry-run never saves choices or changes files.`;
 
-function normalizeRemote(value: string) {
+export function normalizeRemote(value: string) {
   const url = new URL(value);
   if (url.username || url.password || url.search || url.hash)
     throw new Error(
@@ -59,7 +63,7 @@ function normalizeRemote(value: string) {
   return url.href.replace(/\/$/, "");
 }
 
-async function getJson(url: string, token: string) {
+export async function getJson(url: string, token: string) {
   // Never forward a stored credential through a redirect to another endpoint.
   const response = await fetch(url, {
     headers: { authorization: `Bearer ${token}` },
@@ -105,10 +109,6 @@ export async function preview(
     (values["dry-run"] !== undefined || values.ours || values.theirs)
   )
     throw new Error("--dry-run, --ours and --theirs are only valid for sync");
-  if (command === "sync" && !values["dry-run"])
-    throw new Error(
-      "Sync apply is not implemented yet. Use cardstock sync --dry-run to preview changes.",
-    );
   const { file: configPath, config } = await loadConfig(cwd, values.config);
   const remoteValue = values.remote ?? config.remote;
   if (!remoteValue)
@@ -132,6 +132,13 @@ export async function preview(
   };
   const stateKey = createHash("sha256").update(stableJson(scope)).digest("hex");
   const baselinePath = path.join(directory, ".cardstock", `${stateKey}.json`);
+  if (
+    command === "baseline" &&
+    (await readOptional(`${baselinePath}.journal.json`)) !== null
+  )
+    throw new Error(
+      "A sync is pending; use sync --resume or --abort before replacing its baseline",
+    );
   let baseline: Baseline | undefined;
   let baselineText: string | undefined;
   try {
@@ -165,6 +172,19 @@ export async function preview(
   let metadata: RemoteMetadata | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     metadata = remoteMetadataSchema.parse(await getJson(url, credential.token));
+    if (metadata.syncProtocol === 2) {
+      const raw = await getJson(`${url}/sync`, credential.token);
+      metadata = remoteMetadataSchema.parse(raw);
+      snapshot = remoteSnapshotSchema.parse(raw);
+      if (
+        metadata.project !== config.project ||
+        metadata.board !== config.board
+      )
+        throw new Error(
+          "Snapshot identity does not match the configured board.",
+        );
+      break;
+    }
     snapshot = remoteSnapshotSchema.parse(
       await getJson(`${url}/cards`, credential.token),
     );

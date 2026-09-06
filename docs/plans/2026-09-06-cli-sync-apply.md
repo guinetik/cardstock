@@ -1,5 +1,24 @@
 # #18 — Safe bidirectional sync apply
 
+## Current implementation
+
+The executor and protocol-2 API are implemented. `sync` applies a resolved plan;
+`--resume` retries the journal's operation ID; `--abort` archives without rollback.
+Server writes are a single PostgreSQL transaction with identity/revision checks,
+insert-only creation and retry receipts. The snapshot RPC reads coherent metadata,
+source text, projections and UUIDs. Projection rebasing tracks web changes without
+the legacy body-ownership rule or flattening untouched nested YAML.
+
+The executor validates merged documents, records intent, verifies remote outcomes,
+publishes local files without clobbering concurrent arrivals, and checkpoints only
+verified cards. Before-images remain recoverable. Known UUID mismatches fail closed;
+legacy baseline identity adoption requires an explicit flag or a clean bootstrap.
+
+Local verification includes the built Node CLI through the actual authenticated
+routes and an isolated Supabase board, rollback/concurrency tests, lost responses,
+and forcibly killed processes after remote commit and local baseline checkpoints.
+Production deployment and a hosted apply smoke test are separate rollout steps.
+
 ## Sequence
 
 1. Materialize the conflict-free field plan into local and remote Markdown,
@@ -33,7 +52,7 @@ for recovery/audit. Manual editing to make both sides agree remains valid.
 Initial CLI surface: `sync --dry-run --ours 17:body` or `--theirs 17` previews that
 choice without saving it or writing either side. Repeat flags to select more cards.
 
-## Initial implementation boundary
+## Historical first-slice boundary (superseded by the executor)
 
 The first implementation slice covers merge materialization and recovery-journal
 storage/state transitions. It does not enable `sync` writes. The existing #16 API
@@ -49,7 +68,7 @@ generation to reject stale writers. Original content stays available after parti
 success. Baseline advancement and filesystem replacement belong to the executor,
 not the journal store. No production card content is changed by these tests.
 
-## First-slice verification
+## Historical first-slice verification
 
 65 core/journal tests and 19 real-Node CLI integration tests pass. Package and app
 TypeScript checks pass. The CLI test script runs journal tests before building and

@@ -41,4 +41,5 @@ jobs:
           version="$(node -p "require('./packages/cli/package.json').version")"
           test "$(cardstock --version)" = "$version"
           test "$(cardstock -v)" = "$version"
-          if cardstock sync; then echo '::error::Unknown command succeeded'; exit 1; fi
+          if cardstock sync; then echo '::error::Unconfigured sync succeeded'; exit 1; fi
+          CARDSTOCK_TEST_ENTRY="$(npm root -g)/@guinetik/cardstock-cli/dist/index.js" node --test packages/cli/test/sync.test.mjs

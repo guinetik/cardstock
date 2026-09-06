@@ -1,6 +1,6 @@
 # Deploying — hosted Supabase + Vercel
 
-Two projects to create, then a handful of values to wire. Nothing secret goes to Vercel except the anon key, which is public by design.
+Two projects to create, then a handful of values to wire. The CLI API requires a server-only Supabase service-role key; never expose it through a NEXT_PUBLIC variable.
 
 ## 1. Supabase (hosted)
 
@@ -21,7 +21,7 @@ Two projects to create, then a handful of values to wire. Nothing secret goes to
    - Then check **Authentication → Rate Limits**: the 2/hour cap only applies to the built-in sender, but confirm the custom-SMTP limit is above your expected sign-in rate. Resend's free tier allows 3,000 emails/month and 100/day.
 
    Local dev is unaffected — `bunx supabase start` keeps routing mail to Mailpit at http://127.0.0.1:54324.
-6. **Project Settings → API**: copy the Project URL and the anon/publishable key (for Vercel) and the service-role key (for your `.env.local` only).
+6. **Project Settings → API**: copy the Project URL and the anon/publishable key, plus the service-role key for server-only Vercel configuration and local administration.
 
 ## 2. Members
 
@@ -41,7 +41,7 @@ Seeding only fills the allowlist. Each person sets their own password the first 
 2. Environment variables (Production + Preview):
    - `NEXT_PUBLIC_SUPABASE_URL` — the project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon/publishable key
-   - do **not** add `SUPABASE_SERVICE_ROLE_KEY` — the app never needs it, and it bypasses every row-level policy
+   - `SUPABASE_SERVICE_ROLE_KEY` — server-only; required by CLI sign-in and the authorization-guarded board API. Never prefix it with `NEXT_PUBLIC` or store it in tracker configuration.
 3. Deploy. The owner onboards like anyone else: *First time here? Set your password* on `/login`, using `OWNER_EMAIL`. Anyone not on the allowlist is told the beta is invite-only, and no account is created for them.
 
 ## 4. Day to day
@@ -49,3 +49,24 @@ Seeding only fills the allowlist. Each person sets their own password the first 
 - New tracker items: run `etl:import` from your machine (it is a local tool by design), the board updates on the next page load.
 - Adding a person: the **owner** (any project, including as a project admin) or a **project admin** (members of that project only). Open the project page (`/p/<slug>`) or, as owner, `/users`. No email is sent; share the app URL so they can set a password on first use. Only the owner can invite another project admin. `MEMBER_EMAILS` + `db:seed-members` remains available for bootstrap and automation.
 - Schema changes: add a migration under `supabase/migrations/`, `bunx supabase db push`.
+
+## CLI sync protocol 2 rollout
+
+1. Back up production and confirm the linked Supabase project before reviewing
+   `bunx supabase db push --dry-run`. Apply the reviewed migrations, including
+   `20260914000000_cli_sync_apply.sql`, to that project.
+2. Deploy the matching application code. The migration adds transactional sync,
+   retry receipts, source projections and revision tracking for tag/link edits.
+   The new client refuses to apply against a server without protocol 2.
+3. Use the repository CLI until a release containing this implementation is
+   published. Sign in normally, run `status`/`sync --dry-run`, and reconcile any
+   differences before `sync`. Old baselines can be refreshed with `baseline` when
+   both sides agree, or explicitly upgraded with `sync --adopt-identities` after
+   confirming the current card identities.
+4. Smoke-test a controlled card change in each direction, an explicit conflict
+   choice, and a clean second preview. Do not retire the legacy tracker clients
+   until #19's mapping and three-client round-trip checks pass.
+
+See `packages/cli/README.md` for resume/abort, stale-lock recovery, and retained
+original files. Receipt rows must not be pruned while clients may still resume the
+associated journals. No hosted migration or deployment is performed by CLI sync.

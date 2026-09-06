@@ -8,6 +8,7 @@ import { findConfig } from "./config";
 import { credentialFor, removeCredential, saveCredential } from "./credentials";
 import { INIT_HELP, init } from "./init";
 import { PREVIEW_HELP, preview } from "./preview";
+import { executeSync } from "./sync-execute";
 
 const HELP = `Usage: cardstock <command>
 
@@ -15,9 +16,10 @@ const HELP = `Usage: cardstock <command>
   init --from <board.json> [--out <file>] [--remote <url>] [--dry-run] [--json]
   validate [--config <file>] [--json]
   status [--config <file>] [--remote <url>] [--json]
-  sync --dry-run [--config <file>] [--remote <url>] [--json]
+  sync [--dry-run] [--config <file>] [--remote <url>] [--json]
                  [--ours <id>[:<field>]] [--theirs <id>[:<field>]]
   baseline [--config <file>] [--remote <url>] [--json]
+  sync --resume | --abort [--recover-lock] [--remote <url>] [--json]
   login --remote <url> [--no-browser]
   logout --remote <url>
   --version, -v
@@ -103,6 +105,8 @@ export async function run(args: string[], cwd: string): Promise<number> {
     if (command === "init") {
       return await init(args.slice(1), cwd);
     }
+    if (command === "sync" && !args.slice(1).some((arg) => arg === "--dry-run"))
+      return await executeSync(args.slice(1), cwd);
     if (["status", "sync", "baseline"].includes(command))
       return await preview(command, args.slice(1), cwd);
     if (command === "validate") {

@@ -15,6 +15,7 @@ export const GET = withToken(async ({ db, board }) => {
     .sort((a, b) => Number(a.external_id) - Number(b.external_id))
     .map((card) => ({
       externalId: card.external_id,
+      cardId: card.id,
       revision: card.updated_at,
       markdown: decoder.decode(markdownByPath[`${card.external_id}.md`]),
     }));

@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
+import { hostname } from "node:os";
 import path from "node:path";
 import {
   baselineSchema,
   comparisonFields,
   type RemoteCard,
+  readSyncFrontmatter,
   remoteSnapshotSchema,
   type SyncIntent,
   stableJson,
@@ -65,6 +67,18 @@ function validate(value: unknown): SyncJournal {
       (intent.before.remote === null && !intent.writeRemote)
     )
       throw new Error("Invalid journal creation intent");
+    for (const markdown of [
+      intent.before.local,
+      intent.before.remote?.markdown,
+      intent.after.local,
+      intent.after.remote,
+    ]) {
+      if (
+        markdown != null &&
+        String(Number(readSyncFrontmatter(markdown).id)) !== intent.externalId
+      )
+        throw new Error("Journal Markdown identity does not match its file");
+    }
     seen.add(intent.externalId);
   }
   return journal;
@@ -107,6 +121,8 @@ export function verifyRemote(
   );
   if (
     observed.externalId !== externalId ||
+    (entry.intent.before.remote?.cardId !== undefined &&
+      observed.cardId !== entry.intent.before.remote.cardId) ||
     !observed.revision ||
     actual.id !== externalId ||
     stableJson(actual.fields) !== stableJson(expected.fields)
@@ -227,7 +243,11 @@ export class JournalStore {
     let createdTemporary = false;
     try {
       await lock.writeFile(
-        JSON.stringify({ pid: process.pid, journal: next.id }),
+        JSON.stringify({
+          pid: process.pid,
+          hostname: hostname(),
+          journal: next.id,
+        }),
       );
       await lock.sync();
       if (stableJson(await this.read()) !== stableJson(previous))

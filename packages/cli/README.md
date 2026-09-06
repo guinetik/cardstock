@@ -1,8 +1,9 @@
 # Cardstock CLI
 
 Command-line companion for [Cardstock](https://github.com/guinetik/cardstock).
-Initialize tracker configuration, validate Markdown offline, and preview local and
-remote changes. Applying remote sync is not implemented yet.
+Initialize tracker configuration, validate Markdown offline, preview changes, and
+sync Markdown with the board using explicit conflict resolution and recovery.
+Apply requires a server deployed with sync protocol 2 and its database migration.
 
 Requires Node.js 22 or newer. Bun is only needed by package developers.
 
@@ -144,5 +145,80 @@ filesystem, malformed input/snapshot, or network errors. `clean` means there are
 no pending data changes or conflicts; check `ok`/diagnostics as well before using
 a plan. Snapshot and tracker changes during a read require retrying the preview.
 
-`sync` without `--dry-run` refuses to run. Applying changes, conflict resolution,
-API mapping overrides, and interrupted-sync recovery remain part of #18/#19.
+## Apply and conflict choices
+
+```sh
+cardstock sync --remote https://cardstock.example.com --json
+cardstock sync --dry-run --ours 17:body --theirs 18:frontmatter.priority
+cardstock sync --ours 17:body --theirs 18:frontmatter.priority
+```
+
+Ours always means local Markdown; theirs always means the hosted board. A choice
+affects only the selected conflicting fields, preserving unrelated edits from both
+sides. Omit `:field` to select all conflicts on a card. Repeat flags for additional
+cards. Missing/replaced identities cannot be resolved by choosing a content side.
+Legacy app-owned/file-owned body flags never choose the winner in this sync path.
+
+The CLI records the complete intent before writes. Remote uploads are a single
+transaction containing the card, tags, links and history. Existing rows require
+immutable UUIDs and revisions; new rows use insert-only creation. An operation ID
+makes retries idempotent, including when the server committed but its response was
+lost. Snapshots are read back before local publication and baseline advancement.
+Each verified card checkpoints independently; a failure never advances unverified
+cards. Later edits can still appear as pending work in the final preview.
+
+Older baselines lack immutable IDs. Once both sides agree, rerun `baseline` against
+the updated server. Alternatively, `sync --adopt-identities` explicitly trusts the
+currently observed identity mapping for this one upgrade. It does not override a
+known UUID mismatch or resolve any content conflicts.
+
+Optional field removal is a real removal, not an instruction to retain an old
+database value. Untouched source formatting and nested unknown YAML are preserved.
+Rank is a position in a lane: invalid or contradictory positions fail the entire
+remote batch. Ambiguous tied lane ranks require a board reorder before applying.
+Nonempty tag/epic/area mapping overrides and custom audience rules are refused
+pending #19 integration. Existing app-managed audience is retained on updates;
+new cards use the default internal-tag audience rule. For tag resolution,
+normal tag references, unambiguous bare tags and group aliases are supported.
+
+## Interrupted sync and recovery
+
+```sh
+cardstock sync --resume --remote https://cardstock.example.com
+cardstock sync --resume --recover-lock --remote https://cardstock.example.com
+cardstock sync --abort --remote https://cardstock.example.com
+```
+
+Resume uses the saved intent and retry ID, not a freshly guessed winner. Do not
+pass new `--ours`/`--theirs` choices to resume. If either side changed incompatibly,
+preserve those edits, abort the old intent, then preview/reconcile a fresh plan.
+Abort archives the journal; it does **not** roll back completed remote or local
+writes. An explicit baseline replacement is refused while a journal is pending.
+
+The scope lock excludes other cooperating sync/baseline writers. `--recover-lock`
+only reclaims a lock recorded on this machine whose process has exited. Unknown
+owners and live processes require inspection, never automatic lock stealing.
+
+Local files are staged and flushed, then published with an exclusive filesystem
+link so a file that appears concurrently is never overwritten. An existing file
+is first moved to its per-operation `.before` name and checked again. A crash in
+that brief filename gap is recoverable with `--resume`; file contents are never
+published partially. Displaced originals are retained to preserve writes from
+editors holding an old file descriptor. These backups and journal archives contain
+Markdown, not credentials. Add these patterns to each tracker's ignore file:
+
+```gitignore
+.cardstock/
+*.md.cardstock-*.before
+*.md.cardstock-*.tmp
+```
+
+Do not delete recovery artifacts until the run is verified and any concurrent
+editor changes have been reconciled. Hard-link publication requires a filesystem
+that supports hard links; an unsupported filesystem stops with originals retained.
+File data is flushed; directory durability follows platform filesystem guarantees
+(Windows does not expose POSIX directory fsync through Node).
+
+Apply exits 0 when the recorded operation completes without remaining conflicts,
+1 for plan/validation conflicts, and 2 for failed or interrupted execution. JSON
+errors include the pending journal path and recovery guidance when available.

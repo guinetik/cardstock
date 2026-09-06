@@ -6,6 +6,8 @@
 packages/*/dist/
 *.tgz
 .cardstock/
+*.md.cardstock-*.before
+*.md.cardstock-*.tmp
 /.pnp
 .pnp.*
 .yarn/*

@@ -1,10 +1,15 @@
 import { boardEtag } from "@/lib/api/board";
 import { apiError, apiJson } from "@/lib/api/errors";
 import { withToken } from "@/lib/api/route";
+import { syncSnapshot } from "@/lib/api/sync";
 import { applyPlan } from "@/lib/import/apply";
 import { loadBoardState } from "@/lib/import/board-state";
 import { planImport } from "@/lib/import/plan";
 import type { SheetFile } from "@/lib/import/types";
+
+export const GET = withToken(async ({ db, board, project }) =>
+  apiJson(await syncSnapshot(db, board.id, project.slug, board.slug)),
+);
 
 interface SyncCard {
   externalId: string;

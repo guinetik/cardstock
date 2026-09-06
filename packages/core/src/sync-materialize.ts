@@ -1,4 +1,11 @@
-import { isAlias, isMap, isScalar, parseDocument, visit } from "yaml";
+import {
+  isAlias,
+  isMap,
+  isScalar,
+  parseDocument,
+  stringify,
+  visit,
+} from "yaml";
 import type { Config } from "./config";
 import {
   comparisonFields,
@@ -153,6 +160,33 @@ function patchFields(
   }
   return (
     target.slice(0, a.start) + yaml + target.slice(a.end, a.bodyStart) + body
+  );
+}
+
+export function markdownFromFields(externalId: string, fields: Fields): string {
+  const frontmatter = Object.fromEntries(
+    Object.entries(fields)
+      .filter(([key]) => key.startsWith("frontmatter."))
+      .map(([key, value]) => [key.slice(12), value]),
+  );
+  return `---\n${stringify({ id: Number(externalId), ...frontmatter })}---\n# #${externalId} — ${frontmatter.title}\n\n${fields.body ?? ""}\n`;
+}
+
+/** Rebase only database fields that changed since the stored source projection. */
+export function rebaseMarkdown(
+  source: string,
+  externalId: string,
+  previous: Fields,
+  current: Fields,
+): string {
+  const keys = [
+    ...new Set([...Object.keys(previous), ...Object.keys(current)]),
+  ].filter((key) => stableJson(previous[key]) !== stableJson(current[key]));
+  return patchFields(
+    source,
+    markdownFromFields(externalId, current),
+    keys,
+    current,
   );
 }
 

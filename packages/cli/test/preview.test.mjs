@@ -168,8 +168,8 @@ test("status and dry-run are identical read-only previews; baseline is explicit"
   const count = ctx.state.requests.length;
   const apply = await ctx.cli("sync", "--json");
   assert.equal(apply.code, 2);
-  assert.match(JSON.parse(apply.stdout).error, /not implemented/);
-  assert.equal(ctx.state.requests.length, count);
+  assert.match(JSON.parse(apply.stdout).error, /protocol 2/);
+  assert.ok(ctx.state.requests.length > count);
 });
 
 test("preview shows both directions and conflicts without advancing the baseline", async (t) => {

@@ -17,6 +17,7 @@ export interface LocalCard {
   markdown: string;
 }
 export interface RemoteCard {
+  cardId?: string;
   externalId: string;
   revision: string;
   markdown: string;
@@ -25,6 +26,7 @@ export interface Vocabulary {
   tagGroups: { key: string; tags: { key: string }[] }[];
 }
 export const remoteMetadataSchema = z.object({
+  syncProtocol: z.number().optional(),
   project: z.string(),
   board: z.string(),
   etag: z.string().min(1),
@@ -37,6 +39,7 @@ export const remoteSnapshotSchema = z.object({
   cards: z.array(
     z.object({
       externalId: z.string().regex(/^[1-9]\d*$/),
+      cardId: z.string().uuid().optional(),
       revision: z.string().min(1),
       markdown: z.string(),
     }),
@@ -72,6 +75,7 @@ export const baselineSchema = z.strictObject({
   cards: z.array(
     z.strictObject({
       file: z.string().regex(/^[1-9]\d*\.md$/),
+      cardId: z.string().uuid().optional(),
       externalId: z.string().regex(/^[1-9]\d*$/),
       revision: z.string().min(1),
       markdown: z.string(),
@@ -146,22 +150,7 @@ export function comparisonFields(
   mapping?: Config["mapping"],
 ): { id: string; fields: Fields } {
   const parsed = parseFile(markdown);
-  const lines = markdown.split(/\r?\n/);
-  const end = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
-  const document = parseDocument(lines.slice(1, end).join("\n"), {
-    stringKeys: true,
-  });
-  if (
-    document.errors.length ||
-    document.warnings.some((warning) => warning.code === "TAG_RESOLVE_FAILED")
-  ) {
-    throw new Error(
-      "Sync comparison requires unambiguous YAML frontmatter; fix syntax, duplicate keys or unsupported tags first.",
-    );
-  }
-  const raw = document.toJS({ maxAliasCount: 100 });
-  if (!raw || typeof raw !== "object" || Array.isArray(raw))
-    throw new Error("Frontmatter must be an object");
+  const raw = readSyncFrontmatter(markdown);
   const { data } = validateFrontmatter(raw);
   const fields: Fields = Object.create(null);
   for (const [key, value] of Object.entries(raw)) {
@@ -181,6 +170,27 @@ export function comparisonFields(
   }
   fields.body = bodyWithoutH1(parsed.body);
   return { id: String(data.id), fields };
+}
+
+export function readSyncFrontmatter(markdown: string): Record<string, unknown> {
+  parseFile(markdown);
+  const lines = markdown.split(/\r?\n/);
+  const end = lines.findIndex((line, i) => i > 0 && line.trim() === "---");
+  const document = parseDocument(lines.slice(1, end).join("\n"), {
+    stringKeys: true,
+  });
+  if (
+    document.errors.length ||
+    document.warnings.some((warning) => warning.code === "TAG_RESOLVE_FAILED")
+  ) {
+    throw new Error(
+      "Sync comparison requires unambiguous YAML frontmatter; fix syntax, duplicate keys or unsupported tags first.",
+    );
+  }
+  const raw = document.toJS({ maxAliasCount: 100 });
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    throw new Error("Frontmatter must be an object");
+  return raw;
 }
 
 const fieldValue = (fields: Fields | undefined, key: string): FieldValue =>
@@ -245,6 +255,21 @@ export function planSync(input: {
     const remote = remotes.get(externalId);
     const base = bases.get(externalId);
     const file = local?.card.file ?? base?.card.file ?? `${externalId}.md`;
+    if (
+      base?.card.cardId &&
+      remote &&
+      base.card.cardId !== remote.card.cardId
+    ) {
+      cards.push({
+        externalId,
+        file,
+        action: "conflict",
+        changes: [],
+        reason:
+          "identity_changed: card was replaced; reconcile identity explicitly",
+      });
+      continue;
+    }
     if (base && !remote) {
       cards.push({
         externalId,
