@@ -84,3 +84,40 @@ Current-version mode creates only a tag. The helper checks/builds locally; the
 workflow verifies the npm installation with Node before publication. npm versions
 are immutable: do not tag an already published version expecting it to republish.
 Web deployment and CLI versioning are independent.
+
+## Board API
+
+The web application exposes a versioned API for future CLI sync commands at
+`/api/v1`. Create a personal access token in **Profile → CLI tokens**. The
+plaintext token has the shape `cst_<id8>_<secret43>` and is shown once; only a
+SHA-256 hash is stored. Revoke it from the same page when it is no longer used.
+
+Send it on every request:
+
+```sh
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/v1/boards
+```
+
+| Route | Response |
+| --- | --- |
+| `GET /api/v1/boards` | Projects and boards visible to the token holder. |
+| `GET /api/v1/boards/:project/:board` | Lanes, tags, epics, roster, settings, and an etag. |
+| `GET /api/v1/boards/:project/:board/cards` | Markdown cards with each card's revision and the board etag. |
+| `POST /api/v1/boards/:project/:board/sync` | A plan, or a revision-checked write when `apply` is true. |
+
+For example, a dry run sends:
+
+```json
+{ "apply": false, "cards": [{ "externalId": "16", "markdown": "---\nid: 16\n…" }] }
+```
+
+An applied change must quote the `revision` returned by the snapshot for every
+changed card. Missing revisions return `409 conflict` with
+`details.code = "revision_required"`; stale revisions return `409` and list
+the conflicting cards alongside any cards that were already applied.
+
+Errors always have the form `{ "error": { "code", "message", "details"? } }`.
+The API uses `unauthenticated` (401), `forbidden` (403), `not_found` (404),
+`invalid_request` (422), and `conflict` (409). See
+[`docs/specs/2026-09-06-authenticated-board-api-design.md`](specs/2026-09-06-authenticated-board-api-design.md)
+for the rationale and compatibility rules.

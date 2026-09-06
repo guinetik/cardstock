@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 const PUBLIC = ["/login", "/auth/"];
+const API_PREFIX = "/api/v1/";
 
 /** Refresh the Supabase session cookie on every request and gate everything but /login and /auth/* behind sign-in. */
 export async function proxy(request: NextRequest) {
@@ -25,7 +26,11 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await db.auth.getUser();
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC.some((p) => path === p || path.startsWith(p));
+  // CLI routes authenticate through their bearer-token wrapper, not a browser
+  // session. Let them reach it so an invalid token returns API JSON, not HTML.
+  const isPublic =
+    path.startsWith(API_PREFIX) ||
+    PUBLIC.some((p) => path === p || path.startsWith(p));
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

@@ -37,6 +37,7 @@ function state(cards: Partial<ExistingCard>[] = []): BoardState {
     archived_by: null,
     color: null,
     source_hash: null,
+    updated_at: "2026-09-06T00:00:00.000Z",
     has_source_text: true,
     frontmatter_extra: {},
     tag_ids: [],

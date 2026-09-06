@@ -39,6 +39,14 @@ function fakeDb(failAt = 0) {
               : { data: { id: `db-${writes}` }, error: null },
           );
         },
+        maybeSingle: () => {
+          writes++;
+          return Promise.resolve(
+            writes === failAt
+              ? { data: null, error: { message: "boom" } }
+              : { data: { id: `db-${writes}` }, error: null },
+          );
+        },
         // biome-ignore lint/suspicious/noThenProperty: mimics supabase-js's thenable builder
         then: (
           resolve: (v: unknown) => unknown,
@@ -135,7 +143,12 @@ describe("applyPlan", () => {
       plan(rows),
       "me",
     );
-    expect(counts).toEqual({ created: 0, updated: 1, recalibrated: 1 });
+    expect(counts).toEqual({
+      created: 0,
+      updated: 1,
+      recalibrated: 1,
+      conflicted: [],
+    });
     expect(events).toHaveLength(1);
   });
 

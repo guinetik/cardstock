@@ -51,6 +51,8 @@ export interface ExistingCard {
   archived_by: string | null;
   color: string | null;
   source_hash: string | null;
+  /** The card's revision. Conditional writes compare against this. */
+  updated_at: string;
   /** Whether the row already stores the sheet it was imported from. */
   has_source_text: boolean;
   frontmatter_extra: Record<string, unknown>;

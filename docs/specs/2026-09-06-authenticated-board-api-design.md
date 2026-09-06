@@ -103,10 +103,10 @@ Board-scoped routes 404 rather than 403 on a project the member cannot see, so t
 |---|---|
 | `GET /api/v1/boards` | Discovery. Every project and board the member can reach, with their role on each. |
 | `GET /api/v1/boards/:project/:board` | Vocabulary. Lanes, tag groups and their tags, epics, the project roster, board settings, and the board etag. |
-| `GET /api/v1/boards/:project/:board/sheets` | Snapshot. Every card as a markdown sheet, with its `external_id` and revision, plus the board etag. |
-| `POST /api/v1/boards/:project/:board/sync` | Plan a set of sheets and, if asked, apply them. |
+| `GET /api/v1/boards/:project/:board/cards` | Snapshot. Every card as markdown, with its `external_id` and revision, plus the board etag. |
+| `POST /api/v1/boards/:project/:board/sync` | Plan a set of cards and, if asked, apply them. |
 
-JSON rather than the existing zip export: #17 needs to diff sheets, and unzipping to do that is a step with no purpose.
+JSON rather than the existing zip export: #17 needs to diff cards, and unzipping to do that is a step with no purpose.
 
 ### Errors
 
@@ -120,18 +120,18 @@ Every failure is `{ "error": { "code", "message", "details"? } }` with a matchin
 | `invalid_request` | 422 |
 | `conflict` | 409 |
 
-`details` carries structure the CLI can act on — the conflicting cards, the offending sheet names — never a stack trace or a database message. A Supabase error is logged server-side and reported as a generic 500.
+`details` carries structure the CLI can act on — the conflicting cards and malformed card payloads — never a stack trace or a database message. A Supabase error is logged server-side and reported as a generic 500.
 
 ## Revisions and conflicts
 
-A card's revision is its `updated_at`, returned with every sheet in the snapshot. The sync request:
+A card's revision is its `updated_at`, returned with every card in the snapshot. The sync request:
 
 ```json
 POST /api/v1/boards/cardstock/cardstock-dev/sync
 { "apply": true,
-  "sheets": [
-    { "name": "16.md",
-      "text": "---\nid: 16\n…",
+  "cards": [
+    { "externalId": "16",
+      "markdown": "---\nid: 16\n…",
       "revision": "2026-09-06T12:04:11.882Z" }
   ] }
 ```
@@ -152,16 +152,16 @@ That is the shape #18's recovery journal needs anyway. A partial apply is report
 
 ### The board etag
 
-Both GET routes return an `etag` — a hash over the maximum `updated_at` across cards, lanes, tag groups and tags. It lets a client ask "has anything at all changed?" without pulling every sheet, and gives #17 a cheap no-op check.
+Both GET routes return an `etag` — a hash over the maximum `updated_at` across cards, lanes, tag groups and tags. It lets a client ask "has anything at all changed?" without pulling every card, and gives #17 a cheap no-op check.
 
 ## One change to existing code
 
 `exportBoardEntries` rebases `source_text` and `lane_from_source` as a side effect of reading, which is right for a download and wrong for a GET that any client may call on a loop. It splits into:
 
-- `boardSheets(db, boardId, prefix?)` — pure. Returns the sheets and the rebase rows it *would* write.
+- `boardCards(db, boardId, prefix?)` — pure. Returns markdown cards and the rebase rows it *would* write.
 - `rebaseSources(db, rows)` — the write half, unchanged in behaviour.
 
-`exportBoardEntries` keeps its signature and calls both, so the zip routes are untouched. The API calls only `boardSheets`. This is the only refactor in scope; nothing else in `src/lib/import/` moves.
+`exportBoardEntries` keeps its signature and calls both, so the zip routes are untouched. The API calls only `boardCards`. This is the only refactor in scope; nothing else in `src/lib/import/` moves.
 
 ## Minting
 

@@ -31,6 +31,8 @@ export interface ApplyCounts {
   updated: number;
   /** Rows that only recorded the sheet — same content, different bytes. */
   recalibrated: number;
+  /** External ids whose stored revision moved on before the write landed. */
+  conflicted: string[];
 }
 
 export async function applyPlan(
@@ -38,12 +40,18 @@ export async function applyPlan(
   state: BoardState,
   plan: Plan,
   actor: string,
+  expected?: Map<string, string>,
 ): Promise<ApplyCounts> {
   if (!plan.ok)
     throw new Error("The plan has errors; fix the files and try again.");
-  const counts: ApplyCounts = { created: 0, updated: 0, recalibrated: 0 };
+  const counts: ApplyCounts = {
+    created: 0,
+    updated: 0,
+    recalibrated: 0,
+    conflicted: [],
+  };
   try {
-    await fileThePlan(db, state, plan, actor, counts);
+    await fileThePlan(db, state, plan, actor, counts, expected);
   } catch (e) {
     throw new ApplyError((e as Error).message, counts.created, counts.updated);
   }
@@ -57,6 +65,7 @@ async function fileThePlan(
   plan: Plan,
   actor: string,
   counts: ApplyCounts,
+  expected?: Map<string, string>,
 ): Promise<void> {
   const boardId = state.id;
 
@@ -171,19 +180,35 @@ async function fileThePlan(
     // is updated by id rather than upserted: an insert-shaped upsert must
     // satisfy every NOT NULL column (e.g. title) before Postgres even looks
     // at the conflict, which a changed-priority-only patch would violate.
+    const revision = prev ? expected?.get(row.id) : undefined;
     const { data, error } = prev
-      ? await db
-          .from("cards")
-          .update(columns)
-          .eq("id", prev.id)
-          .select("id")
-          .single()
+      ? await (revision
+          ? db
+              .from("cards")
+              .update(columns)
+              .eq("id", prev.id)
+              .eq("updated_at", revision)
+              .select("id")
+              .maybeSingle()
+          : db
+              .from("cards")
+              .update(columns)
+              .eq("id", prev.id)
+              .select("id")
+              .maybeSingle())
       : await db
           .from("cards")
           .upsert(columns, { onConflict: "board_id,external_id" })
           .select("id")
-          .single();
-    if (error || !data) fail(`#${row.id}`, error);
+          .maybeSingle();
+    if (error) fail(`#${row.id}`, error);
+    if (!data) {
+      if (revision) {
+        counts.conflicted.push(row.id);
+        continue;
+      }
+      fail(`#${row.id}`, null);
+    }
     idByExternal.set(row.id, data.id);
 
     if (row.patch.tagRefs !== undefined) {

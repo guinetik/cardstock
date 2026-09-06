@@ -7,6 +7,7 @@ import { manageableProjectIds } from "@/lib/access-server";
 import { memberLabel } from "@/lib/keys";
 import { notificationPrefs } from "@/lib/notify";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
+import { type CliTokenRow, CliTokens } from "./cli-tokens";
 import { NotificationSettings } from "./notification-settings";
 import { PortraitEditor } from "./portrait-editor";
 import { ProfileForm } from "./profile-form";
@@ -27,7 +28,7 @@ export default async function ProfilePage() {
   const member = await currentMember();
   if (!member) redirect("/login?error=member");
   const db = await supabaseServer();
-  const [{ data }, canManage] = await Promise.all([
+  const [{ data }, canManage, { data: tokens }] = await Promise.all([
     db
       .from("projects")
       .select(
@@ -35,6 +36,11 @@ export default async function ProfilePage() {
       )
       .order("name"),
     manageableProjectIds(member),
+    db
+      .from("cli_tokens")
+      .select("id, name, created_at, last_used_at, expires_at")
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false }),
   ]);
   const projects: BinderProject[] = ((data ?? []) as ProjectRow[]).map((p) => ({
     slug: p.slug,
@@ -81,6 +87,14 @@ export default async function ProfilePage() {
             ((member.prefs ?? {}) as Record<string, unknown>).notifications,
           )}
         />
+      </ProjectSection>
+
+      <ProjectSection
+        id="profile-cli"
+        title="cli tokens"
+        count={String((tokens ?? []).length)}
+      >
+        <CliTokens tokens={(tokens ?? []) as CliTokenRow[]} />
       </ProjectSection>
 
       <ProjectSection

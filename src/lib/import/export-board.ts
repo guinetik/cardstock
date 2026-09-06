@@ -4,8 +4,15 @@ import { cardToMarkdown, writeSheet } from "@/lib/frontmatter/write";
 import { loadBoardState } from "@/lib/import/board-state";
 import { sheetFromCard } from "@/lib/import/plan";
 
+export interface RebaseRow {
+  id: string;
+  external_id: string;
+  source_text: string;
+  lane_from_source: string | null;
+}
+
 /**
- * One board's sheets, ready for a zip.
+ * One board's markdown cards and the rebase they imply, without writing.
  *
  * Each file is the one that was handed to us with the board's marks written
  * in; a card that never had a source is written from scratch. Exporting also
@@ -16,11 +23,11 @@ import { sheetFromCard } from "@/lib/import/plan";
  * `prefix` is prepended to every entry name, so a project export can put each
  * board in its own folder (`"<board-slug>/"`).
  */
-export async function exportBoardEntries(
+export async function boardCards(
   db: SupabaseClient,
   boardId: string,
   prefix = "",
-): Promise<Record<string, Uint8Array>> {
+): Promise<{ cards: Record<string, Uint8Array>; rebase: RebaseRow[] }> {
   const state = await loadBoardState(db, boardId);
   const { data: sources, error: sourcesError } = await db
     .from("cards")
@@ -44,21 +51,16 @@ export async function exportBoardEntries(
     return r && "ref" in r ? r.ref : null;
   };
 
-  const entries: Record<string, Uint8Array> = {};
+  const cards: Record<string, Uint8Array> = {};
   const enc = new TextEncoder();
-  const rebase: {
-    id: string;
-    external_id: string;
-    source_text: string;
-    lane_from_source: string | null;
-  }[] = [];
+  const rebase: RebaseRow[] = [];
   for (const card of state.cards.values()) {
     const sheet = sheetFromCard(card, state);
     const src = sourceOf.get(card.id);
     const text = src
       ? writeSheet(src, sheet, { tagRef: resolve })
       : cardToMarkdown(sheet);
-    entries[`${prefix}${card.external_id}.md`] = enc.encode(text);
+    cards[`${prefix}${card.external_id}.md`] = enc.encode(text);
     if (text !== src)
       rebase.push({
         id: card.id,
@@ -67,7 +69,15 @@ export async function exportBoardEntries(
         lane_from_source: sheet.lane,
       });
   }
-  for (const r of rebase) {
+  return { cards, rebase };
+}
+
+/** Store sheets a download handed out, preserving zip export's old behaviour. */
+export async function rebaseSources(
+  db: SupabaseClient,
+  rows: RebaseRow[],
+): Promise<void> {
+  for (const r of rows) {
     const { error } = await db
       .from("cards")
       .update({
@@ -78,5 +88,15 @@ export async function exportBoardEntries(
     if (error)
       console.error(`export rebase #${r.external_id}: ${error.message}`);
   }
-  return entries;
+}
+
+/** One board's markdown cards for a zip. Downloads still rebase after reading. */
+export async function exportBoardEntries(
+  db: SupabaseClient,
+  boardId: string,
+  prefix = "",
+): Promise<Record<string, Uint8Array>> {
+  const { cards, rebase } = await boardCards(db, boardId, prefix);
+  await rebaseSources(db, rebase);
+  return cards;
 }
