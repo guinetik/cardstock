@@ -378,105 +378,109 @@ export function PrioritiesView(props: PrioritiesViewProps) {
         is red alert.
       </p>
 
-      <section className="paper-well mt-3 flex flex-col p-4">
-        {([1, 2, 3] as const).map((band) => {
-          const rows = bands[band];
-          const isOver = over?.target === band;
-          return (
-            // biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern
-            <div
-              key={band}
-              className={`flex flex-col gap-1.5 pb-4 ${isOver ? "paper-lane--over" : ""}`}
-              onDragOver={(event) => onContainerDragOver(event, band)}
-              onDragLeave={(event) => onContainerDragLeave(event, band)}
-              onDrop={(event) => onDrop(event, band, rows.length)}
-            >
+      <div className="mt-3 flex flex-col gap-4 lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <section className="paper-well flex flex-col p-4 lg:col-start-2 lg:row-start-1">
+          {([1, 2, 3] as const).map((band) => {
+            const rows = bands[band];
+            const isOver = over?.target === band;
+            return (
+              // biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern
               <div
-                className="flex items-baseline gap-2.5 pb-1.5"
-                style={{ borderBottom: `2px solid ${BAND_PEN_COLOR[band]}` }}
+                key={band}
+                className={`flex flex-col gap-1.5 pb-4 ${isOver ? "paper-lane--over" : ""}`}
+                onDragOver={(event) => onContainerDragOver(event, band)}
+                onDragLeave={(event) => onContainerDragLeave(event, band)}
+                onDrop={(event) => onDrop(event, band, rows.length)}
               >
-                <span className={`sq sq--on ${PRIORITY_PEN[band]}`}>
-                  P{band}
-                </span>
-                <h2
-                  className="lane-name text-sm"
-                  style={{ color: BAND_PEN_COLOR[band] }}
+                <div
+                  className="flex items-baseline gap-2.5 pb-1.5"
+                  style={{ borderBottom: `2px solid ${BAND_PEN_COLOR[band]}` }}
                 >
-                  {BAND_LABEL[band]}
-                </h2>
-                <span className="font-mono text-[10.5px] text-[var(--color-grey)]">
-                  {band === 1
-                    ? `${p1.length} · room for ${p1Room}`
-                    : rows.length}
+                  <span className={`sq sq--on ${PRIORITY_PEN[band]}`}>
+                    P{band}
+                  </span>
+                  <h2
+                    className="lane-name text-sm"
+                    style={{ color: BAND_PEN_COLOR[band] }}
+                  >
+                    {BAND_LABEL[band]}
+                  </h2>
+                  <span className="font-mono text-[10.5px] text-[var(--color-grey)]">
+                    {band === 1
+                      ? `${p1.length} · room for ${p1Room}`
+                      : rows.length}
+                  </span>
+                </div>
+                {rows.map((card, index) => {
+                  displayCounter += 1;
+                  return bandRow(card, band, index, displayCounter);
+                })}
+                {band === 1 && rows.length === 0 && (
+                  <p className="px-0.5 py-2 text-xs text-[var(--color-grey)]">
+                    No stones yet. Whatever goes in first sets the shape of
+                    everything after it.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </section>
+
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern */}
+        <div
+          className={`flex flex-col gap-2.5 px-1.5 pb-3.5 pt-1 lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 ${
+            over?.target === "desk" ? "paper-lane--over" : ""
+          }`}
+          onDragOver={(event) => onContainerDragOver(event, "desk")}
+          onDragLeave={(event) => onContainerDragLeave(event, "desk")}
+          onDrop={(event) => onDrop(event, "desk", unweighed.length)}
+        >
+          <div className="flex flex-wrap items-baseline gap-2.5 border-b border-dashed border-[var(--border-strong)] pb-1.5">
+            <h2 className="lane-name text-xs text-[var(--color-grey)]">
+              Unweighed
+            </h2>
+            <span className="font-mono text-[10.5px] text-[var(--color-grey)]">
+              {unweighed.length}
+            </span>
+            <span className="text-[11.5px] text-[var(--color-ink2)]">
+              Not in the jar, so the priority filter cannot find them. Drag one
+              in; drag a sheet out here to unweigh it.
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-3.5 pt-2.5">
+            {unweighed.map((card, index) => (
+              // biome-ignore lint/a11y/noStaticElementInteractions: post-it mirrors the prototype's div pattern
+              <div
+                key={card.id}
+                className="flex w-44 flex-col gap-1.5 p-2.5 shadow-[var(--shadow-card)]"
+                style={{
+                  background: "var(--surface-postit)",
+                  rotate: TILTS[index % TILTS.length],
+                }}
+                draggable
+                onDragStart={(event) => onDragStart(event, card.id)}
+                onDragEnd={onDragEnd}
+              >
+                <span className="font-mono text-[10px] text-[var(--color-grey)]">
+                  #{card.external_id}
+                </span>
+                <Link
+                  href={href(card)}
+                  className="text-[12.5px] font-medium leading-tight"
+                >
+                  {card.title}
+                </Link>
+                <span className="stat stat--faint pt-0.5">
+                  {card.lane_name}
                 </span>
               </div>
-              {rows.map((card, index) => {
-                displayCounter += 1;
-                return bandRow(card, band, index, displayCounter);
-              })}
-              {band === 1 && rows.length === 0 && (
-                <p className="px-0.5 py-2 text-xs text-[var(--color-grey)]">
-                  No stones yet. Whatever goes in first sets the shape of
-                  everything after it.
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </section>
-
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern */}
-      <div
-        className={`mt-4 flex flex-col gap-2.5 px-1.5 pb-3.5 pt-1 ${
-          over?.target === "desk" ? "paper-lane--over" : ""
-        }`}
-        onDragOver={(event) => onContainerDragOver(event, "desk")}
-        onDragLeave={(event) => onContainerDragLeave(event, "desk")}
-        onDrop={(event) => onDrop(event, "desk", unweighed.length)}
-      >
-        <div className="flex flex-wrap items-baseline gap-2.5 border-b border-dashed border-[var(--border-strong)] pb-1.5">
-          <h2 className="lane-name text-xs text-[var(--color-grey)]">
-            Unweighed
-          </h2>
-          <span className="font-mono text-[10.5px] text-[var(--color-grey)]">
-            {unweighed.length}
-          </span>
-          <span className="text-[11.5px] text-[var(--color-ink2)]">
-            Not in the jar, so the priority filter cannot find them. Drag one
-            in; drag a sheet out here to unweigh it.
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-3.5 pt-2.5">
-          {unweighed.map((card, index) => (
-            // biome-ignore lint/a11y/noStaticElementInteractions: post-it mirrors the prototype's div pattern
-            <div
-              key={card.id}
-              className="flex w-44 flex-col gap-1.5 p-2.5 shadow-[var(--shadow-card)]"
-              style={{
-                background: "var(--surface-postit)",
-                rotate: TILTS[index % TILTS.length],
-              }}
-              draggable
-              onDragStart={(event) => onDragStart(event, card.id)}
-              onDragEnd={onDragEnd}
-            >
-              <span className="font-mono text-[10px] text-[var(--color-grey)]">
-                #{card.external_id}
-              </span>
-              <Link
-                href={href(card)}
-                className="text-[12.5px] font-medium leading-tight"
-              >
-                {card.title}
-              </Link>
-              <span className="stat stat--faint pt-0.5">{card.lane_name}</span>
-            </div>
-          ))}
-          {unweighed.length === 0 && (
-            <p className="px-0.5 py-1.5 text-xs text-[var(--color-grey)]">
-              Everything has a weight.
-            </p>
-          )}
+            ))}
+            {unweighed.length === 0 && (
+              <p className="px-0.5 py-1.5 text-xs text-[var(--color-grey)]">
+                Everything has a weight.
+              </p>
+            )}
+          </div>
         </div>
       </div>
       {isPending && <output className="sr-only">Saving…</output>}
