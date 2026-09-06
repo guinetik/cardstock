@@ -330,3 +330,73 @@ test("board selection and metadata responses are validated", async (t) => {
   assert.equal(remote.code, 2);
   assert.match(JSON.parse(remote.stdout).error, /must not contain credentials/);
 });
+
+test("ours/theirs preview resolves only selected conflicts and never writes", async (t) => {
+  const ctx = await setup(t);
+  const saved = JSON.parse((await ctx.cli("baseline", "--json")).stdout);
+  const baselineBefore = await readFile(saved.baseline.path, "utf8");
+  const local = `${sheet.replace("custom: original", "custom: local")}Local body.\n`;
+  const remote = `${sheet.replace("status: backlog", "status: held")}Remote body.\n`;
+  await writeFile(path.join(ctx.tracker, "1.md"), local);
+  ctx.state.snapshot.cards[0] = {
+    externalId: "1",
+    revision: "r2",
+    markdown: remote,
+  };
+  for (const side of ["ours", "theirs"]) {
+    const result = await ctx.cli(
+      "sync",
+      "--dry-run",
+      `--${side}`,
+      "1:body",
+      "--json",
+    );
+    assert.equal(result.code, 0, result.stdout);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.counts.conflicts, 0);
+    const changes = report.cards[0].changes;
+    assert.equal(
+      changes.find((change) => change.field === "body").resolution,
+      side,
+    );
+    assert.equal(
+      changes.find((change) => change.field === "body").direction,
+      side === "ours" ? "upload" : "download",
+    );
+    assert.equal(
+      changes.find((change) => change.field === "frontmatter.custom").direction,
+      "upload",
+    );
+    assert.equal(
+      changes.find((change) => change.field === "frontmatter.status").direction,
+      "download",
+    );
+  }
+  assert.equal(
+    (await ctx.cli("sync", "--dry-run", "--ours", "1", "--json")).code,
+    0,
+  );
+  assert.equal((await ctx.cli("sync", "--dry-run", "--json")).code, 1);
+  assert.equal(await readFile(saved.baseline.path, "utf8"), baselineBefore);
+  assert.equal(await readFile(path.join(ctx.tracker, "1.md"), "utf8"), local);
+  assert.ok(ctx.state.requests.every((request) => request.method === "GET"));
+});
+
+test("invalid and overlapping conflict selections are explicit errors", async (t) => {
+  const ctx = await setup(t);
+  await ctx.cli("baseline", "--json");
+  await writeFile(path.join(ctx.tracker, "1.md"), `${sheet}Local body.\n`);
+  ctx.state.snapshot.cards[0].markdown = `${sheet}Remote body.\n`;
+  for (const flags of [
+    ["--ours", "1", "--theirs", "1:body"],
+    ["--ours", "2"],
+    ["--theirs", "1:frontmatter.typo"],
+    ["--ours", "../1"],
+  ]) {
+    const result = await ctx.cli("sync", "--dry-run", ...flags, "--json");
+    assert.equal(result.code, 2, result.stdout);
+    assert.equal(JSON.parse(result.stdout).ok, false);
+  }
+  assert.equal((await ctx.cli("baseline", "--ours", "1", "--json")).code, 2);
+  assert.equal((await ctx.cli("status", "--theirs", "1", "--json")).code, 2);
+});

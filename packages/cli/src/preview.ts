@@ -12,11 +12,13 @@ import { parseArgs } from "node:util";
 import {
   type Baseline,
   baselineSchema,
+  parseConflictSelections,
   planSync,
   type RemoteMetadata,
   type RemoteSnapshot,
   remoteMetadataSchema,
   remoteSnapshotSchema,
+  resolveSyncConflicts,
   stableJson,
   validateTracker,
 } from "@cardstock/core";
@@ -25,12 +27,17 @@ import { credentialFor } from "./credentials";
 
 export const PREVIEW_HELP = `Usage: cardstock status [--config <file>] [--remote <url>] [--json]
        cardstock sync --dry-run [--config <file>] [--remote <url>] [--json]
+                               [--ours <id>[:<field>]] [--theirs <id>[:<field>]]
        cardstock baseline [--config <file>] [--remote <url>] [--json]
 
 status and sync --dry-run read local files, the saved baseline and authenticated
 board snapshots. They write no files and make no changes to the board.
 baseline explicitly saves agreed state in .cardstock/ beside the configuration;
 it refuses while local and remote cards differ. Missing baselines never pick a winner.
+ours means local Markdown; theirs means the hosted board. Selections resolve only
+conflicting fields, preserving unrelated edits on both sides. Repeat flags to select
+cards or fields (for example --ours 17:body --theirs 18:frontmatter.priority).
+These choices are preview-only and are not saved. No ownership flags select a winner.
 sync without --dry-run is not implemented yet.`;
 
 function normalizeRemote(value: string) {
@@ -88,11 +95,16 @@ export async function preview(
       config: { type: "string" },
       remote: { type: "string" },
       json: { type: "boolean" },
-      ...(command === "sync"
-        ? { "dry-run": { type: "boolean" as const } }
-        : {}),
+      "dry-run": { type: "boolean" },
+      ours: { type: "string", multiple: true },
+      theirs: { type: "string", multiple: true },
     },
   });
+  if (
+    command !== "sync" &&
+    (values["dry-run"] !== undefined || values.ours || values.theirs)
+  )
+    throw new Error("--dry-run, --ours and --theirs are only valid for sync");
   if (command === "sync" && !values["dry-run"])
     throw new Error(
       "Sync apply is not implemented yet. Use cardstock sync --dry-run to preview changes.",
@@ -188,13 +200,16 @@ export async function preview(
     local.map((card) => ({ name: card.file, text: card.markdown })),
     config.scheme,
   ).diagnostics;
-  const plan = planSync({
-    local,
-    remote: snapshot.cards,
-    baseline,
-    vocabulary: metadata,
-    mapping: config.mapping,
-  });
+  const plan = resolveSyncConflicts(
+    planSync({
+      local,
+      remote: snapshot.cards,
+      baseline,
+      vocabulary: metadata,
+      mapping: config.mapping,
+    }),
+    parseConflictSelections(values.ours, values.theirs),
+  );
   const ok = !plan.counts.conflicts && !diagnostics.length;
   let saved = false;
   if (command === "baseline" && ok && plan.clean) {
@@ -261,7 +276,7 @@ export async function preview(
       );
       for (const change of card.changes)
         console.log(
-          `  ${change.direction} ${change.field}${change.reason ? ` (${change.reason})` : ""}`,
+          `  ${change.direction} ${change.field}${change.resolution ? ` (resolved: ${change.resolution})` : change.reason ? ` (${change.reason})` : ""}`,
         );
     }
     for (const diagnostic of diagnostics)

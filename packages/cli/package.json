@@ -31,7 +31,7 @@
   "scripts": {
     "build": "bun build src/index.ts --target node --format esm --outfile dist/index.js",
     "check": "tsc --noEmit",
-    "test": "bun run build && node --test test/cli.test.mjs test/preview.test.mjs",
+    "test": "bun test test/sync-journal.test.ts && bun run build && node --test test/cli.test.mjs test/preview.test.mjs",
     "prepack": "bun run check && bun run build"
   },
   "devDependencies": {

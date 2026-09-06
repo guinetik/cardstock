@@ -16,6 +16,7 @@ const HELP = `Usage: cardstock <command>
   validate [--config <file>] [--json]
   status [--config <file>] [--remote <url>] [--json]
   sync --dry-run [--config <file>] [--remote <url>] [--json]
+                 [--ours <id>[:<field>]] [--theirs <id>[:<field>]]
   baseline [--config <file>] [--remote <url>] [--json]
   login --remote <url> [--no-browser]
   logout --remote <url>

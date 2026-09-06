@@ -89,6 +89,7 @@ export interface FieldChange {
   local: FieldValue;
   remote: FieldValue;
   reason?: string;
+  resolution?: "ours" | "theirs";
 }
 export interface CardPlan {
   externalId: string;
@@ -336,6 +337,10 @@ export function planSync(input: {
         changes,
       });
   }
+  return summarizeSyncPlan(cards);
+}
+
+export function summarizeSyncPlan(cards: CardPlan[]) {
   const counts = {
     uploads: cards.filter(
       (card) =>
