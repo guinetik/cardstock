@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type DragEvent, useMemo, useState, useTransition } from "react";
+import {
+  type DragEvent,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { prioritizeCard } from "@/app/p/[project]/b/[board]/actions";
 import {
   type PriorityCard,
@@ -19,6 +25,11 @@ const BAND_LABEL: Record<1 | 2 | 3, string> = {
   3: "Sand",
 };
 const BAND_WIDTH: Record<1 | 2 | 3, string> = { 1: "100%", 2: "78%", 3: "56%" };
+const BAND_PEN_COLOR: Record<1 | 2 | 3, string> = {
+  1: "var(--pen-red)",
+  2: "var(--pen-blue)",
+  3: "var(--pen-violet)",
+};
 const TILTS = ["-1.6deg", "1.1deg", "-0.7deg", "1.8deg", "-1.2deg", "0.6deg"];
 
 export interface PrioritiesViewProps {
@@ -62,6 +73,8 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     target: DropTarget;
     index: number;
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => setCards(props.cards), [props.cards]);
 
   const scoped =
     props.boardSlug === null && props.selectedBoards
@@ -86,12 +99,22 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     } catch {
       // some browsers refuse dataTransfer writes off-DOM; the id is tracked in state anyway
     }
+    setError(null);
     setDragId(cardId);
   }
 
   function onDragEnd() {
     setDragId(null);
     setOver(null);
+  }
+
+  /** Skip the re-render when the hover position hasn't actually changed. */
+  function setOverIfChanged(next: { target: DropTarget; index: number }) {
+    setOver((prev) =>
+      prev && prev.target === next.target && prev.index === next.index
+        ? prev
+        : next,
+    );
   }
 
   function onRowDragOver(
@@ -102,7 +125,7 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = "move";
-    setOver({ target, index });
+    setOverIfChanged({ target, index });
   }
 
   function onContainerDragOver(
@@ -111,39 +134,88 @@ export function PrioritiesView(props: PrioritiesViewProps) {
   ) {
     event.preventDefault();
     const band = target === "desk" ? unweighed : bands[target];
-    setOver({ target, index: band.length });
+    setOverIfChanged({ target, index: band.length });
+  }
+
+  /** Clear the hover state once the pointer truly leaves the container, ignoring moves onto its own children. */
+  function onContainerDragLeave(
+    event: DragEvent<HTMLElement>,
+    target: DropTarget,
+  ) {
+    const related = event.relatedTarget as Node | null;
+    if (related && event.currentTarget.contains(related)) return;
+    setOver((prev) => (prev?.target === target ? null : prev));
   }
 
   function commit(cardId: string, priority: 1 | 2 | 3 | null, index: number) {
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
+    const previousCards = cards;
 
     if (priority === null) {
+      if (card.priority === null) return; // already unweighed — no-op
       setCards((prev) =>
         prev.map((c) =>
           c.id === cardId ? { ...c, priority: null, priority_rank: null } : c,
         ),
       );
       startTransition(async () => {
-        await prioritizeCard(cardId, null, null);
+        const result = await prioritizeCard(cardId, null, null);
+        if (!result.ok) {
+          setCards(previousCards);
+          setError(result.error);
+        }
         router.refresh();
       });
       return;
     }
 
-    const bandWithoutDragged = bands[priority].filter((c) => c.id !== cardId);
-    const rank = rankForDrop(bandWithoutDragged, index);
-    const reordered = [...bandWithoutDragged];
+    // `index` is the drop position within the band as currently displayed —
+    // which still includes the dragged card if it started in this band.
+    // Removing it first shifts every later index down by one, so a
+    // downward drag needs its target index decremented to land where the
+    // indicator was shown (rather than one slot further).
+    const band = bands[priority];
+    const originIndex = band.findIndex((c) => c.id === cardId);
+    const bandWithoutDragged = band.filter((c) => c.id !== cardId);
+    const insertAt = Math.max(
+      0,
+      Math.min(
+        originIndex !== -1 && originIndex < index ? index - 1 : index,
+        bandWithoutDragged.length,
+      ),
+    );
+
+    const rank = rankForDrop(bandWithoutDragged, insertAt);
     const updated = { ...card, priority, priority_rank: rank };
-    reordered.splice(index, 0, updated);
+    const reordered = [...bandWithoutDragged];
+    reordered.splice(insertAt, 0, updated);
     const orderedIds = reordered.map((c) => c.id);
 
-    // partitionBands re-sorts each band by priority_rank, so the optimistic
-    // array only needs the updated card — display order follows the rank.
-    setCards((prev) => prev.map((c) => (c.id === cardId ? updated : c)));
+    // The band can hold cards with a null priority_rank (never dragged
+    // before), so patching only the dragged card's rank isn't enough to
+    // sort it into place — rewrite every card in the new band order with
+    // sequential local ranks so the optimistic render matches the drop,
+    // regardless of what neighbours' ranks were. The server renormalises
+    // the real ranks independently; router.refresh() replaces these once it
+    // returns.
+    const localRank = new Map(reordered.map((c, i) => [c.id, i]));
+    setCards((prev) =>
+      prev.map((c) => {
+        if (c.id === cardId) return updated;
+        const localPriorityRank = localRank.get(c.id);
+        return localPriorityRank === undefined
+          ? c
+          : { ...c, priority_rank: localPriorityRank };
+      }),
+    );
 
     startTransition(async () => {
-      await prioritizeCard(cardId, priority, rank, orderedIds);
+      const result = await prioritizeCard(cardId, priority, rank, orderedIds);
+      if (!result.ok) {
+        setCards(previousCards);
+        setError(result.error);
+      }
       router.refresh();
     });
   }
@@ -282,6 +354,15 @@ export function PrioritiesView(props: PrioritiesViewProps) {
         </div>
       )}
 
+      {error && (
+        <p
+          role="alert"
+          className="basis-full border-l-2 border-[var(--pen-red)] bg-[var(--surface-card)] px-3 py-2 text-sm"
+        >
+          {error}
+        </p>
+      )}
+
       <p className="mt-1 max-w-[40rem] font-display text-[19px] italic leading-snug text-[var(--color-ink2)]">
         Stones first, then pebbles, then sand.
       </p>
@@ -303,22 +384,19 @@ export function PrioritiesView(props: PrioritiesViewProps) {
               key={band}
               className={`flex flex-col gap-1.5 pb-4 ${isOver ? "paper-lane--over" : ""}`}
               onDragOver={(event) => onContainerDragOver(event, band)}
+              onDragLeave={(event) => onContainerDragLeave(event, band)}
               onDrop={(event) => onDrop(event, band, rows.length)}
             >
               <div
                 className="flex items-baseline gap-2.5 pb-1.5"
-                style={{
-                  borderBottom: `2px solid var(--pen-${band === 1 ? "red" : band === 2 ? "blue" : "violet"})`,
-                }}
+                style={{ borderBottom: `2px solid ${BAND_PEN_COLOR[band]}` }}
               >
                 <span className={`sq sq--on ${PRIORITY_PEN[band]}`}>
                   P{band}
                 </span>
                 <h2
                   className="lane-name text-sm"
-                  style={{
-                    color: `var(--pen-${band === 1 ? "red" : band === 2 ? "blue" : "violet"})`,
-                  }}
+                  style={{ color: BAND_PEN_COLOR[band] }}
                 >
                   {BAND_LABEL[band]}
                 </h2>
@@ -349,6 +427,7 @@ export function PrioritiesView(props: PrioritiesViewProps) {
           over?.target === "desk" ? "paper-lane--over" : ""
         }`}
         onDragOver={(event) => onContainerDragOver(event, "desk")}
+        onDragLeave={(event) => onContainerDragLeave(event, "desk")}
         onDrop={(event) => onDrop(event, "desk", unweighed.length)}
       >
         <div className="flex flex-wrap items-baseline gap-2.5 border-b border-dashed border-[var(--border-strong)] pb-1.5">
