@@ -1,0 +1,48 @@
+name: Publish CLI
+
+on:
+  push:
+    tags:
+      - 'cli-v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-cli-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@11
+      - name: Check release tag
+        run: |
+          version="$(node -p "require('./packages/cli/package.json').version")"
+          test "$GITHUB_REF_NAME" = "cli-v$version" || { echo '::error::Tag does not match CLI version'; exit 1; }
+      - run: bun install --frozen-lockfile
+      - run: bun run check:packages
+      - name: Pack and verify the installable CLI
+        run: |
+          mkdir -p "$RUNNER_TEMP/cardstock-pack"
+          npm pack ./packages/cli --pack-destination "$RUNNER_TEMP/cardstock-pack"
+          npm install --global "$RUNNER_TEMP"/cardstock-pack/*.tgz
+          version="$(node -p "require('./packages/cli/package.json').version")"
+          test "$(cardstock --version)" = "$version"
+          test "$(cardstock -v)" = "$version"
+          if cardstock sync; then echo '::error::Unknown command succeeded'; exit 1; fi
+      - name: Publish verified tarball through npm OIDC
+        run: npm publish "$RUNNER_TEMP"/cardstock-pack/*.tgz --access public

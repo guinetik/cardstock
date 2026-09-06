@@ -1,0 +1,13 @@
+{
+  "name": "@cardstock/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Internal shared logic for the Cardstock website and CLI",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  }
+}

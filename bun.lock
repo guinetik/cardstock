@@ -6,6 +6,7 @@
       "name": "cardstock",
       "dependencies": {
         "@base-ui/react": "^1.7.0",
+        "@cardstock/core": "workspace:*",
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
@@ -22,6 +23,7 @@
         "date-fns": "^4.4.0",
         "fflate": "^0.8.3",
         "gray-matter": "^4.0.3",
+        "lexical": "0.48.0",
         "lucide-react": "^1.34.0",
         "marked": "^18.0.11",
         "next": "16.3.3",
@@ -36,6 +38,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "2.4.2",
+        "@next/env": "16.3.3",
         "@playwright/test": "^1.62.1",
         "@tailwindcss/postcss": "^4",
         "@tailwindcss/typography": "^0.5.20",
@@ -51,6 +54,20 @@
         "tailwindcss": "^4",
         "typescript": "^5",
       },
+    },
+    "packages/cli": {
+      "name": "@guinetik/cardstock-cli",
+      "version": "0.1.0",
+      "bin": {
+        "cardstock": "dist/index.js",
+      },
+      "devDependencies": {
+        "@cardstock/core": "workspace:*",
+      },
+    },
+    "packages/core": {
+      "name": "@cardstock/core",
+      "version": "0.1.0",
     },
   },
   "trustedDependencies": [
@@ -138,6 +155,8 @@
     "@biomejs/cli-win32-arm64": ["@biomejs/cli-win32-arm64@2.4.2", "", { "os": "win32", "cpu": "arm64" }, "sha512-k2uqwLYrNNxnaoiW3RJxoMGnbKda8FuCmtYG3cOtVljs3CzWxaTR+AoXwKGHscC9thax9R4kOrtWqWN0+KdPTw=="],
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.2", "", { "os": "win32", "cpu": "x64" }, "sha512-9ma7C4g8Sq3cBlRJD2yrsHXB1mnnEBdpy7PhvFrylQWQb4PoyCmPucdX7frvsSBQuFtIiKCrolPl/8tCZrKvgQ=="],
+
+    "@cardstock/core": ["@cardstock/core@workspace:packages/core"],
 
     "@codemirror/autocomplete": ["@codemirror/autocomplete@6.20.3", "", { "dependencies": { "@codemirror/language": "^6.0.0", "@codemirror/state": "^6.0.0", "@codemirror/view": "^6.17.0", "@lezer/common": "^1.0.0" } }, "sha512-tlosUqb+3BbxCxZdu4tKeRghPFC+QM7q4X5YhKV2eCmPG+1r2F3f4AaSz5sCrFqUtX4Jh20VFTKecl16MgiV9g=="],
 
@@ -230,6 +249,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
     "@gravatar-com/quick-editor": ["@gravatar-com/quick-editor@0.8.0", "", {}, "sha512-z9t6aOaP9i3x5aJGtQUfaXoO7YxHZd+h49E13qZFJQ4RNId8Qe7FcoT+TFXuvVry6+dqL44aYtUXiGl+890oxw=="],
+
+    "@guinetik/cardstock-cli": ["@guinetik/cardstock-cli@workspace:packages/cli"],
 
     "@hono/node-server": ["@hono/node-server@2.1.1", "", { "peerDependencies": { "hono": "^4" } }, "sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg=="],
 

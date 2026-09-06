@@ -1,0 +1,42 @@
+name: Check CLI
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/*cli.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/*cli.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile
+      - run: bun run check:packages
+      - name: Verify npm installation
+        run: |
+          mkdir -p "$RUNNER_TEMP/cardstock-pack"
+          npm pack ./packages/cli --pack-destination "$RUNNER_TEMP/cardstock-pack"
+          npm install --global "$RUNNER_TEMP"/cardstock-pack/*.tgz
+          version="$(node -p "require('./packages/cli/package.json').version")"
+          test "$(cardstock --version)" = "$version"
+          test "$(cardstock -v)" = "$version"
+          if cardstock sync; then echo '::error::Unknown command succeeded'; exit 1; fi

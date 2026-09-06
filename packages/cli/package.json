@@ -1,0 +1,39 @@
+{
+  "name": "@guinetik/cardstock-cli",
+  "version": "0.1.0",
+  "description": "Command-line companion for Cardstock",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "author": "Guinetik",
+  "bin": {
+    "cardstock": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guinetik/cardstock.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/guinetik/cardstock/issues"
+  },
+  "homepage": "https://github.com/guinetik/cardstock#readme",
+  "scripts": {
+    "build": "bun build src/index.ts --target node --format esm --outfile dist/index.js",
+    "check": "tsc --noEmit",
+    "prepack": "bun run check && bun run build"
+  },
+  "devDependencies": {
+    "@cardstock/core": "workspace:*"
+  }
+}

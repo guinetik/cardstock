@@ -11,6 +11,10 @@ A hosted board over a markdown tracker. Your team keeps writing one `.md` per it
 
 ## Stack
 
+This repository also contains a private shared core and the independently
+published `@guinetik/cardstock-cli` workspace. The Next.js app stays at the root.
+See [CLI development and npm releases](docs/cli-development.md).
+
 bun · Next.js 16 (App Router, Turbopack, `proxy.ts`) · React 19 · TypeScript · Tailwind 4 + shadcn · Biome · Supabase (Postgres, Auth email + password) via `@supabase/ssr` · dnd-kit · `bun test` + Playwright · Vercel.
 
 ## Run it locally
@@ -94,4 +98,4 @@ See `docs/deploy.md` — hosted Supabase (migrations pushed with the CLI, Auth r
 - `docs/plans/2026-08-26-implementation-plan.md` — phases
 - `docs/frontmatter.schema.json` — the tracker contract
 
-MIT.
+See [LICENSE](LICENSE) (GPLv3).

@@ -2,13 +2,19 @@
   "name": "cardstock",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "check": "biome check && tsc --noEmit",
+    "check": "biome check && tsc --noEmit && bun run check:packages",
+    "check:packages": "bun run --filter './packages/*' check",
+    "build:cli": "bun run --cwd packages/cli build",
+    "cli": "bun run packages/cli/src/index.ts",
     "test": "bun test --env-file=.env.local",
     "test:e2e": "playwright test",
     "db:start": "supabase start",
@@ -25,6 +31,7 @@
     "db:pull-prod": "bun run etl/pull-prod.ts"
   },
   "dependencies": {
+    "@cardstock/core": "workspace:*",
     "@base-ui/react": "^1.7.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -42,6 +49,7 @@
     "date-fns": "^4.4.0",
     "fflate": "^0.8.3",
     "gray-matter": "^4.0.3",
+    "lexical": "0.48.0",
     "lucide-react": "^1.34.0",
     "marked": "^18.0.11",
     "next": "16.3.3",
@@ -56,6 +64,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.2",
+    "@next/env": "16.3.3",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.20",
