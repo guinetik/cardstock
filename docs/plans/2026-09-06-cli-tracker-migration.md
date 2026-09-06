@@ -4,6 +4,10 @@ Prepared 2026-09-06 against `fd299b5` (CLI 0.2.2), after pulling the hosted `car
 
 ## Revised direction and current implementation
 
+Accepted complete by Joao on 2026-09-06: all three projects have successfully
+migrated to CLI 0.4.0. Cardstock shim retirement is committed in 96fc2bc; tracker
+#19 records the closeout evidence. No implementation work remains in this scope.
+
 The product owner explicitly removed Designer-specific validation parity as an
 acceptance gate. Migrate to Cardstock's generic contract; do not reproduce Staffeto
 conventions in application code. The original inventory below is historical.
