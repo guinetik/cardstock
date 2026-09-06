@@ -116,6 +116,9 @@ export async function init(args: string[], cwd: string): Promise<number> {
     await requirePath(tracker, "directory");
     await requirePath(seed, "file");
     const scheme = { ...legacy.scheme };
+    notes.push(
+      "Legacy area/epic lists are suggestions, not validation constraints. Audience rules are retained as metadata only: use explicit audience: all or internal; tags and epic names never set audience.",
+    );
     if (scheme.scheme_doc) {
       const doc = await resolveSchemeDoc(root, scheme.scheme_doc);
       scheme.scheme_doc = relativeTo(directory, doc);
@@ -138,7 +141,7 @@ export async function init(args: string[], cwd: string): Promise<number> {
       `Seed ${seed} is retained as a provisioning/recovery reference; no SQL is executed.`,
     );
     notes.push(
-      "Use status or sync --dry-run to preview board changes. Sync apply and provisioning checks are not available yet; keep existing sync scripts until round-trip parity is verified.",
+      "Use status or sync --dry-run to preview board changes, then sync against a protocol-3 server. Keep old scripts only until the generic Cardstock round trip is verified; reproducing project-specific validation rules is not a cutover requirement.",
     );
     if (!values.remote)
       notes.push(

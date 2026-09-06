@@ -12,8 +12,9 @@ export const schemeSchema = z
     lanes: names.min(1),
     lanes_for_status: z.record(name, names.min(1)).optional(),
     now_lane_requires_status: name.optional(),
-    epics: names.min(1),
-    areas: names.min(1),
+    // Legacy suggestions only. Live board epics and free-text areas are not enums.
+    epics: names.optional(),
+    areas: names.optional(),
     base_tags: names.optional(),
     tag_groups: z
       .record(
@@ -83,6 +84,7 @@ export const mappingSchema = z.strictObject({
   by_tag: z.record(name, names).optional(),
   by_epic: z.record(name, names).optional(),
   by_area: z.record(name, names).optional(),
+  // Retained as legacy metadata, never evaluated by generic import/sync.
   audience_internal_when: z
     .strictObject({
       tags: names.optional(),

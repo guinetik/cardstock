@@ -25,12 +25,26 @@
       ]
     },
     "epic": {
-      "type": "string",
-      "minLength": 1
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 200
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "area": {
       "type": "string",
       "minLength": 1
+    },
+    "audience": {
+      "type": "string",
+      "enum": [
+        "all",
+        "internal"
+      ]
     },
     "assignee": {
       "anyOf": [
@@ -52,7 +66,11 @@
       "anyOf": [
         {
           "type": "string",
-          "enum": ["L", "M", "H"]
+          "enum": [
+            "L",
+            "M",
+            "H"
+          ]
         },
         {
           "type": "null"
@@ -63,7 +81,11 @@
       "anyOf": [
         {
           "type": "string",
-          "enum": ["L", "M", "H"]
+          "enum": [
+            "L",
+            "M",
+            "H"
+          ]
         },
         {
           "type": "null"
@@ -282,6 +304,12 @@
       ]
     }
   },
-  "required": ["id", "title", "status", "epic", "area", "tags"],
+  "required": [
+    "id",
+    "title",
+    "status",
+    "area",
+    "tags"
+  ],
   "additionalProperties": {}
 }

@@ -7,7 +7,6 @@ import {
   buildVocabulary,
   laneForNewCard,
   type Mapping,
-  mapAudience,
   mapTags,
 } from "@/lib/frontmatter/mapping";
 import { parseFile } from "@/lib/frontmatter/parse";
@@ -28,9 +27,7 @@ import type {
   SheetFile,
 } from "./types";
 
-export const DEFAULT_MAPPING: Mapping = {
-  audience_internal_when: { tags: ["internal"] },
-};
+export const DEFAULT_MAPPING: Mapping = {};
 
 /** `gate-1` → `Gate 1`, `needs-input` → `Needs input`: sentence case, not title case. */
 export function laneNameFromKey(key: string): string {
@@ -84,6 +81,7 @@ export function sheetFromCard(
     status: card.status,
     epic: card.epic ?? "",
     area: card.area ?? "",
+    audience: card.audience ?? "all",
     // Prefer the member's current email over the stored text: the owner may
     // have corrected an address, and the export should carry the live one.
     assignee:
@@ -113,12 +111,7 @@ export function sheetFromCard(
 }
 
 /** DB columns for the sheet keys in `changes` (plus the ones every write carries). */
-function columnsFor(
-  sheet: CardSheet,
-  changes: Change[],
-  isNew: boolean,
-  audience: "all" | "internal",
-) {
+function columnsFor(sheet: CardSheet, changes: Change[], isNew: boolean) {
   const keys = new Set(changes.map((c) => c.key));
   const cols: Record<string, unknown> = {};
   const set = (k: Change["key"], v: () => Record<string, unknown>) => {
@@ -127,6 +120,7 @@ function columnsFor(
   set("title", () => ({ title: sheet.title }));
   set("status", () => ({ status: sheet.status }));
   set("area", () => ({ area: sheet.area }));
+  set("audience", () => ({ audience: sheet.audience }));
   set("assignee", () => ({ assignee: sheet.assignee }));
   set("raised_by", () => ({ raised_by: sheet.raisedBy }));
   set("raised", () => ({ raised_on: sheet.raisedOn }));
@@ -153,7 +147,6 @@ function columnsFor(
   }
   set("color", () => ({ color: sheet.color }));
   set("body", () => ({ body_md: sheet.bodyMd, body_edited_at: null }));
-  if (isNew) cols.audience = audience;
   return cols;
 }
 
@@ -221,10 +214,9 @@ export function planImport(
       if (fm.lane && !laneKeys.has(fm.lane))
         newLanes.set(fm.lane, { key: fm.lane, name: laneNameFromKey(fm.lane) });
 
-      const audience = mapAudience(fm, mapping);
       const shared = {
         external_id: id,
-        epic: sheet.epic,
+        ...(present.has("epic") || !prev ? { epic: sheet.epic || null } : {}),
         source_path: file.name,
         source_hash: parsed.hash,
         source_text: file.text,
@@ -238,7 +230,7 @@ export function planImport(
             ? fm.lane
             : laneForNewCard(fm.lane, laneKeys, inboxKey);
         const patch: CardPatch = {
-          columns: { ...shared, ...columnsFor(sheet, [], true, audience) },
+          columns: { ...shared, ...columnsFor(sheet, [], true) },
           laneKey,
           rank:
             fm.rank != null && fm.lane === laneKey
@@ -285,7 +277,7 @@ export function planImport(
       }
       const keys = new Set(changes.map((c) => c.key));
       const patch: CardPatch = {
-        columns: { ...shared, ...columnsFor(sheet, changes, false, audience) },
+        columns: { ...shared, ...columnsFor(sheet, changes, false) },
         laneKey: keys.has("lane") ? sheet.lane : null,
         rank:
           keys.has("rank") || keys.has("lane")

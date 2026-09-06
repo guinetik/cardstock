@@ -18,6 +18,7 @@ export function validateScheme(
       ...(scheme.scheme_doc ? { reference: scheme.scheme_doc } : {}),
     });
   for (const key of scheme.required_keys) {
+    if (key === "epic") continue; // A board card may have no epic assignment.
     if (!Object.hasOwn(fields, key))
       add("required_key", key, `Missing required key: ${key}`);
   }
@@ -35,8 +36,11 @@ export function validateScheme(
   };
   member("status", scheme.statuses);
   member("lane", scheme.lanes);
-  member("epic", scheme.epics);
-  member("area", scheme.areas);
+  for (const field of ["epic", "area"]) {
+    if (field === "epic" && fields[field] == null) continue;
+    if (Object.hasOwn(fields, field) && typeof fields[field] !== "string")
+      add("field_type", field, `${field} must be a string`);
+  }
   member("value", scheme.sizes);
   member("effort", scheme.sizes);
   const { status, lane, priority, tags } = fields;

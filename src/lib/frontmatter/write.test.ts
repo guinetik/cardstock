@@ -36,6 +36,14 @@ function sheetOf(text: string): CardSheet {
 }
 
 describe("writeSheet", () => {
+  test("audience exports as an independent field without adding a tag", () => {
+    const out = writeSheet(FILE, { ...sheetOf(FILE), audience: "internal" });
+    expect(out).toContain("audience: internal");
+    expect(out).not.toContain("- internal");
+    expect(writeSheet(out, { ...sheetOf(out), audience: "all" })).toContain(
+      "audience: all",
+    );
+  });
   test("a sheet the board agrees with comes back byte-identical", () => {
     expect(writeSheet(FILE, sheetOf(FILE))).toBe(FILE);
   });

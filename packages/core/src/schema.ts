@@ -51,8 +51,10 @@ export const frontmatterSchema = z.looseObject({
   id: z.coerce.number().int().positive(),
   title: z.string().min(1),
   status: z.enum(STATUSES),
-  epic: z.string().min(1),
+  epic: z.string().trim().max(200).nullable().optional(),
   area: z.string().min(1),
+  // Classification/filter only; never an access-control rule or inferred from tags.
+  audience: z.enum(["all", "internal"]).optional(),
   assignee: z.string().nullable().optional(),
   tags: strList,
   // known optional
@@ -105,5 +107,7 @@ export function validateFrontmatter(
 
 /** JSON Schema for docs/frontmatter.schema.json (`bun run etl:schema`). */
 export function jsonSchema() {
-  return z.toJSONSchema(frontmatterSchema, { target: "draft-2020-12" });
+  const schema = z.toJSONSchema(frontmatterSchema, { target: "draft-2020-12" });
+  // Only JSON Schema, without the runtime's non-JSON Standard Schema helpers.
+  return JSON.parse(JSON.stringify(schema)) as typeof schema;
 }

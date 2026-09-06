@@ -99,27 +99,18 @@ export function mapTags(
     else if (r && !ambiguous.includes(r.ambiguous)) ambiguous.push(r.ambiguous);
   }
   for (const t of fm.tags) add(mapping.by_tag?.[lc(t)]);
-  add(mapping.by_epic?.[lc(fm.epic)]);
+  add(mapping.by_epic?.[lc(fm.epic ?? "")]);
   add(mapping.by_area?.[lc(fm.area)]);
   return { refs, ambiguous };
 }
 
 export function mapAudience(
   fm: Frontmatter,
-  mapping: Mapping,
+  _mapping: Mapping,
 ): "all" | "internal" {
-  if (
-    fm.tags.some((t) => lc(t) === "internal") ||
-    lc(fm.epic) === "engineering (internal)"
-  )
-    return "internal";
-  const w = mapping.audience_internal_when;
-  if (!w) return "all";
-  if (fm.tags.some((t) => (w.tags ?? []).map(lc).includes(lc(t))))
-    return "internal";
-  if ((w.areas ?? []).map(lc).includes(lc(fm.area))) return "internal";
-  if ((w.epics ?? []).map(lc).includes(lc(fm.epic))) return "internal";
-  return "all";
+  // Legacy signature retained for ETL callers. Names and mapping rules no longer
+  // determine classification; audience is an independent frontmatter field.
+  return fm.audience ?? "all";
 }
 
 /** `value` H/M/L → priority 1/2/3 — the product owner counts in numbers. */

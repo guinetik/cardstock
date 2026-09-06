@@ -30,6 +30,7 @@ export interface ExistingCard {
   status: string;
   epic: string | null;
   area: string | null;
+  audience: "all" | "internal";
   assignee: string | null;
   assignee_id: string | null;
   raised_by: string | null;

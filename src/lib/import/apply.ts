@@ -165,7 +165,7 @@ async function fileThePlan(
       ...row.patch.columns,
     };
     if (row.patch.epic !== undefined)
-      columns.epic_id = await epic(row.patch.epic);
+      columns.epic_id = row.patch.epic ? await epic(row.patch.epic) : null;
     if ("assignee" in columns)
       columns.assignee_id = memberByEmail(columns.assignee);
     if (row.patch.laneKey) {

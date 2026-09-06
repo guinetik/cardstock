@@ -38,7 +38,7 @@ it refuses while local and remote cards differ. Missing baselines never pick a w
 ours means local Markdown; theirs means the hosted board. Selections resolve only
 conflicting fields, preserving unrelated edits on both sides. Repeat flags to select
 cards or fields (for example --ours 17:body --theirs 18:frontmatter.priority).
-Without --dry-run, sync applies the resolved plan through transactional protocol 2.
+Without --dry-run, sync applies the resolved plan through transactional protocol 3.
 sync --resume retries the recorded operation; --abort archives it without rollback.
 --recover-lock reclaims a same-machine lock only when its process has exited.
 --adopt-identities explicitly upgrades a legacy baseline to current immutable IDs.
@@ -172,7 +172,7 @@ export async function preview(
   let metadata: RemoteMetadata | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     metadata = remoteMetadataSchema.parse(await getJson(url, credential.token));
-    if (metadata.syncProtocol === 2) {
+    if (metadata.syncProtocol === 2 || metadata.syncProtocol === 3) {
       const raw = await getJson(`${url}/sync`, credential.token);
       metadata = remoteMetadataSchema.parse(raw);
       snapshot = remoteSnapshotSchema.parse(raw);

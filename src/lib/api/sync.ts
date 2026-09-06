@@ -15,7 +15,7 @@ import type { CardSheet } from "@/lib/frontmatter/sheet";
 import { writeSheet } from "@/lib/frontmatter/write";
 
 export const syncRequestSchema = z.strictObject({
-  protocol: z.literal(2),
+  protocol: z.literal(3),
   operationId: z.string().uuid(),
   cards: z
     .array(
@@ -72,7 +72,7 @@ export function syncColumns(
     columns: {
       title: fm.title,
       status: fm.status,
-      epic: fm.epic,
+      epic: fm.epic || null,
       area: fm.area,
       assignee: fm.assignee ?? null,
       raised_by: fm.raised_by ?? null,
@@ -94,11 +94,7 @@ export function syncColumns(
       source_text: card.markdown,
       source_hash: parsed.hash,
       frontmatter_extra: extra,
-      audience: fm.tags.some(
-        (tag) => tag === "internal" || tag.endsWith(":internal"),
-      )
-        ? "internal"
-        : "all",
+      audience: fm.audience ?? "all",
     },
   };
 }
@@ -111,6 +107,7 @@ function legacySheet(id: string, p: Fields): CardSheet {
     status: get("status"),
     epic: get("epic") ?? "",
     area: get("area") ?? "",
+    audience: get("audience") as "all" | "internal",
     assignee: get("assignee"),
     tags: get("tags"),
     raisedBy: get("raised_by"),
@@ -155,6 +152,12 @@ export async function syncSnapshot(
     }[];
   };
   const cards = raw.cards.map((card) => {
+    if (
+      !["all", "internal"].includes(
+        String(card.projection["frontmatter.audience"]),
+      )
+    )
+      throw new Error("Explicit-audience migration is not installed");
     const markdown = card.source
       ? card.savedProjection
         ? rebaseMarkdown(
@@ -195,7 +198,7 @@ export async function syncSnapshot(
     .update(stableJson({ cards, tagGroups: raw.tagGroups }))
     .digest("hex");
   return {
-    syncProtocol: 2,
+    syncProtocol: 3,
     project,
     board,
     etag,

@@ -169,6 +169,9 @@ export function comparisonFields(
     fields[`frontmatter.${key}`] = normalized;
   }
   fields.body = bodyWithoutH1(parsed.body);
+  // Omission is the default classification, including pre-audience baselines.
+  fields["frontmatter.audience"] = data.audience ?? "all";
+  fields["frontmatter.epic"] = data.epic || null;
   return { id: String(data.id), fields };
 }
 

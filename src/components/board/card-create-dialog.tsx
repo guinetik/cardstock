@@ -271,9 +271,12 @@ function CardCreateForm(
                   }
                   disabled={busy}
                 >
-                  <option value="all">Everyone</option>
-                  <option value="internal">Internal only</option>
+                  <option value="all">General</option>
+                  <option value="internal">Internal</option>
                 </select>
+                <span className="text-xs text-muted-foreground">
+                  Classification for filtering; does not restrict access.
+                </span>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label htmlFor="new-card-priority">

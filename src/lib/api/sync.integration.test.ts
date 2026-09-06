@@ -80,7 +80,7 @@ describe.skipIf(!local)("transactional CLI sync", () => {
     operation = randomUUID(),
     actor = member,
   ) =>
-    db.rpc("cli_apply_sync", {
+    db.rpc("cli_apply_sync_v3", {
       p_board: board,
       p_member: actor,
       p_operation: operation,
@@ -237,7 +237,7 @@ describe.skipIf(!local)("transactional CLI sync", () => {
     );
     expect(
       (
-        await anon.rpc("cli_apply_sync", {
+        await anon.rpc("cli_apply_sync_v3", {
           p_board: board,
           p_member: member,
           p_operation: randomUUID(),
@@ -292,6 +292,119 @@ describe.skipIf(!local)("transactional CLI sync", () => {
         .error?.code,
     ).toBe("22023");
     expect(await snapshot()).toEqual(snap);
+  });
+
+  test("audience round-trips without an internal tag and legacy names do not classify cards", async () => {
+    const text = sheet(30)
+      .replace("epic: Test", "epic: Engineering (internal)")
+      .replace("area: Data", "area: Unlisted area");
+    expect((await apply([request(30, text)])).error).toBeNull();
+    let card = (await snapshot()).cards.find((c) => c.externalId === "30")!;
+    const row = await db
+      .from("cards")
+      .select("audience")
+      .eq("id", card.cardId)
+      .single();
+    expect(row.data?.audience).toBe("all");
+    const classified = text.replace(
+      "tags: [bug]",
+      "tags: [bug]\naudience: internal",
+    );
+    expect(
+      (await apply([request(30, classified, card.cardId, card.revision)]))
+        .error,
+    ).toBeNull();
+    card = (await snapshot()).cards.find((c) => c.externalId === "30")!;
+    expect(card.markdown).toBe(classified);
+    expect(
+      (await apply([request(30, text, card.cardId, card.revision)])).error,
+    ).toBeNull();
+    expect(
+      (await db.from("cards").select("audience").eq("id", card.cardId).single())
+        .data?.audience,
+    ).toBe("all");
+    card = (await snapshot()).cards.find((c) => c.externalId === "30")!;
+    expect(
+      (await apply([request(30, classified, card.cardId, card.revision)]))
+        .error,
+    ).toBeNull();
+    card = (await snapshot()).cards.find((c) => c.externalId === "30")!;
+    await db.from("cards").update({ audience: "all" }).eq("id", card.cardId);
+    const changed = (await snapshot()).cards.find(
+      (c) => c.externalId === "30",
+    )!;
+    expect(changed.revision).not.toBe(card.revision);
+    expect(changed.markdown).toContain("audience: all");
+  });
+
+  test("pre-audience stored projections export the existing classification, not old source conventions", async () => {
+    expect((await apply([request(31)])).error).toBeNull();
+    const card = (await snapshot()).cards.find((c) => c.externalId === "31")!;
+    const saved = await db
+      .from("cards")
+      .select("sync_projection")
+      .eq("id", card.cardId)
+      .single();
+    const projection = { ...saved.data!.sync_projection };
+    delete projection["frontmatter.audience"];
+    await db
+      .from("cards")
+      .update({ audience: "internal", sync_projection: projection })
+      .eq("id", card.cardId);
+    expect(
+      (await snapshot()).cards.find((c) => c.externalId === "31")!.markdown,
+    ).toContain("audience: internal");
+    await db
+      .from("cards")
+      .update({ sync_projection: null })
+      .eq("id", card.cardId);
+    expect(
+      (await snapshot()).cards.find((c) => c.externalId === "31")!.markdown,
+    ).toContain("audience: internal");
+  });
+
+  test("new epic names are reused and clearing assignments does not delete the epic", async () => {
+    const text = sheet(32).replace(
+      "epic: Test",
+      "epic: A brand-new initiative",
+    );
+    expect(
+      (
+        await apply([
+          request(32, text),
+          request(33, text.replaceAll("32", "33")),
+        ])
+      ).error,
+    ).toBeNull();
+    const epics = await db
+      .from("epics")
+      .select("id")
+      .eq("board_id", board)
+      .eq("source_name", "A brand-new initiative");
+    expect(epics.data).toHaveLength(1);
+    let card = (await snapshot()).cards.find((c) => c.externalId === "32")!;
+    const cleared = text.replace("epic: A brand-new initiative\n", "");
+    expect(
+      (await apply([request(32, cleared, card.cardId, card.revision)])).error,
+    ).toBeNull();
+    expect(
+      (
+        await db
+          .from("cards")
+          .select("epic,epic_id")
+          .eq("id", card.cardId)
+          .single()
+      ).data,
+    ).toEqual({ epic: null, epic_id: null });
+    expect(
+      (await db.from("epics").select("id").eq("id", epics.data![0].id)).data,
+    ).toHaveLength(1);
+    await db
+      .from("cards")
+      .update({ epic: "A brand-new initiative", epic_id: epics.data![0].id })
+      .eq("id", card.cardId);
+    card = (await snapshot()).cards.find((c) => c.externalId === "32")!;
+    expect(card.markdown).toContain("epic: A brand-new initiative");
   });
 
   test("built Node CLI round-trips through the real route and local database", async () => {
@@ -408,6 +521,32 @@ describe.skipIf(!local)("transactional CLI sync", () => {
         (await snapshot()).cards.find((card) => card.externalId === "4")
           ?.markdown,
       ).toBe(changed);
+      await db
+        .from("cards")
+        .update({ audience: "internal", area: "A new web area" })
+        .eq("id", row.cardId);
+      result = await cli("sync");
+      expect(result.code, result.stdout).toBe(0);
+      expect(await readFile(target, "utf8")).toContain("audience: internal");
+      expect(await readFile(target, "utf8")).toContain("area: A new web area");
+      await writeFile(
+        target,
+        (await readFile(target, "utf8")).replace(
+          "audience: internal",
+          "audience: all",
+        ),
+      );
+      result = await cli("sync");
+      expect(result.code, result.stdout).toBe(0);
+      expect(
+        (
+          await db
+            .from("cards")
+            .select("audience")
+            .eq("id", row.cardId)
+            .single()
+        ).data?.audience,
+      ).toBe("all");
       result = await cli("status");
       expect(result.code, result.stdout).toBe(0);
       expect(JSON.parse(result.stdout).clean).toBe(true);
@@ -422,6 +561,13 @@ test("sync wire validation rejects mismatched identity/revision pairs and duplic
   expect(
     syncRequestSchema.safeParse({
       protocol: 2,
+      operationId: randomUUID(),
+      cards: [],
+    }).success,
+  ).toBe(false);
+  expect(
+    syncRequestSchema.safeParse({
+      protocol: 3,
       operationId: randomUUID(),
       cards: [
         {
@@ -441,7 +587,7 @@ test("sync wire validation rejects mismatched identity/revision pairs and duplic
   };
   expect(
     syncRequestSchema.safeParse({
-      protocol: 2,
+      protocol: 3,
       operationId: randomUUID(),
       cards: [card, card],
     }).success,

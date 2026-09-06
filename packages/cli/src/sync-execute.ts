@@ -135,9 +135,9 @@ export async function executeSync(
     const snapshot = async () => {
       const raw = await getJson(`${url}/sync`, credential.token);
       const meta = remoteMetadataSchema.parse(raw);
-      if (meta.syncProtocol !== 2)
+      if (meta.syncProtocol !== 3)
         throw new Error(
-          "Remote lacks safe sync protocol 2; deploy the server and sync migration first",
+          "Remote lacks sync protocol 3 (explicit audience); deploy the server and audience migration first",
         );
       const snap = remoteSnapshotSchema.parse(raw);
       if (
@@ -196,12 +196,7 @@ export async function executeSync(
       if (
         Object.keys(config.mapping?.by_tag ?? {}).length ||
         Object.keys(config.mapping?.by_epic ?? {}).length ||
-        Object.keys(config.mapping?.by_area ?? {}).length ||
-        config.mapping?.audience_internal_when?.epics?.length ||
-        config.mapping?.audience_internal_when?.areas?.length ||
-        (config.mapping?.audience_internal_when?.tags !== undefined &&
-          stableJson(config.mapping.audience_internal_when.tags) !==
-            stableJson(["internal"]))
+        Object.keys(config.mapping?.by_area ?? {}).length
       )
         throw new Error(
           "Mapping overrides require #19 integration; no sync writes were made",
@@ -292,7 +287,7 @@ export async function executeSync(
         redirect: "error",
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
-          protocol: 2,
+          protocol: 3,
           operationId: journal.id,
           cards: writes,
           groupAliases: config.mapping?.group_aliases ?? {},
@@ -309,7 +304,7 @@ export async function executeSync(
       }
       const result = z
         .object({
-          protocol: z.literal(2),
+          protocol: z.literal(3),
           operationId: z.literal(journal.id),
           applied: z.array(
             z.object({

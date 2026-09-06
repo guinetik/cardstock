@@ -102,6 +102,32 @@ const task = (patch: Partial<Card> = {}): Card => ({
 });
 
 describe("boardStatuses", () => {
+  test("internal filtering reads audience without requiring or interpreting tags", () => {
+    expect(
+      matches(
+        task({ audience: "internal", tag_ids: [] }),
+        emptyFilters(false),
+        [],
+        [work],
+      ),
+    ).toBe(false);
+    expect(
+      matches(
+        task({ audience: "internal", tag_ids: [] }),
+        emptyFilters(true),
+        [],
+        [work],
+      ),
+    ).toBe(true);
+    expect(
+      matches(
+        task({ audience: "all", tag_ids: ["internal"] }),
+        emptyFilters(false),
+        [],
+        [work],
+      ),
+    ).toBe(true);
+  });
   test("unique, sorted, blanks dropped, order independent of input", () => {
     expect(
       boardStatuses([

@@ -41,7 +41,7 @@ async function setup(t) {
     writes: 0,
     receipts: new Map(),
     hook: null,
-    protocol: 2,
+    protocol: 3,
     drop: false,
     revision: 0,
   };
@@ -111,7 +111,7 @@ async function setup(t) {
         });
         state.writes++;
       }
-      const receipt = { protocol: 2, operationId: body.operationId, applied };
+      const receipt = { protocol: 3, operationId: body.operationId, applied };
       state.receipts.set(body.operationId, receipt);
       if (state.drop) {
         state.drop = false;
@@ -225,6 +225,34 @@ test("conflicts write nothing until explicit ours or theirs is chosen", async (t
   assert.equal(c.state.writes, 0);
 });
 
+test("explicit audience downloads, uploads and defaults independently of legacy rules", async (t) => {
+  const c = await setup(t);
+  const configPath = path.join(c.cwd, "cardstock.json");
+  const config = JSON.parse(await readFile(configPath, "utf8"));
+  config.mapping = {
+    audience_internal_when: { tags: ["bug"], epics: ["Platform"] },
+  };
+  await writeFile(configPath, JSON.stringify(config));
+  await c.baseline();
+  c.state.cards[0].markdown = sheet().replace(
+    "custom: original",
+    "custom: original\naudience: internal",
+  );
+  let result = await c.cli("sync");
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(result.data.clean, true);
+  assert.match(
+    await readFile(path.join(c.tracker, "1.md"), "utf8"),
+    /audience: internal/,
+  );
+  await writeFile(path.join(c.tracker, "1.md"), sheet());
+  result = await c.cli("sync");
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(result.data.clean, true);
+  assert.doesNotMatch(c.state.cards[0].markdown, /audience: internal/);
+  assert.equal((await c.cli("status")).data.clean, true);
+});
+
 test("lost response resumes the same operation without duplicate writes or events", async (t) => {
   const c = await setup(t),
     baseline = await c.baseline(),
@@ -328,10 +356,10 @@ test("same external ID with a new UUID is an unresolvable identity conflict", as
 test("unsupported server cannot receive writes; legacy baseline adoption is explicit", async (t) => {
   const c = await setup(t),
     file = await c.baseline();
-  c.state.protocol = 1;
+  c.state.protocol = 2;
   assert.equal((await c.cli("sync")).code, 2);
   assert.equal(c.state.writes, 0);
-  c.state.protocol = 2;
+  c.state.protocol = 3;
   const baseline = JSON.parse(await readFile(file, "utf8"));
   delete baseline.cards[0].cardId;
   await writeFile(file, JSON.stringify(baseline));

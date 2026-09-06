@@ -72,6 +72,23 @@ describe("configuration contract", () => {
 });
 
 describe("scheme validation", () => {
+  test("area and epic names are unconstrained even with legacy vocabulary lists", () => {
+    expect(
+      validate(
+        good
+          .replace("area: Data", "area: Customer experience")
+          .replace("epic: Board & cards", "epic: Improve onboarding"),
+      ).ok,
+    ).toBe(true);
+    expect(validate(good.replace("epic: Board & cards\n", "")).ok).toBe(true);
+    expect(validate(good.replace("epic: Board & cards", "epic: null")).ok).toBe(
+      true,
+    );
+    expect(
+      schemeSchema.safeParse({ ...scheme, areas: undefined, epics: undefined })
+        .success,
+    ).toBe(true);
+  });
   test("accepts valid data, unknown frontmatter and CRLF without mutating inputs", () => {
     const files = [{ name: "9.md", text: good.replaceAll("\n", "\r\n") }];
     const before = structuredClone(files);
@@ -109,8 +126,6 @@ describe("scheme validation", () => {
     ],
     ["tags: [enhancement, board]", "tags: [bug, unknown]", "unknown_tag"],
     ["tags: [enhancement, board]\n", "", "required_key"],
-    ["area: Data", "area: Unknown", "vocabulary"],
-    ["epic: Board & cards", "epic: Unknown", "vocabulary"],
     ["lane: now", "lane: unknown", "vocabulary"],
     ["effort: H", "effort: high", "vocabulary"],
     ["effort: H", "effort:", "field_type"],

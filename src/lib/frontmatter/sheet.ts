@@ -17,6 +17,7 @@ export interface CardSheet {
   status: string;
   epic: string;
   area: string;
+  audience: "all" | "internal";
   /** The assignee's email as the file states it. May match no member. */
   assignee: string | null;
   tags: string[];
@@ -51,6 +52,7 @@ export const SHEET_KEYS = {
   status: { get: (s: CardSheet) => s.status },
   epic: { get: (s: CardSheet) => s.epic },
   area: { get: (s: CardSheet) => s.area },
+  audience: { get: (s: CardSheet) => s.audience },
   assignee: { get: (s: CardSheet) => s.assignee },
   raised_by: { get: (s: CardSheet) => s.raisedBy },
   raised: { get: (s: CardSheet) => s.raisedOn },
@@ -93,8 +95,9 @@ export function sheetFromFrontmatter(
     externalId: String(fm.id),
     title: fm.title,
     status: fm.status,
-    epic: fm.epic,
+    epic: fm.epic ?? "",
     area: fm.area,
+    audience: fm.audience ?? "all",
     assignee: normaliseEmail(fm.assignee),
     tags: tagRefs,
     raisedBy: fm.raised_by ?? null,

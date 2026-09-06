@@ -216,20 +216,23 @@ describe("mapping", () => {
   test("JSON overrides still apply and dedupe", () => {
     expect(mapTags(fm, mapping, vocab).refs).toEqual(["kind:bug", "area:ui"]);
   });
-  test("internal kind or engineering epic → internal audience", () => {
+  test("tag and epic names never imply internal audience", () => {
     expect(mapAudience({ ...fm, tags: ["tracker-item", "internal"] }, {})).toBe(
-      "internal",
+      "all",
     );
     expect(mapAudience({ ...fm, epic: "Engineering (internal)" }, {})).toBe(
-      "internal",
+      "all",
     );
   });
-  test("audience", () => {
+  test("explicit audience is independent of legacy mapping rules", () => {
     expect(mapAudience(fm, mapping)).toBe("all");
     expect(
       mapAudience({ ...fm, tags: ["tracker-item", "meta"] }, mapping),
-    ).toBe("internal");
-    expect(mapAudience({ ...fm, area: "Platform" }, mapping)).toBe("internal");
+    ).toBe("all");
+    expect(mapAudience({ ...fm, area: "Platform" }, mapping)).toBe("all");
+    expect(mapAudience({ ...fm, audience: "internal", tags: [] }, {})).toBe(
+      "internal",
+    );
   });
   test("value → priority", () => {
     expect(valueToPriority("H")).toBe(1);

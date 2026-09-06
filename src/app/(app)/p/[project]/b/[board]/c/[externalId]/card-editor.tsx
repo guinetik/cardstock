@@ -256,9 +256,12 @@ export function CardEditor({
               save({ audience: e.target.value as "all" | "internal" })
             }
           >
-            <option value="all">Everyone</option>
-            <option value="internal">Internal only</option>
+            <option value="all">General</option>
+            <option value="internal">Internal</option>
           </select>
+          <span className="text-xs text-muted-foreground">
+            Classification for filtering; does not restrict access.
+          </span>
         </label>
         <label>
           <span className={fieldLabel}>Planned start</span>

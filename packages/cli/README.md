@@ -3,7 +3,7 @@
 Command-line companion for [Cardstock](https://github.com/guinetik/cardstock).
 Initialize tracker configuration, validate Markdown offline, preview changes, and
 sync Markdown with the board using explicit conflict resolution and recovery.
-Apply requires a server deployed with sync protocol 2 and its database migration.
+Apply requires a server deployed with sync protocol 3 and its database migrations.
 
 Requires Node.js 22 or newer. Bun is only needed by package developers.
 
@@ -34,7 +34,7 @@ The tracker directory must already contain `<id>.md` files; other filenames are
 ignored, matching the existing ETL. No issue files are changed during validation.
 
 Validation uses the website's frontmatter contract and checks IDs against filenames.
-An optional `scheme` adds board-specific workflow, vocabulary, tag cardinality,
+An optional `scheme` adds board-specific workflow, tag vocabulary and cardinality,
 open-item summary and required-section checks. Scheme validation also checks strict
 YAML syntax (including duplicate keys); minimal configurations retain the existing
 lenient parser. JSON diagnostics include a code and field, plus a scheme document
@@ -70,11 +70,11 @@ written. `$comment` metadata is preserved. `provisioning.seed` records the SQL
 seed for administrators and recovery; the CLI never executes it. Credentials
 remain outside the configuration. `--remote <url>` is optional for offline work.
 
-Mappings preserve group aliases, tag/epic/area overrides and audience rules for
-future sync integration. Validation checks the configured tracker vocabulary;
-it does not contact the board to verify its tags or lanes. Keep existing sync and
-provisioning scripts until remote sync and round-trip parity are available.
-Configuration import alone does not complete the sync migration.
+Configuration import preserves legacy mapping metadata and reports changed
+semantics. Group aliases resolve tag spelling; legacy audience rules are never
+evaluated. Validation does not contact the board to verify tags or lanes.
+Migrating clients must pass Cardstock's contract, not reproduce their old project's
+validator. Keep provisioning artifacts until the new workflow is verified.
 
 To recover from an incorrect configuration, select the saved original file or
 correct the imported one and rerun validation. Init and validation do not modify
@@ -176,10 +176,39 @@ Optional field removal is a real removal, not an instruction to retain an old
 database value. Untouched source formatting and nested unknown YAML are preserved.
 Rank is a position in a lane: invalid or contradictory positions fail the entire
 remote batch. Ambiguous tied lane ranks require a board reorder before applying.
-Nonempty tag/epic/area mapping overrides and custom audience rules are refused
-pending #19 integration. Existing app-managed audience is retained on updates;
-new cards use the default internal-tag audience rule. For tag resolution,
-normal tag references, unambiguous bare tags and group aliases are supported.
+Nonempty tag/epic/area tag-derivation overrides remain unsupported: put the desired
+tags directly in frontmatter before removing those rules. Normal tag references,
+unambiguous bare tags and group aliases are supported. No alias name is built in.
+
+## Generic fields and audience
+
+```yaml
+area: Customer experience
+epic: Improve onboarding
+audience: internal
+tags: [enhancement]
+```
+
+Area is free-form nonempty text, not an enum. Epic is an optional assignment by
+name (up to 200 characters): sync reuses an epic on that board or creates it.
+Clear the assignment with an omitted, empty or null epic; this never deletes the
+epic or its other cards. Epics created on the site can be assigned to cards and
+round-trip normally. Empty epics without cards have no standalone Markdown file.
+Legacy `scheme.areas` and `scheme.epics` lists are retained as suggestions only,
+and a legacy required-epic rule does not prevent an unassigned card.
+
+Audience is an independent filter classification: `all` (the UI's General option)
+or `internal`. It is **not an access-control boundary**. A board needs no internal
+tag; a tag named internal or any area/epic name has no automatic effect on audience.
+Legacy `audience_internal_when` is retained as inert metadata, never evaluated by
+sync or the importer. Existing database audience values are not migrated or reset.
+
+Omitted audience means `all`. Protocol-3 snapshots expose the existing stored
+classification, so old baselines download an internal value before future edits.
+Removing a previously synced `audience: internal` is an explicit change back to
+`all`. Field merging, revision checks and recovery apply as for other fields.
+Older clients/servers cannot apply across this protocol change. Finish or archive
+pending journals before upgrading; do not delete the baseline or recovery files.
 
 ## Interrupted sync and recovery
 

@@ -50,14 +50,18 @@ Seeding only fills the allowlist. Each person sets their own password the first 
 - Adding a person: the **owner** (any project, including as a project admin) or a **project admin** (members of that project only). Open the project page (`/p/<slug>`) or, as owner, `/users`. No email is sent; share the app URL so they can set a password on first use. Only the owner can invite another project admin. `MEMBER_EMAILS` + `db:seed-members` remains available for bootstrap and automation.
 - Schema changes: add a migration under `supabase/migrations/`, `bunx supabase db push`.
 
-## CLI sync protocol 2 rollout
+## CLI sync protocol 3 rollout
 
 1. Back up production and confirm the linked Supabase project before reviewing
    `bunx supabase db push --dry-run`. Apply the reviewed migrations, including
-   `20260914000000_cli_sync_apply.sql`, to that project.
+   `20260914000000_cli_sync_apply.sql` and
+   `20260915000000_explicit_card_audience.sql`, to that project.
 2. Deploy the matching application code. The migration adds transactional sync,
    retry receipts, source projections and revision tracking for tag/link edits.
-   The new client refuses to apply against a server without protocol 2.
+   Protocol 3 adds explicit audience classification and optional epic assignments.
+   The new migration preserves existing audience values and does not change access
+   policies. New clients require protocol 3; older clients refuse the new server.
+   Finish or archive pending journals before upgrading and keep their backups.
 3. Use the repository CLI until a release containing this implementation is
    published. Sign in normally, run `status`/`sync --dry-run`, and reconcile any
    differences before `sync`. Old baselines can be refreshed with `baseline` when
@@ -65,7 +69,8 @@ Seeding only fills the allowlist. Each person sets their own password the first 
    confirming the current card identities.
 4. Smoke-test a controlled card change in each direction, an explicit conflict
    choice, and a clean second preview. Do not retire the legacy tracker clients
-   until #19's mapping and three-client round-trip checks pass.
+   until their generic Cardstock round-trip checks pass. Reproducing Designer's
+   project-specific validator is not an acceptance requirement.
 
 See `packages/cli/README.md` for resume/abort, stale-lock recovery, and retained
 original files. Receipt rows must not be pruned while clients may still resume the

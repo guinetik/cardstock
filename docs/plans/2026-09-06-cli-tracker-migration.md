@@ -2,7 +2,36 @@
 
 Prepared 2026-09-06 against `fd299b5` (CLI 0.2.2), after pulling the hosted `cardstock/cardstock-dev` board.
 
-## Outcome and boundary
+## Revised direction and current implementation
+
+The product owner explicitly removed Designer-specific validation parity as an
+acceptance gate. Migrate to Cardstock's generic contract; do not reproduce Staffeto
+conventions in application code. The original inventory below is historical.
+
+- Area is free-form text; legacy area/epic vocabulary lists are suggestions only.
+- Epics are optional board entities: reuse by name, create missing names, download
+  website assignments, and clear assignments without deleting entities. Epic names
+  do not trigger tags, audience or workflow behavior in the generic sync path.
+- Audience is explicitly `all` or `internal`, an independent filter classification
+  with no access-control effect. Tags are board-defined labels, not audience rules.
+  Remove hardcoded internal-tag/engineering-epic inference from the importer too.
+- Retain aliases as explicit configuration. Legacy `audience_internal_when` is inert
+  metadata; nonempty tag-derivation overrides remain rejected by sync rather than
+  being silently applied. They can be replaced with explicit frontmatter tags.
+
+Implemented locally: frontmatter and snapshot audience, bidirectional updates,
+generic area/epic validation, optional epic assignment, UI clarification, and
+protocol-3 safety gates. Migration `20260915000000_explicit_card_audience.sql`
+preserves stored audience and access policies, extends revision projections, and
+adds a separate v3 apply function so incomplete deployments fail before writes.
+Finish/reconcile pending journals before upgrading; retain old baselines so existing
+internal audience can be downloaded safely. Default/omitted audience is `all`.
+
+Remaining: production migration/deployment and hosted generic-field smoke test,
+installed CLI release, client configuration/runbook cutover and retiring shims.
+No production changes are performed as part of this local implementation.
+
+## Historical outcome and boundary
 
 Cardstock, Designer and Website use the same installed CLI with one portable configuration per tracker. Preserve each board's workflow, vocabulary, mappings and validation rules. No copied Python engine, app checkout, Docker database or database credentials should be needed for everyday validation and sync.
 

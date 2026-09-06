@@ -21,7 +21,7 @@ export const POST = withToken(
         error instanceof Error ? error.message : "Invalid sync request",
       );
     }
-    const { data, error } = await db.rpc("cli_apply_sync", {
+    const { data, error } = await db.rpc("cli_apply_sync_v3", {
       p_board: board.id,
       p_member: member.id,
       p_operation: operationId,
@@ -36,6 +36,6 @@ export const POST = withToken(
         return apiError("invalid_request", error.message);
       throw new Error(error.message);
     }
-    return apiJson({ protocol: 2, operationId, ...data });
+    return apiJson({ protocol: 3, operationId, ...data });
   },
 );

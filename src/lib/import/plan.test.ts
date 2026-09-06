@@ -16,6 +16,7 @@ function state(cards: Partial<ExistingCard>[] = []): BoardState {
     status: "backlog",
     epic: "E",
     area: "A",
+    audience: "all",
     assignee: null,
     assignee_id: null,
     raised_by: null,
@@ -78,6 +79,24 @@ function state(cards: Partial<ExistingCard>[] = []): BoardState {
 }
 
 describe("planImport", () => {
+  test("audience is explicit on create and update; omitted legacy imports preserve existing values", () => {
+    expect(
+      planImport([sheet(1, "audience: internal")], state()).rows[0],
+    ).toMatchObject({ patch: { columns: { audience: "internal" } } });
+    const existing = state([{ audience: "internal" }]);
+    const omitted = planImport([sheet(1, "")], existing).rows[0];
+    if (omitted.verdict !== "changed") throw new Error(omitted.verdict);
+    expect(omitted.patch.columns).not.toHaveProperty("audience");
+    expect(
+      planImport([sheet(1, "audience: all")], existing).rows[0],
+    ).toMatchObject({ patch: { columns: { audience: "all" } } });
+    expect(
+      writeSheet(
+        sheet(1, "").text,
+        sheetFromCard(existing.cards.get("1")!, existing),
+      ),
+    ).toContain("audience: internal");
+  });
   test("a new card lands in the lane it names, or the inbox", () => {
     const plan = planImport(
       [sheet(5, "lane: now\nrank: 3"), sheet(6, "")],
