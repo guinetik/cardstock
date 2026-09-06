@@ -1,0 +1,16 @@
+<!-- @dsCard group="Colors" viewport="700x160" name="Pen" subtitle="oklch(0.50 0.15 h) — the decisions the app recorded" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{padding:14px 18px;background:var(--surface-page);color:var(--color-ink)}.cap{font-family:var(--font-mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-grey-faint)}.hex{font-family:var(--font-mono);font-size:9.5px;color:var(--color-grey)}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.pens{display:flex;gap:14px}.pen{flex:1}.chip{height:34px;border-radius:var(--radius-card)}.pen b{display:block;margin-top:6px;font-size:11px;font-weight:600}</style>
+</head><body><div class="pens">
+<div class="pen"><div class="chip" style="background:var(--pen-red)"></div><b>pen-red</b><span class="hex">P1 · blocked · the stamp</span></div>
+<div class="pen"><div class="chip" style="background:var(--pen-amber)"></div><b>pen-amber</b><span class="hex">wip · waiting · late</span></div>
+<div class="pen"><div class="chip" style="background:var(--pen-green)"></div><b>pen-green</b><span class="hex">effort L · shipped</span></div>
+<div class="pen"><div class="chip" style="background:var(--pen-blue)"></div><b>pen-blue</b><span class="hex">links · P2 · focus ring</span></div>
+<div class="pen"><div class="chip" style="background:var(--pen-violet)"></div><b>pen-violet</b><span class="hex">P3</span></div>
+</div>
+<div class="row" style="margin-top:14px">
+<span class="stat stat--wip">wip</span><span class="stat stat--blocked">blocked</span><span class="stat stat--info">built</span><span class="stat stat--success">shipped</span>
+<span style="width:8px"></span>
+<span class="sq sq--on sq--red">P1</span><span class="sq sq--on sq--blue">P2</span><span class="sq sq--on sq--violet">P3</span>
+</div></body></html>

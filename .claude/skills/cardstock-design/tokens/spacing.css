@@ -1,0 +1,36 @@
+/*
+ * The app measures in Tailwind's rem steps; these tokens name the ones it
+ * actually uses so a consumer without Tailwind gets the same rhythm. This
+ * naming is an intentional addition — cardstock has no spacing token file.
+ */
+:root {
+  --space-px: 1px;
+  --space-0-5: 0.125rem; /* 2px  — rivet gaps, mark pack gutters */
+  --space-1: 0.25rem;    /* 4px  — sq gaps, chip gaps */
+  --space-1-5: 0.375rem; /* 6px  — colour-picker gap, lane tool gap */
+  --space-2: 0.5rem;     /* 8px  — lane gap, card gap, field padding */
+  --space-2-5: 0.625rem; /* 10px — card padding */
+  --space-3: 0.75rem;    /* 12px — binder gap, folder gap */
+  --space-4: 1rem;       /* 16px — folder body, cockpit tile padding */
+  --space-5: 1.25rem;    /* 20px */
+  --space-6: 1.5rem;     /* 24px — page gutter */
+  --space-8: 2rem;       /* 32px — section break */
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* The card gutter that gives the hover swell somewhere to grow. Without it
+     a hovered card outgrows the lane's scroll container and it scrolls
+     sideways — and the container cannot clip, because clipping would cut the
+     lift shadow off at the sides. */
+  --card-gutter: 3px;
+
+  /* Default kanban column measure — the filter search uses the same one. */
+  --lane-width: clamp(280px, 22vw, 420px); /* @kind spacing */
+  --lane-width-max: min(880px, 44vw); /* @kind spacing */
+  --lane-spine-width: 1.75rem;
+
+  /* Page measures the app holds to. */
+  --page-max: 64rem;      /* projects / project pages */
+  --page-gutter: 1.5rem;
+  --topbar-height: 3rem;
+}

@@ -1,0 +1,29 @@
+/*
+ * Edges and lift. 2px is the whole radius scale — paper is cut, not moulded.
+ * Elevation is four heights, all contact shadows, never a glow:
+ *
+ *   (none)         flat in the well
+ *   --shadow-card  a sheet resting on the lane
+ *   --shadow-lift  pointed at, pinned, or under a dialog
+ *   --shadow-hand  the card in hand, clear of the board
+ *
+ * --shadow-well is the one inset: stock cut *into* the desk (the inbox
+ * drawer, a lane spine, the corkboard).
+ */
+:root {
+  --radius-card: 2px;
+  --radius-btn: 2px;
+  --radius-input: 2px;
+  /* Alias for lifted shadcn code; the app caps every radius at --radius-card. */
+  --radius: 2px;
+
+  --shadow-card: 0 1px 0 rgb(27 25 21 / 0.03), 0 1px 2px rgb(27 25 21 / 0.07);
+  --shadow-lift: 0 2px 4px rgb(27 25 21 / 0.08), 0 14px 28px -10px rgb(27 25 21 / 0.22);
+  --shadow-hand: 0 4px 8px rgb(27 25 21 / 0.1), 0 30px 50px -12px rgb(27 25 21 / 0.34);
+  --shadow-well: inset 0 1px 3px rgb(27 25 21 / 0.09);
+
+  /* Two sheets of an epic's page block showing beneath its cover. */
+  --tome-sheets:
+    3px 3px 0 -1px var(--surface-raised), 3px 3px 0 0 var(--border-strong),
+    6px 6px 0 -1px var(--surface-raised), 6px 6px 0 0 var(--border-hairline);
+}

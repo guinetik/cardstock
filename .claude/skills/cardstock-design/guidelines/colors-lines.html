@@ -1,0 +1,16 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Ruled lines & fills" subtitle="Borders are ruled lines; fills are the faintest possible wash" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{padding:14px 18px;background:var(--surface-page);color:var(--color-ink)}.cap{font-family:var(--font-mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-grey-faint)}.hex{font-family:var(--font-mono);font-size:9.5px;color:var(--color-grey)}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.lines{display:grid;gap:9px}.l{display:grid;grid-template-columns:130px minmax(0,1fr) 150px;align-items:center;gap:12px;font-size:11px}.rule{height:0}</style>
+</head><body><div class="lines">
+<div class="l"><b>hairline</b><span style="border-top:1px solid var(--border-hairline)"></span><span class="hex">#ded8ca · card edges</span></div>
+<div class="l"><b>strong</b><span style="border-top:1px solid var(--border-strong)"></span><span class="hex">#c7bfad · pointed at, inputs</span></div>
+<div class="l"><b>divider</b><span style="border-top:1px solid var(--border-divider)"></span><span class="hex">#c7bfad · topbar, sections</span></div>
+<div class="l"><b>ink rule</b><span style="border-top:2px solid var(--color-ink)"></span><span class="hex">2px · a work lane's tab</span></div>
+<div class="l"><b>amber rule</b><span style="border-top:1px solid var(--pen-amber)"></span><span class="hex">a waiting lane's tab</span></div>
+</div>
+<div class="row" style="margin-top:12px">
+<span style="padding:5px 10px;background:var(--fill-subtle);font-size:11px">fill-subtle · hover</span>
+<span style="padding:5px 10px;background:var(--fill-subtle-strong);font-size:11px">fill-subtle-strong · accent</span>
+<span style="padding:5px 10px;background:var(--scrim);color:#fff;font-size:11px">scrim · under a dialog</span>
+</div></body></html>

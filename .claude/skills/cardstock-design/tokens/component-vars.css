@@ -1,0 +1,24 @@
+/*
+ * The highlighter's swipe, one per group hue. A mark is a *swipe* of a
+ * marker, not a pill: the gradient starts 5px in and stops 7px short so the
+ * ends come out uneven, and the 101deg angle is the overshoot of a hand
+ * pulling a marker across a word. --swipe-half-* is the same swipe at half
+ * pressure, which is what an unassigned tag previews on hover.
+ *
+ * Group order is amber, blue, green, violet, red — red last, so a red mark
+ * stays rare enough to mean something.
+ */
+:root {
+  --swipe-1: linear-gradient(101deg, transparent 0 2px, var(--mark-1) 5px, var(--mark-1) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-2: linear-gradient(101deg, transparent 0 2px, var(--mark-2) 5px, var(--mark-2) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-3: linear-gradient(101deg, transparent 0 2px, var(--mark-3) 5px, var(--mark-3) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-4: linear-gradient(101deg, transparent 0 2px, var(--mark-4) 5px, var(--mark-4) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-5: linear-gradient(101deg, transparent 0 2px, var(--mark-5) 5px, var(--mark-5) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-half-1: linear-gradient(101deg, transparent 0 2px, color-mix(in oklab, var(--mark-1), transparent 50%) 5px, color-mix(in oklab, var(--mark-1), transparent 50%) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-half-2: linear-gradient(101deg, transparent 0 2px, color-mix(in oklab, var(--mark-2), transparent 50%) 5px, color-mix(in oklab, var(--mark-2), transparent 50%) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-half-3: linear-gradient(101deg, transparent 0 2px, color-mix(in oklab, var(--mark-3), transparent 50%) 5px, color-mix(in oklab, var(--mark-3), transparent 50%) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-half-4: linear-gradient(101deg, transparent 0 2px, color-mix(in oklab, var(--mark-4), transparent 50%) 5px, color-mix(in oklab, var(--mark-4), transparent 50%) calc(100% - 7px), transparent calc(100% - 1px));
+  --swipe-half-5: linear-gradient(101deg, transparent 0 2px, color-mix(in oklab, var(--mark-5), transparent 50%) 5px, color-mix(in oklab, var(--mark-5), transparent 50%) calc(100% - 7px), transparent calc(100% - 1px));
+  /* The default hue a bare .mark carries. */
+  --swipe: var(--swipe-2);
+}

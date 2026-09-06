@@ -1,0 +1,51 @@
+<!-- @dsCard group="Components" viewport="700x320" name="Board" subtitle="The board card, the epic tome, the post-it" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:16px 20px;background:var(--surface-page)}.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}.cap{margin:0 0 6px;font-family:var(--font-mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-grey-faint)}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { BoardCard, EpicTome, CalendarSlip, Eyebrow, Stat, PaperLane } = window.CardstockDesignSystem_acd70a;
+const TAGS = [{name:"Onboarding",hue:2},{name:"Bug",hue:4}];
+function Card(){return (
+  <div className="cols">
+    <div>
+      <p className="cap">Resting</p>
+      <BoardCard id="1" title="Sign-up form loses what you typed" epic="Onboarding"
+        raised="Aug 1" priority={1} effort="L" tags={TAGS} note="Validation clears the whole form." />
+      <p className="cap" style={{marginTop:12}}>Pinned — back of the card out</p>
+      <BoardCard id="2" title="Invoice PDF shows the wrong currency" epic="Billing" status="wip"
+        pinned raised="Aug 3" priority={2} effort="M" tags={[{name:"Billing",hue:2}]} note="EU customers only." />
+    </div>
+    <div>
+      <p className="cap">Tinted · overdue rule</p>
+      <BoardCard id="10" title="First run shows a two-minute tour" epic="Onboarding"
+        tint="blue" signal="overdue" raised="Aug 12" priority={1} effort="M" tags={TAGS} />
+      <p className="cap" style={{marginTop:12}}>Slips in the drawer</p>
+      <PaperLane kind="inbox" width="spine" style={{padding:6}}>
+        <BoardCard id="11" title="Search results page loads slowly" variant="flat" rail={false} raised="Aug 13" signal="forgotten" />
+        <BoardCard id="12" title="Team members can be invited by email" variant="flat" rail={false} raised="Aug 14" signal="forgotten" />
+      </PaperLane>
+    </div>
+    <div>
+      <p className="cap">Epic tome</p>
+      <EpicTome outlook="at-risk">
+        <Eyebrow>Epic · Ana</Eyebrow>
+        <h2 style={{fontSize:18,margin:"2px 0 4px"}}>Onboarding</h2>
+        <p style={{fontSize:12,color:"var(--color-grey)",margin:0}}>New teams reach a first board in a day.</p>
+        <p style={{marginTop:10}}><Stat tone="danger">At risk</Stat></p>
+      </EpicTome>
+      <p className="cap" style={{marginTop:12}}>Post-its</p>
+      <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+        <CalendarSlip id="10" shape="stub" tilt={-2} />
+        <CalendarSlip id="3" shape="stub" tilt={1.5} tint="amber" />
+        <CalendarSlip id="5" title="Should trials require a card?" board="backlog" />
+      </div>
+    </div>
+  </div>
+);}
+ReactDOM.createRoot(document.getElementById("root")).render(<Card />);
+</script></body></html>

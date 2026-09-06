@@ -1,0 +1,41 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Filing" subtitle="Folders, binders, the lane microcosm, letterhead" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:16px 20px;background:var(--surface-page)}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { Folder, Binder, BinderTool, LaneMap, Letterhead, Stamp, PaperLink, PaperButton, PaperTooltip, Icon } = window.CardstockDesignSystem_acd70a;
+const LANES = [
+  { name: "Unsorted", kind: "inbox", cells: [{signal:"queued"},{signal:"queued"},{signal:"queued"}] },
+  { name: "Now", cells: [{signal:"moving"},{tint:"amber"},{signal:"late"}], more: 4 },
+  { name: "Next", cells: [{signal:"queued"},{signal:"blocked"}] },
+  { name: "Needs input", kind: "waiting", cells: [{signal:"late"}] },
+  { name: "Done", kind: "done", cells: [{signal:"delivered"},{signal:"delivered"}] },
+  { name: "Archive", kind: "archive", cells: [{}] },
+];
+function Card(){return (
+  <div style={{display:"grid",gap:18}}>
+    <Letterhead eyebrow={<a href="#">Demo</a>} title="Product backlog"
+      links={<><PaperLink href="#">Epic Cockpit</PaperLink><PaperLink href="#">Calendar</PaperLink><PaperLink href="#">Timeline</PaperLink><PaperLink href="#">Manage</PaperLink></>}
+      aside={<span style={{display:"flex",gap:8}}><PaperButton size="sm">Add lane</PaperButton><PaperButton size="sm" variant="outline">Export CSV</PaperButton></span>} />
+    <ul className="folders">
+      <Folder name="Demo" href="#" aside={<><Stamp>13 cards<br/>filed</Stamp><PaperLink href="#" className="folder-go">Open project →</PaperLink></>}>
+        <p className="folder-blurb">A project is a collection of boards. A board is where cards go to be worked.</p>
+        <ul className="binders">
+          <Binder name="Product backlog" href="#" count="13 cards" stacked
+            tools={<><BinderTool title="Manage"><Icon name="settings" /></BinderTool><BinderTool pen as="a" href="#"><Icon name="gauge" />Epic Cockpit</BinderTool></>} />
+          <Binder wide name="Platform" href="#" count="6 cards"><LaneMap lanes={LANES} /></Binder>
+        </ul>
+      </Folder>
+    </ul>
+    <div style={{display:"flex",gap:24,alignItems:"flex-start",paddingTop:8}}>
+      <PaperTooltip lead="Waiting on Finance" meta="5 days in lane · SLA 5d" hint="Past its SLA — the day count turns red." />
+    </div>
+  </div>
+);}
+ReactDOM.createRoot(document.getElementById("root")).render(<Card />);
+</script></body></html>

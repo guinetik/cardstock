@@ -1,0 +1,36 @@
+<!-- @dsCard group="cardstock app" viewport="1440x900" name="cardstock — the app" subtitle="Login → projects → board → timeline → cockpit, click-through" -->
+<!DOCTYPE html>
+<html lang="en" data-theme="paper"><head><meta charset="utf-8"><title>cardstock — UI kit</title>
+<link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script src="data.js"></script>
+<style>html,body{height:100%}#root{min-height:100%;display:flex;flex-direction:column}</style>
+</head><body>
+<div id="root"></div>
+<script type="text/babel" src="Shell.jsx"></script>
+<script type="text/babel" src="CardFace.jsx"></script>
+<script type="text/babel" src="LoginScreen.jsx"></script>
+<script type="text/babel" src="ProjectsScreen.jsx"></script>
+<script type="text/babel" src="ProjectScreen.jsx"></script>
+<script type="text/babel" src="BoardScreen.jsx"></script>
+<script type="text/babel" src="TimelineScreen.jsx"></script>
+<script type="text/babel" src="CockpitScreen.jsx"></script>
+<script type="text/babel" data-presets="react">
+function App() {
+  const [view, setView] = React.useState("board");
+  const data = window.CS_DATA;
+  if (view === "login") return <LoginScreen onView={setView} />;
+  const screen =
+    view === "projects" ? <ProjectsScreen data={data} onView={setView} /> :
+    view === "project" ? <ProjectScreen data={data} onView={setView} /> :
+    view === "timeline" ? <TimelineScreen data={data} onView={setView} view={view} /> :
+    view === "cockpit" ? <CockpitScreen data={data} onView={setView} view={view} /> :
+    <BoardScreen data={data} onView={setView} view={view} />;
+  return <Shell view={view} onView={setView}>{screen}</Shell>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body></html>

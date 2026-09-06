@@ -1,0 +1,28 @@
+/*
+ * Paper does not bounce. There is no spring easing and no press-scale: a
+ * press is a 1px settle. Pointing at a card lifts it out of the lane towards
+ * you — it rises --motion-rise and foreshortens by --motion-swell while the
+ * shadow deepens to --shadow-lift. That is perspective, not a spring: a sheet
+ * nearer the eye is a larger sheet.
+ *
+ * Two easings, and the difference matters. --motion-ease-out is for things
+ * that only change colour or depth. Anything that changes size or place — a
+ * lane collapsing, a card opening — uses --motion-ease-settle, because
+ * --motion-ease-out puts four fifths of the distance in the first fifth of
+ * the time and reads as a jump however long you make it.
+ */
+:root {
+  --motion-duration-hover: 320ms; /* @kind other */
+  --motion-duration-ui: 420ms; /* @kind other */
+  /* A card waits this long before opening, so brushing past a lane does not
+     set off a row of expansions. Leaving closes it immediately, no delay. */
+  --motion-dwell: 450ms; /* @kind other */
+  --motion-ease-out: cubic-bezier(0.32, 0.72, 0, 1); /* @kind other */
+  --motion-ease-settle: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+  --motion-press-y: 1px; /* @kind spacing */
+  --motion-rise: -2px; /* @kind spacing */
+  --motion-swell: 1.012; /* @kind other */
+  /* How long a dragged card must dwell over a collapsed lane before it
+     springs open (built, switched off in the app). */
+  --motion-spring: 450ms; /* @kind other */
+}

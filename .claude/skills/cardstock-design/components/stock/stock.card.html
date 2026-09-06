@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Stock" subtitle="Sheets, lanes, the drawer, the well, the topbar" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:0;background:var(--surface-page)}.pad{padding:14px 20px 20px}.lanes{display:flex;gap:8px;align-items:stretch}.sheet{padding:10px;font-size:13px;color:var(--color-ink2)}.cap{margin:0 0 6px;font-family:var(--font-mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-grey-faint)}</style>
+</head><body><div id="root"></div>
+<script type="text/babel">
+const { PaperTopbar, PaperLane, PaperCard, PaperWell, LaneHead, Portrait } = window.CardstockDesignSystem_acd70a;
+const Sheet = ({children, ...p}) => <PaperCard {...p}><div className="sheet">{children}</div></PaperCard>;
+function Card(){return (
+  <div>
+    <PaperTopbar right={<span style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}>Ana Lima<Portrait size="topbar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="" /></span>} />
+    <div className="pad">
+      <div className="lanes">
+        <PaperLane kind="work" style={{padding:8,display:"flex",flexDirection:"column",gap:8,width:200,flex:"none"}}>
+          <LaneHead name="Now" kind="work" count="3" />
+          <Sheet>A sheet resting on the lane</Sheet>
+          <Sheet tint="amber">Tinted stock</Sheet>
+        </PaperLane>
+        <PaperLane kind="inbox" style={{padding:8,display:"flex",flexDirection:"column",gap:8,width:200,flex:"none"}}>
+          <LaneHead name="Unsorted" kind="inbox" count="2" />
+          <div style={{display:"flex",flexDirection:"column"}}>
+            <Sheet variant="flat">A slip in the drawer</Sheet>
+            <Sheet variant="flat">Flush, hairline-separated</Sheet>
+          </div>
+        </PaperLane>
+        <PaperLane kind="waiting" style={{padding:8,display:"flex",flexDirection:"column",gap:8,width:180,flex:"none"}}>
+          <LaneHead name="Needs input" kind="waiting" count="1" sla={5} />
+          <Sheet>Amber rule for waiting</Sheet>
+        </PaperLane>
+        <PaperLane collapsed style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,padding:"8px 0",flex:"none"}}>
+          <h2 className="lane-name" style={{color:"var(--color-grey)"}}>Archive</h2>
+          <span style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--color-grey-faint)"}}>4</span>
+        </PaperLane>
+        <div style={{display:"flex",flexDirection:"column",gap:8,flex:1}}>
+          <div><p className="cap">Overlay — in hand</p><Sheet variant="overlay">Rotated 0.7°</Sheet></div>
+          <div><p className="cap">Well — cut into the desk</p><PaperWell style={{padding:10}}><span style={{fontSize:13,color:"var(--color-ink2)"}}>An in-tray</span></PaperWell></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);}
+ReactDOM.createRoot(document.getElementById("root")).render(<Card />);
+</script></body></html>

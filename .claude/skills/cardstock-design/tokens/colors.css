@@ -1,0 +1,74 @@
+/*
+ * Paper — daylight, and the default theme. Warm neutral stock in a fixed
+ * stacking order: page (the desk) < panel (a lane laid on it) < card (a sheet
+ * on the lane), with well cut *into* the desk for the drawer. Nothing is
+ * translucent and nothing is blurred, so an empty lane still reads as a place.
+ *
+ * Brand-free by design: colour arrives as *pen* (a decision the app recorded)
+ * or *mark* (a highlighter swipe the reader made). Never both on one element.
+ */
+:root {
+  /* ---------------------------------------------------------------- ink */
+  --color-ink: #1b1915;
+  --color-ink2: #454039;
+  --color-ink-strong: #100e0b;
+  --color-grey: #726b60;
+  --color-grey-faint: #a09889;
+  --color-scrollbar: rgb(114 107 96 / 0.35);
+
+  /* -------------------------------------------------------------- stock */
+  --surface-page: #f2eee6;
+  --surface-panel: #ebe7dd;
+  --surface-card: #fcfbf8;
+  --surface-well: #dcd5c3;
+  --surface-input: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-topbar: #fcfbf8;
+
+  /* Nine pastel card tints — the frontmatter-owned colour of a sheet. */
+  --surface-card-rose: #f2c6d0;
+  --surface-card-orange: #f2cfad;
+  --surface-card-amber: #eedb91;
+  --surface-card-green: #c5dfbd;
+  --surface-card-cyan: #bce0df;
+  --surface-card-blue: #c4d8ee;
+  --surface-card-indigo: #ced0ed;
+  --surface-card-violet: #ddc7eb;
+  --surface-card-pink: #edc7df;
+
+  /* The calendar's corkboard: mid-value so pinned white sheets carry the
+     contrast, flecked by the speck colour. Post-its default to canary. */
+  --surface-cork: #d9c09c;
+  --cork-speck: rgb(97 74 44 / 0.14);
+  --surface-postit: #f9efb7;
+
+  /* -------------------------------------------------------- ruled lines */
+  --border-hairline: #ded8ca;
+  --border-strong: #c7bfad;
+  --border-input: #c7bfad;
+  --border-divider: #c7bfad;
+
+  /* Pen: one hue wheel at oklch L .50 C .15 — the decisions the app records. */
+  --pen-red: oklch(0.5 0.15 30);
+  --pen-amber: oklch(0.52 0.13 75);
+  --pen-green: oklch(0.5 0.13 150);
+  --pen-blue: oklch(0.5 0.15 264);
+  --pen-violet: oklch(0.5 0.15 305);
+  /* Stock showing through an ink-filled square. */
+  --pen-ink: #fbf9f4;
+
+  /* Highlighter: the same wheel at L .91, multiplied over the stock. Hue
+     belongs to the tag *group*, in board order: amber, blue, green, violet,
+     red — red last so a red mark stays rare enough to mean something. */
+  --mark-1: oklch(0.9 0.1 30 / 0.62);
+  --mark-2: oklch(0.92 0.14 85 / 0.62);
+  --mark-3: oklch(0.91 0.12 150 / 0.55);
+  --mark-4: oklch(0.91 0.09 250 / 0.62);
+  --mark-5: oklch(0.9 0.09 305 / 0.55);
+  --mark-blend: multiply; /* @kind other */
+
+  --fill-subtle: rgb(114 107 96 / 0.09);
+  --fill-subtle-strong: rgb(114 107 96 / 0.16);
+
+  --scrim: rgb(27 25 21 / 0.28);
+}

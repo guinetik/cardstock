@@ -1,0 +1,43 @@
+/* Page defaults, lifted from cardstock's app/globals.css @layer base. */
+*,
+*::before,
+*::after { box-sizing: border-box }
+html, body { height: 100%; min-height: 100% }
+html { font-family: var(--font-sans) }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  background: var(--surface-page);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+}
+h1, h2, h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  line-height: var(--leading-tight);
+  color: var(--color-ink-strong);
+}
+h1 { font-size: var(--text-h1) }
+h2 { font-size: var(--text-h2) }
+h3 { font-size: var(--text-h3) }
+h4, h5, h6 { margin: 0; font-family: var(--font-sans); font-weight: 600 }
+p { margin: 0 }
+/* Links are pen blue, underlined only on hover — see .paper-link. */
+a { color: var(--pen-blue); text-decoration: none; text-underline-offset: 0.15em }
+a:hover { color: var(--pen-blue); text-decoration: underline }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer }
+input, select, textarea { font: inherit; color: inherit }
+code, kbd, pre, samp { font-family: var(--font-mono) }
+ul, ol { margin: 0; padding: 0; list-style: none }
+:focus-visible { outline: 2px solid var(--pen-blue); outline-offset: 2px }
+::-webkit-scrollbar { width: 8px; height: 8px }
+::-webkit-scrollbar-track { background: transparent }
+::-webkit-scrollbar-thumb { background: var(--color-scrollbar); border-radius: 0 }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}

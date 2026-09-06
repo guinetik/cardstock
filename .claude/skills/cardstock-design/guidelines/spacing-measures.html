@@ -1,0 +1,17 @@
+<!-- @dsCard group="Spacing" viewport="700x200" name="Measures in use" subtitle="Lane width, the card gutter, the page measure" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{padding:14px 18px;background:var(--surface-page);color:var(--color-ink)}.cap{font-family:var(--font-mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-grey-faint)}.hex{font-family:var(--font-mono);font-size:9.5px;color:var(--color-grey)}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.m{display:grid;gap:10px;font-size:12px}</style>
+</head><body><div class="m">
+<div><span class="hex">--lane-width clamp(280px, 22vw, 420px)</span>
+<div style="margin-top:5px;display:flex;gap:8px">
+<span class="paper-lane" style="width:200px;height:36px;display:block"></span>
+<span class="paper-lane paper-lane--drawer" style="width:200px;height:36px;display:block"></span>
+</div></div>
+<div><span class="hex">--card-gutter 3px — room for the hover swell to grow</span>
+<div style="margin-top:5px;background:var(--surface-panel);border:1px solid var(--border-hairline);padding:8px 0;width:220px">
+<div style="padding:0 3px"><div class="paper-card" style="height:28px"></div></div>
+<div style="padding:0 3px;margin-top:8px"><div class="paper-card" style="height:28px"></div></div>
+</div></div>
+<div class="row"><span class="hex">--page-max 64rem</span><span class="hex">--page-gutter 1.5rem</span><span class="hex">--topbar-height 3rem</span><span class="hex">--lane-spine-width 1.75rem</span></div>
+</div></body></html>

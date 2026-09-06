@@ -1,0 +1,74 @@
+/*
+ * Semantic aliases. Base values above say what a colour *is*; these say what
+ * it is *for*. The shadcn-shaped names are the exact aliases cardstock sets
+ * in app/globals.css, so code lifted out of the app keeps working.
+ *
+ * The one to remember: the primary action is ink, not a colour. Pen blue is
+ * for links and P2 only.
+ */
+:root {
+  /* ------------------------------------------------------- text & ground */
+  --text-heading: var(--color-ink-strong);
+  --text-default: var(--color-ink);
+  --text-prose: var(--color-ink2);
+  --text-muted: var(--color-grey);
+  --text-faint: var(--color-grey-faint);
+  --text-on-pen: var(--pen-ink);
+  --text-link: var(--pen-blue);
+  --text-danger: var(--pen-red);
+
+  --ground-desk: var(--surface-page);
+  --ground-lane: var(--surface-panel);
+  --ground-sheet: var(--surface-card);
+  --ground-drawer: var(--surface-well);
+  --ground-field: var(--surface-input);
+  --ground-menu: var(--surface-raised);
+
+  /* ------------------------------------------------------------ decisions */
+  --pen-priority-1: var(--pen-red);
+  --pen-priority-2: var(--pen-blue);
+  --pen-priority-3: var(--pen-violet);
+  --pen-effort-l: var(--pen-green);
+  --pen-effort-m: var(--pen-amber);
+  --pen-effort-h: var(--pen-red);
+
+  /* Signals — the same five pens on the card, the timeline and the cockpit. */
+  --signal-queued: var(--color-grey-faint);
+  --signal-moving: var(--pen-blue);
+  --signal-late: var(--pen-amber);
+  --signal-blocked: var(--pen-red);
+  --signal-delivered: var(--pen-green);
+
+  /* -------------------------------------------------- shadcn-shaped names */
+  --background: var(--surface-page);
+  --foreground: var(--color-ink);
+  --card: var(--surface-card);
+  --card-foreground: var(--color-ink);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-ink);
+  --primary-foreground: var(--surface-card);
+  --secondary: var(--fill-subtle);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--fill-subtle);
+  --muted-foreground: var(--color-grey);
+  --accent: var(--fill-subtle-strong);
+  --accent-foreground: var(--color-ink);
+  --destructive: var(--pen-red);
+  --border: var(--border-hairline);
+  --input: var(--border-input);
+  --ring: var(--pen-blue);
+  --chart-1: var(--pen-blue);
+  --chart-2: var(--pen-green);
+  --chart-3: var(--pen-amber);
+  --chart-4: var(--pen-violet);
+  --chart-5: var(--pen-red);
+  --sidebar: var(--surface-panel);
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--pen-blue);
+  --sidebar-primary-foreground: var(--pen-ink);
+  --sidebar-accent: var(--fill-subtle);
+  --sidebar-accent-foreground: var(--color-ink);
+  --sidebar-border: var(--border-hairline);
+  --sidebar-ring: var(--pen-blue);
+}

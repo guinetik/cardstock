@@ -1,0 +1,16 @@
+<!-- @dsCard group="Brand" viewport="700x200" name="Motion" subtitle="Paper does not bounce; a press is a 1px settle" -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{padding:14px 18px;background:var(--surface-page);color:var(--color-ink)}.cap{font-family:var(--font-mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-grey-faint)}.hex{font-family:var(--font-mono);font-size:9.5px;color:var(--color-grey)}.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.mg{display:grid;grid-template-columns:120px minmax(0,1fr);gap:9px 14px;align-items:center;font-size:12px;color:var(--color-ink2)}.k{font-family:var(--font-mono);font-size:10px;color:var(--color-grey)}</style>
+</head><body><div class="mg">
+<span class="k">--motion-rise</span><span>−2px · pointing at a card lifts it out of the lane toward you</span>
+<span class="k">--motion-swell</span><span>1.012 · and it foreshortens — perspective, not a spring</span>
+<span class="k">--motion-press-y</span><span>1px · a press settles down; nothing scales on press</span>
+<span class="k">--motion-dwell</span><span>450ms · a card waits this long before opening; leaving closes it at once</span>
+<span class="k">--ease-out</span><span>cubic-bezier(.32,.72,0,1) · colour and depth only</span>
+<span class="k">--ease-settle</span><span>cubic-bezier(.4,0,.2,1) · anything that changes size or place</span>
+</div>
+<div class="row" style="margin-top:14px;gap:20px">
+<div class="paper-card" style="width:150px;padding:9px;font-size:12px">Hover me — I rise</div>
+<span class="cap">prefers-reduced-motion drops the movement entirely</span>
+</div></body></html>
