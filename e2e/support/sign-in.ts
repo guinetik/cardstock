@@ -40,7 +40,9 @@ export async function submitSignIn(
 /** Sign in through the login form and wait for the app to take over. */
 export async function signInAs(page: Page, email: string, password: string) {
   await submitSignIn(page, email, password);
-  await page.waitForURL(/\/(p\/|$)/);
+  // `/` is the public landing page now; a signed-in visitor lands on
+  // `/projects`, or wherever `next` pointed them.
+  await page.waitForURL(/\/(p\/|projects$)/);
 }
 
 /** Sign in as the owner, who can see everything. */

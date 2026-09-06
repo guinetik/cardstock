@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
-import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
+import type { CardPatch } from "@/app/(app)/p/[project]/b/[board]/actions";
 import { CardReferenceText } from "@/components/card-reference-text";
 import { EpicLabel } from "@/components/epic-label";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";

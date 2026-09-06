@@ -42,7 +42,7 @@ import {
   sortLaneCards,
   updateCard,
   updateLane,
-} from "@/app/p/[project]/b/[board]/actions";
+} from "@/app/(app)/p/[project]/b/[board]/actions";
 import { CardReferenceScope } from "@/components/card-reference-scope";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CardColor } from "@/lib/card-color";

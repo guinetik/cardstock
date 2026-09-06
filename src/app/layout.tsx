@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
-import Link from "next/link";
-import { UserMenu } from "@/components/user-menu";
 import { CARDSTOCK_TITLE } from "@/lib/site-title";
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -44,18 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
-      <body className="flex min-h-full flex-col">
-        <header className="paper-topbar flex h-12 shrink-0 items-center justify-between px-4">
-          <Link
-            href="/"
-            className="font-heading text-[15px] font-semibold tracking-tight"
-          >
-            cardstock
-          </Link>
-          <UserMenu />
-        </header>
-        {children}
-      </body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

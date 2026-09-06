@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-const ROUTE = "src/app/p/[project]/b/[board]/c/[externalId]";
+const ROUTE = "src/app/(app)/p/[project]/b/[board]/c/[externalId]";
 
 /**
  * Read a project file relative to the worktree root.

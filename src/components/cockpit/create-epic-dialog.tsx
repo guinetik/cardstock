@@ -3,7 +3,7 @@
 import { RocketIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createEpic } from "@/app/p/[project]/b/[board]/cockpit/actions";
+import { createEpic } from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

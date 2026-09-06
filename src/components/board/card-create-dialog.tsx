@@ -5,7 +5,7 @@ import { type FormEvent, useState } from "react";
 import type {
   CreateCardInput,
   CreateCardResult,
-} from "@/app/p/[project]/b/[board]/actions";
+} from "@/app/(app)/p/[project]/b/[board]/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,7 +24,10 @@ import { markHue } from "@/lib/types";
 import { CardColorPicker } from "./card-color-picker";
 
 const IssueBodyEditor = dynamic(
-  () => import("@/app/p/[project]/b/[board]/c/[externalId]/issue-body-editor"),
+  () =>
+    import(
+      "@/app/(app)/p/[project]/b/[board]/c/[externalId]/issue-body-editor"
+    ),
   { ssr: false },
 );
 

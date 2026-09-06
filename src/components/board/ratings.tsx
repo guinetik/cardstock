@@ -1,5 +1,5 @@
 "use client";
-import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
+import type { CardPatch } from "@/app/(app)/p/[project]/b/[board]/actions";
 import { type Card, EFFORT_PEN, PRIORITY_PEN } from "@/lib/types";
 
 const P: Array<1 | 2 | 3> = [1, 2, 3];

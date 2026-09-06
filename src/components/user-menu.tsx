@@ -59,7 +59,9 @@ export async function UserMenu() {
         <DropdownMenuItem render={<Link href="/profile" />}>
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/" />}>Projects</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/projects" />}>
+          Projects
+        </DropdownMenuItem>
         {member.role === "owner" && (
           <DropdownMenuItem render={<Link href="/users" />}>
             Users

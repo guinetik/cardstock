@@ -17,7 +17,7 @@ import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { updateCard } from "@/app/p/[project]/b/[board]/actions";
+import { updateCard } from "@/app/(app)/p/[project]/b/[board]/actions";
 import { CalendarSlip } from "@/components/calendar/calendar-slip";
 import { DraggableCalendarSlip } from "@/components/calendar/draggable-calendar-slip";
 import { useCalendarRealtime } from "@/components/calendar/use-calendar-realtime";

@@ -296,7 +296,10 @@ describe("paper components", () => {
 
 describe("card detail page chrome", () => {
   const page = readFileSync(
-    join(here, "../../app/p/[project]/b/[board]/c/[externalId]/card-sheet.tsx"),
+    join(
+      here,
+      "../../app/(app)/p/[project]/b/[board]/c/[externalId]/card-sheet.tsx",
+    ),
     "utf8",
   );
 
@@ -314,7 +317,7 @@ describe("card editor chrome", () => {
   const editor = readFileSync(
     join(
       here,
-      "../../app/p/[project]/b/[board]/c/[externalId]/card-editor.tsx",
+      "../../app/(app)/p/[project]/b/[board]/c/[externalId]/card-editor.tsx",
     ),
     "utf8",
   );

@@ -3,7 +3,7 @@
 import { PaperclipIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createCard } from "@/app/p/[project]/b/[board]/actions";
+import { createCard } from "@/app/(app)/p/[project]/b/[board]/actions";
 import { EpicLabel } from "@/components/epic-label";
 import { Button } from "@/components/ui/button";
 import {

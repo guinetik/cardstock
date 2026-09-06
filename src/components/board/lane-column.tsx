@@ -19,7 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { createContext, type ReactNode, useContext, useMemo } from "react";
-import type { CardPatch } from "@/app/p/[project]/b/[board]/actions";
+import type { CardPatch } from "@/app/(app)/p/[project]/b/[board]/actions";
 import {
   DropdownMenu,
   DropdownMenuContent,

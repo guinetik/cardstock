@@ -53,23 +53,23 @@ async function setPassword(
 
 test("an invited person sets a password and is signed in", async ({ page }) => {
   await setPassword(page, INVITEE, PASSWORD);
-  await page.waitForURL(/\/(p\/|$)/);
+  await page.waitForURL(/\/(p\/|projects$)/);
   await expect(page).not.toHaveURL(/\/login/);
 });
 
 test("that password then signs them in on a later visit", async ({ page }) => {
   await setPassword(page, INVITEE, PASSWORD);
-  await page.waitForURL(/\/(p\/|$)/);
+  await page.waitForURL(/\/(p\/|projects$)/);
 
   await page.context().clearCookies();
   await signInAs(page, INVITEE, PASSWORD);
-  await page.waitForURL(/\/(p\/|$)/);
+  await page.waitForURL(/\/(p\/|projects$)/);
   await expect(page).not.toHaveURL(/\/login/);
 });
 
 test("the wrong password is refused", async ({ page }) => {
   await setPassword(page, INVITEE, PASSWORD);
-  await page.waitForURL(/\/(p\/|$)/);
+  await page.waitForURL(/\/(p\/|projects$)/);
 
   await page.context().clearCookies();
   await submitSignIn(page, INVITEE, OTHER_PASSWORD);
@@ -81,7 +81,7 @@ test("a second attempt cannot overwrite an existing password", async ({
   page,
 }) => {
   await setPassword(page, INVITEE, PASSWORD);
-  await page.waitForURL(/\/(p\/|$)/);
+  await page.waitForURL(/\/(p\/|projects$)/);
   await page.context().clearCookies();
 
   // Someone who knows the address tries to claim the account.
@@ -92,7 +92,7 @@ test("a second attempt cannot overwrite an existing password", async ({
   // The original password still works, so nothing was taken over.
   await page.context().clearCookies();
   await signInAs(page, INVITEE, PASSWORD);
-  await page.waitForURL(/\/(p\/|$)/);
+  await page.waitForURL(/\/(p\/|projects$)/);
   await expect(page).not.toHaveURL(/\/login/);
 });
 

@@ -17,7 +17,7 @@ import { useState } from "react";
 import {
   assignCardEpic,
   createEpic,
-} from "@/app/p/[project]/b/[board]/cockpit/actions";
+} from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
 import { PaperTooltip, PaperTooltipLines } from "@/components/paper-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

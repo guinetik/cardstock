@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import {
   type EpicPatch,
   updateEpic,
-} from "@/app/p/[project]/b/[board]/cockpit/actions";
+} from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
 import type { Epic } from "@/lib/types";
 
 const label =
