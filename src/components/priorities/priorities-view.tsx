@@ -16,7 +16,7 @@ import {
   rankForDrop,
 } from "@/lib/priorities";
 import type { PrioritiesBoard } from "@/lib/priorities-data";
-import { EFFORT_PEN, PRIORITY_PEN } from "@/lib/types";
+import { EFFORT_PEN } from "@/lib/types";
 
 const STONE_CAP = 6;
 const BAND_LABEL: Record<1 | 2 | 3, string> = {
@@ -24,7 +24,7 @@ const BAND_LABEL: Record<1 | 2 | 3, string> = {
   2: "Pebbles",
   3: "Sand",
 };
-const BAND_WIDTH: Record<1 | 2 | 3, string> = { 1: "100%", 2: "78%", 3: "56%" };
+const STEP_WIDTH: Record<1 | 2 | 3, string> = { 1: "100%", 2: "80%", 3: "60%" };
 const BAND_PEN_COLOR: Record<1 | 2 | 3, string> = {
   1: "var(--pen-red)",
   2: "var(--pen-blue)",
@@ -254,28 +254,36 @@ export function PrioritiesView(props: PrioritiesViewProps) {
         : band === 2
           ? "text-[14px]"
           : "text-[13px] whitespace-nowrap overflow-hidden text-ellipsis";
+    const pad =
+      band === 1 ? "px-4 py-3.5" : band === 2 ? "px-3.5 py-2" : "px-3 py-1";
     const showDropLine =
       over?.target === band && over.index === index && dragId !== card.id;
     return (
       <div key={card.id} className="flex flex-col gap-1.5">
-        {showDropLine && (
-          <span
-            className="block h-0.5 bg-[var(--pen-blue)]"
-            style={{ width: BAND_WIDTH[band], margin: "0 auto" }}
-          />
-        )}
+        {showDropLine && <span className="block h-0.5 bg-[var(--pen-blue)]" />}
         <article
-          className="paper-card flex items-center gap-3"
-          style={{ width: BAND_WIDTH[band], margin: "0 auto" }}
+          className={`priority-pressed flex items-center gap-3 ${pad}`}
           draggable
           onDragStart={(event) => onDragStart(event, card.id)}
           onDragEnd={onDragEnd}
           onDragOver={(event) => onRowDragOver(event, band, index)}
           onDrop={(event) => onDrop(event, band, index)}
         >
-          <span className="w-6 flex-none text-right font-mono text-[var(--color-ink)]">
-            {displayIndex}
-          </span>
+          {band === 3 ? (
+            <span
+              className="flex-none font-mono text-[12.5px] font-semibold"
+              style={{ color: BAND_PEN_COLOR[band] }}
+            >
+              {displayIndex}
+            </span>
+          ) : (
+            <span
+              className={`priority-stamp ${band === 1 ? "h-7 w-8 text-[18px]" : "h-5 w-6 text-[12.5px]"}`}
+              style={{ color: BAND_PEN_COLOR[band] }}
+            >
+              {displayIndex}
+            </span>
+          )}
           <span className="flex-none font-mono text-[11px] text-[var(--color-grey-faint)]">
             #{card.external_id}
           </span>
@@ -379,24 +387,36 @@ export function PrioritiesView(props: PrioritiesViewProps) {
       </p>
 
       <div className="mt-3 flex flex-col gap-4 lg:grid lg:grid-cols-[396px_minmax(0,1fr)] lg:items-start lg:gap-6">
-        <section className="paper-well flex flex-col p-4 lg:col-start-2 lg:row-start-1">
+        <section className="flex flex-col lg:col-start-2 lg:row-start-1">
           {([1, 2, 3] as const).map((band) => {
             const rows = bands[band];
             const isOver = over?.target === band;
+            const stepPad =
+              band === 1
+                ? "px-6 pt-2 pb-5"
+                : band === 2
+                  ? "px-5 pt-1 pb-4"
+                  : "px-5 pt-1 pb-3.5";
             return (
               // biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern
               <div
                 key={band}
-                className={`flex flex-col gap-1.5 pb-4 ${isOver ? "paper-lane--over" : ""}`}
+                className={`priority-step flex w-full flex-col gap-1.5 ${stepPad} ${isOver ? "paper-lane--over" : ""}`}
+                style={{ maxWidth: STEP_WIDTH[band] }}
                 onDragOver={(event) => onContainerDragOver(event, band)}
                 onDragLeave={(event) => onContainerDragLeave(event, band)}
                 onDrop={(event) => onDrop(event, band, rows.length)}
               >
                 <div
                   className="flex items-baseline gap-2.5 pb-1.5"
-                  style={{ borderBottom: `2px solid ${BAND_PEN_COLOR[band]}` }}
+                  style={{
+                    borderBottom: `3px double ${BAND_PEN_COLOR[band]}`,
+                  }}
                 >
-                  <span className={`sq sq--on ${PRIORITY_PEN[band]}`}>
+                  <span
+                    className="priority-stamp h-5 min-w-7 px-1 text-[11px]"
+                    style={{ color: BAND_PEN_COLOR[band] }}
+                  >
                     P{band}
                   </span>
                   <h2
@@ -424,6 +444,7 @@ export function PrioritiesView(props: PrioritiesViewProps) {
               </div>
             );
           })}
+          <div className="priority-step h-3 w-[38%]" />
         </section>
 
         {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern */}
