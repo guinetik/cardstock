@@ -1,6 +1,6 @@
 {
   "name": "@guinetik/cardstock-cli",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Command-line companion for Cardstock",
   "type": "module",
   "license": "GPL-3.0-only",

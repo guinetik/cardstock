@@ -7,25 +7,116 @@ Apply requires a server deployed with sync protocol 3 and its database migration
 
 Requires Node.js 22 or newer. Bun is only needed by package developers.
 
+## Features in 0.3.0
+
+- Portable `cardstock.json` configuration and offline Markdown validation.
+- Browser-approved sign-in; no database credentials or app checkout required.
+- Read-only status and dry-run plans with field-level uploads, downloads and conflicts.
+- Bidirectional sync using a saved baseline, explicit `ours`/`theirs` choices,
+  transactional uploads, revision/identity checks and resumable recovery.
+- Free-form areas, board-defined epics and tags, explicit audience classification,
+  and preservation of untouched formatting and unknown nested frontmatter.
+
+This release requires sync protocol 3 for writes. Upgrade the server and database
+before upgrading a tracker client; older apply protocols are refused, not silently
+downgraded. See [Generic fields and audience](#generic-fields-and-audience) and
+[Interrupted sync and recovery](#interrupted-sync-and-recovery).
+
+## Install and connect
+
 ```sh
-npm install -g @guinetik/cardstock-cli
+npm install -g @guinetik/cardstock-cli@0.3.0
 cardstock --version
-cardstock init --project staffeto --board designer --dir tracker
-cardstock validate
+mkdir tracker
+cardstock init --project acme --board product --dir tracker --remote https://cardstock.example.com
+cardstock login
 cardstock validate --json
-cardstock login --remote https://cardstock.example.com
-cardstock status --remote https://cardstock.example.com
-cardstock sync --dry-run --remote https://cardstock.example.com --json
-cardstock logout --remote https://cardstock.example.com
+cardstock sync --dry-run --json
+# After reviewing the plan:
+cardstock sync --json
+cardstock status --json
 ```
 
-Or run without a global installation:
+Use existing project/board slugs from the website. `init` creates local configuration,
+not a hosted project or board. An empty tracker downloads remote cards on its first
+sync. If files already exist on both sides, resolve any first-contact differences
+before applying; never delete a baseline to force a result.
+
+Or run without a global installation (pin the same version for repeatable use):
 
 ```sh
-npx @guinetik/cardstock-cli --version
+npx --yes @guinetik/cardstock-cli@0.3.0 --version
 ```
 
 Licensed under GPL-3.0-only; see LICENSE.
+
+## Agent quick reference
+
+Use the installed `cardstock` command from the tracker repository. In the Cardstock
+source repository only, `bun run cli <command>` runs the development source instead.
+Read the existing configuration before changing it; `--config <path>` selects a
+specific tracker and `--remote <url>` overrides its configured server.
+
+| Command | Effect |
+| --- | --- |
+| `validate --json` | Offline checks; no writes. |
+| `status --json` or `sync --dry-run --json` | GET-only plan; no tracker/baseline changes. |
+| `baseline --json` | Save agreed state locally; no board writes. |
+| `sync --json` | Apply both directions and save verified baseline checkpoints. |
+| `sync --ours 19:body --json` | Choose local content for that conflicting field only. |
+| `sync --theirs 19:frontmatter.priority --json` | Choose the board value for that conflicting field only. |
+| `sync --resume --json` | Continue the recorded operation, preserving its retry ID. |
+| `sync --abort --json` | Archive an interrupted intent; does not undo completed writes. |
+| `login --no-browser` | Print a browser approval URL for the user. |
+| `logout` | Revoke the token and remove the local credential. |
+
+A normal task-update workflow:
+
+```sh
+cardstock status --json
+# If the reviewed plan has safe pending changes, sync before editing.
+cardstock sync --json
+# Edit the appropriate tracker/<id>.md; preserve unrelated edits.
+cardstock validate --json
+cardstock sync --dry-run --json
+# Apply only after reviewing the new plan:
+cardstock sync --json
+cardstock status --json
+git diff -- tracker
+```
+
+Only write to the board when the user's task authorizes it. For a read-only review,
+stop after `status`/dry-run. Do not select a conflict winner merely to obtain a clean
+result: inspect the baseline/local/remote values and choose per field, or ask the
+user. `ours` is local Markdown; `theirs` is the board, never an ownership flag.
+
+For automation, read JSON from stdout and keep stderr separate. Preview counts are
+under `counts`; a completed apply reports pending work under `remaining` and remote
+upload IDs under `applied` (downloads are not listed there). Exit 0 means success,
+not necessarily a clean board. Require `ok: true`, `clean: true`, and no diagnostics
+when checking completion. Exit 1 signals conflicts/validation failures; exit 2
+signals configuration, authentication, filesystem, network or execution failure.
+Errors can occur after a remote commit: inspect the journal before retrying.
+
+Keep `.cardstock/`, `*.md.cardstock-*.before` and `*.md.cardstock-*.tmp` out of Git.
+Never commit credentials or print tokens, never infer deletion from a missing card
+file, and never overwrite a corrupt baseline or live lock. Recovery is described
+below. A downloaded board edit changes local files: review those changes and commit
+them only when the task includes committing work.
+
+## Configuration and validation
+
+Minimal `cardstock.json` (paths are relative to this file):
+
+```json
+{
+  "version": 1,
+  "project": "acme",
+  "board": "product",
+  "tracker": "tracker",
+  "remote": "https://cardstock.example.com"
+}
+```
 
 `init` creates `cardstock.json` in the current directory and refuses to replace it.
 `validate` searches this directory and its parents for that file. `--config <file>`
