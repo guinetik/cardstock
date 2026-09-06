@@ -1,6 +1,7 @@
 -- cardstock seed for the Cardstock project's own dev board.
 -- Lives with the tracker because it is board configuration, not app code.
--- Apply with: py -3 backlog/sync.py --hosted --seed
+-- Admin only: verify SUPABASE_DB_URL and back up the selected database first.
+-- Apply with: bun run db:apply --file backlog/cardstock/seed.cardstock.sql
 -- Lane names and tag vocabulary follow backlog/tracker/README-scheme.md.
 
 insert into public.projects (slug, name, description) values

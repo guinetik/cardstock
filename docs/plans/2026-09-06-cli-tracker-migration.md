@@ -32,8 +32,21 @@ Deployed in b9a2002 after Joao applied the migration. Hosted CLI smoke passed on
 checkout, downloaded to an independent tracker, then restored and verified clean
 in both trackers. No internal tag was required. See tracker #19 for evidence.
 
-Remaining: installed CLI release, client configuration/runbook cutover and
-retiring shims. Reproducing Designer's validation conventions is not a gate.
+CLI 0.3.0 and 0.4.0 were subsequently released. Protocol 4 adds explicit deletion
+and recovery; provisioning remains a separate administrator workflow, not a CLI
+seed feature. Reproducing Designer's validation conventions is not a gate.
+
+The user relayed the wiki agent's verified cutover report: both boards clean with
+zero conflicts, validation at 34 and 125 files, and a write/read-back/revert on #75.
+The report also records a backed-up production provisioning run and 15 tests of
+the separate administrator tool. These are reported wiki-side results, not tests
+rerun from this repository.
+
+The Cardstock repository's two obsolete Python wrappers are now removed. Its
+active runbook, tracker scheme and task-loop skill use the CLI and root
+`cardstock.json`; legacy configuration fixtures and seed SQL remain available for
+migration history and authorized administrator provisioning. Historical commands
+in the original plans below are not current operating instructions.
 
 ## Historical outcome and boundary
 

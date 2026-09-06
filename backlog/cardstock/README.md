@@ -1,41 +1,61 @@
-# Cardstock dev board — who owns which field
+# Cardstock dev board — CLI workflow
 
-The board is hosted (repo `guinetik/cardstock`, project `cardstock`, board `cardstock-dev`); `tracker/*.md` is the markdown side of the same data. This directory holds everything board-specific: `seed.cardstock.sql` (project, board, lanes, tag groups) and `mapping.json` (tag overrides, audience rule).
+The board is hosted at `https://cardstock.guinetik.com` (project `cardstock`, board `cardstock-dev`); `backlog/tracker/*.md` is the Markdown side of the same data. The root `cardstock.json` is the operational configuration for validation and sync. This directory retains administrator provisioning SQL and legacy mapping metadata, not a second sync configuration.
 
 This is the app's own backlog. It is deliberately a separate project from `staffeto`, so that feedback about the board tool never lands in a client-delivery board. Item ids are unique per board: `#1` here is not `#1` on the designer board.
 
 ## Commands
 
-Run them from the repo root, and deliberately — `sync.py` rewrites tracker files.
+Run from the repo root. These examples use the development CLI; an installed
+`cardstock` at the matching release supports the same commands. Version 0.4.0
+requires the protocol-4 server and deletion migration.
 
 ```bash
-py -3 backlog/sync.py --hosted --check     # writes nothing
-py -3 backlog/sync.py --hosted             # import, then export
-py -3 backlog/sync.py --hosted --seed      # apply lanes and tag groups
-bun run cli validate                      # scheme rules from cardstock.json
-py -3 backlog/validate_tracker.py          # legacy parity check during migration
+bun run cli validate --json
+bun run cli status --remote https://cardstock.guinetik.com --json
+bun run cli sync --dry-run --remote https://cardstock.guinetik.com --json
+# After reviewing the plan and with authorization to write:
+bun run cli sync --remote https://cardstock.guinetik.com --json
+bun run cli status --remote https://cardstock.guinetik.com --json
 ```
 
-The root `cardstock.json` now embeds this board's scheme and mapping for CLI
-validation. The legacy `board.json` and mapping/seed files remain in use by the
-Python sync path until #17/#18 provide remote sync and #19 proves round-trip
-parity. During that transition, keep rule changes consistent in both
-configurations. The new CLI importer can preview conversion with
-`bun run cli init --from backlog/board.json --out cardstock.migrated.json --dry-run`.
+Sign in with `bun run cli login --remote https://cardstock.guinetik.com` if needed.
+Everyday validation and sync require neither Python, the Staffeto vault, Docker,
+nor database credentials. The old sync/validation wrappers have been retired.
+`backlog/board.json` and `mapping.json` remain historical migration fixtures;
+edit `cardstock.json` for operational rules. `provisioning.seed` is only a reference.
 
 ## Concurrent edits: agents and the board
 
-The two sides own different fields, so they do not collide.
+There is no app-owned/file-owned field split. The CLI compares local Markdown,
+the hosted snapshot and a saved baseline. Disjoint edits merge; conflicting edits
+require an explicit choice. `body_edited_at` does not choose a winner.
 
-| Field | Import writes | Export writes | Owner |
-| --- | --- | --- | --- |
-| title, body, status, epic, area, dates, `needs`, tags | always | never | markdown |
-| `lane`, `rank` | only on a status pin | always | board |
-| `priority`, `effort` | only into a null | always | board |
-| `target`, `archived` | never | always | board |
-| `summary` | only while unedited in the app | never | markdown, then the app |
+`--ours 19:body` chooses local content for that conflicting field;
+`--theirs 19:body` chooses hosted content. Omit `:field` for whole-card conflicts.
+Do not override another person's triage just to obtain a clean result. Preview
+again after applying: success is not the same as `clean: true`.
 
-A comment or a body edit made in the app sets `body_edited_at`; from then on the import ignores that file's body and the export overwrites it. Check with `--check --item <id>`, which prints `body-owner`.
+Missing files never request deletion. Use `delete <id>` or `delete --file <path>`,
+with a dry-run first and authorization for the specific IDs. Remote deletion
+records propagate to other checkouts; local edits become delete-versus-edit
+conflicts. Interrupted operations use `sync --resume` or `sync --abort`; never
+remove the baseline to force agreement. See the [CLI README](../../packages/cli/README.md)
+for JSON output, deletion choices, backups and recovery.
+
+## Administrator provisioning
+
+Provisioning is separate from sync. Keep `seed.cardstock.sql` for authorized
+administrator use; the CLI never executes seeds. Before applying it, verify the
+database selected by `SUPABASE_DB_URL` and take a backup. From the app checkout,
+the administrator command is:
+
+```sh
+bun run db:apply --file backlog/cardstock/seed.cardstock.sql
+```
+
+This requires administrator credentials. Seed inserts add missing entries;
+`ON CONFLICT DO NOTHING` does not reconcile edits to existing configuration.
 
 ## Lanes
 

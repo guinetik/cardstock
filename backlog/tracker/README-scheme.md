@@ -1,6 +1,6 @@
 # Cardstock tracker — item scheme (2026-09-02)
 
-The tracker feeds the `cardstock/cardstock-dev` board — the board app's own backlog. Its readers are the people who use the tool: Hap and Sanjay give the feedback, Joao builds it. Write every item so that the person who asked for it recognises their own request in it. The rules below are enforced by `backlog/validate_tracker.py` where they can be, and by review where they cannot.
+The tracker feeds the `cardstock/cardstock-dev` board — the board app's own backlog. Its readers are the people who use the tool: Hap and Sanjay give the feedback, Joao builds it. Write every item so that the person who asked for it recognises their own request in it. Machine-checkable rules come from the root `cardstock.json` and `bun run cli validate`; editorial conventions are checked by review.
 
 This board was split out on 2026-09-02 so that feedback about the board tool stops landing on the client-delivery boards. See `delivery/designer/tracker/README-scheme.md` and `delivery/website/tracker/README-scheme.md` for its two siblings.
 
@@ -12,7 +12,7 @@ Required: `id`, `title`, `status`, `epic`, `area`, `tags`.
 |---|---|
 | `summary` | One or two sentences in the asker's words: what this is and why it is on the list. No code identifiers, no internal component names. Required on every open item. |
 | `technical_title` | The engineering title, kept verbatim when the title was rewritten for a reader. Optional. |
-| `rank`, `priority`, `target`, `archived`, `archived_by` | Written by the board's export; do not edit by hand. |
+| `rank`, `priority`, `target`, `archived`, `archived_by` | Syncable from either side; change only within the task's scope. Rank is a lane position, not a raw database rank. |
 | `effort` | Human-editable. `H`, `M` or `L`. |
 | `lane` | Writable from either side: a drag on the board, or a new `lane:` here. `built` sits in `building`, `shipped` in `shipped`, `done` in Done. The validator enforces it. |
 
@@ -23,7 +23,10 @@ Required: `id`, `title`, `status`, `epic`, `area`, `tags`.
 - Name the surface when it matters: "on the board", "on the project page", "in the new-card dialog".
 - Good: *Cards do not show how old they are.* Bad: *Add createdAt delta badge to CardTile.*
 
-## Epics — exactly one of these six
+## Epics — suggested board groupings
+
+These names are suggestions, not an enum. Epic assignments can name another
+board epic or create one through sync. A null/empty assignment clears it.
 
 | Epic | Holds |
 |---|---|
@@ -38,6 +41,10 @@ Required: `id`, `title`, `status`, `epic`, `area`, `tags`.
 
 `Platform` · `UI` · `Copy` · `Data`
 
+These are suggestions. Area is free-form nonempty text and has no value-specific behavior.
+Audience is a separate `all`/`internal` classification for filtering, not access
+control; neither an `internal` tag nor any area/epic name sets it automatically.
+
 ## Tags — two groups, this vocabulary only
 
 **Kind** — exactly one: `bug` · `enhancement` · `nice-to-have` · `question` · `internal`
@@ -46,7 +53,13 @@ Required: `id`, `title`, `status`, `epic`, `area`, `tags`.
 
 ## Filing a new item
 
-Cards are also created on the site, and the site numbers them `max id + 1` — the same rule an agent uses. Before creating `<id>.md`, run `py -3 backlog/sync.py --hosted --check` and use the `next-id` it prints. Never pick an id by listing the folder alone.
+Cards can also be created on the site. Preview and sync the hosted board before
+allocating an ID; never pick one by listing the folder alone. The CLI has no
+`next-id` command. Choose an unused ID above both local IDs and the live/deleted
+IDs in the current scoped baseline (its path is shown by `status --json`). Deleted
+IDs remain reserved. This is not a reservation against concurrent creation:
+preview again before uploading and reconcile identity collisions explicitly,
+never resolve them by forcing content over an existing card.
 
 **A new card never starts at a gate.** However finished the code is, a card you create begins in `unsorted`, or in `now` if you are about to work it. Filing is not a promotion.
 
