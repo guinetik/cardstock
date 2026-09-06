@@ -5,6 +5,7 @@
 **/node_modules/
 packages/*/dist/
 *.tgz
+.cardstock/
 /.pnp
 .pnp.*
 .yarn/*

@@ -1,0 +1,277 @@
+import { createHash } from "node:crypto";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
+import path from "node:path";
+import { parseArgs } from "node:util";
+import {
+  type Baseline,
+  baselineSchema,
+  planSync,
+  type RemoteMetadata,
+  type RemoteSnapshot,
+  remoteMetadataSchema,
+  remoteSnapshotSchema,
+  stableJson,
+  validateTracker,
+} from "@cardstock/core";
+import { loadConfig } from "./config";
+import { credentialFor } from "./credentials";
+
+export const PREVIEW_HELP = `Usage: cardstock status [--config <file>] [--remote <url>] [--json]
+       cardstock sync --dry-run [--config <file>] [--remote <url>] [--json]
+       cardstock baseline [--config <file>] [--remote <url>] [--json]
+
+status and sync --dry-run read local files, the saved baseline and authenticated
+board snapshots. They write no files and make no changes to the board.
+baseline explicitly saves agreed state in .cardstock/ beside the configuration;
+it refuses while local and remote cards differ. Missing baselines never pick a winner.
+sync without --dry-run is not implemented yet.`;
+
+function normalizeRemote(value: string) {
+  const url = new URL(value);
+  if (url.username || url.password || url.search || url.hash)
+    throw new Error(
+      "Remote URL must not contain credentials, a query or a fragment.",
+    );
+  if (
+    url.protocol !== "https:" &&
+    !(
+      url.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+    )
+  )
+    throw new Error(
+      "Use HTTPS for remote boards, or HTTP on localhost for development.",
+    );
+  return url.href.replace(/\/$/, "");
+}
+
+async function getJson(url: string, token: string) {
+  // Never forward a stored credential through a redirect to another endpoint.
+  const response = await fetch(url, {
+    headers: { authorization: `Bearer ${token}` },
+    redirect: "error",
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!response.ok) {
+    if (response.status === 401)
+      throw new Error(
+        "Cardstock sign-in is missing or expired. Run cardstock login --remote <url>.",
+      );
+    if (response.status === 403)
+      throw new Error("This account cannot access the requested board.");
+    if (response.status === 404)
+      throw new Error(
+        "Board or API not found. Check the remote, project and board configuration.",
+      );
+    throw new Error(
+      `Cardstock snapshot request failed (HTTP ${response.status}).`,
+    );
+  }
+  return response.json();
+}
+
+export async function preview(
+  command: string,
+  args: string[],
+  cwd: string,
+): Promise<number> {
+  const { values } = parseArgs({
+    args,
+    options: {
+      config: { type: "string" },
+      remote: { type: "string" },
+      json: { type: "boolean" },
+      ...(command === "sync"
+        ? { "dry-run": { type: "boolean" as const } }
+        : {}),
+    },
+  });
+  if (command === "sync" && !values["dry-run"])
+    throw new Error(
+      "Sync apply is not implemented yet. Use cardstock sync --dry-run to preview changes.",
+    );
+  const { file: configPath, config } = await loadConfig(cwd, values.config);
+  const remoteValue = values.remote ?? config.remote;
+  if (!remoteValue)
+    throw new Error(
+      "No remote configured. Pass --remote <url> or add remote to cardstock.json.",
+    );
+  const remote = normalizeRemote(remoteValue);
+  const credential = await credentialFor(remote);
+  if (!credential)
+    throw new Error(
+      `Not signed in to ${remote}. Run cardstock login --remote ${remote}.`,
+    );
+  const directory = path.dirname(configPath);
+  const tracker = path.resolve(directory, config.tracker);
+  const scope = {
+    remote,
+    project: config.project,
+    board: config.board,
+    tracker: path.relative(directory, tracker).split(path.sep).join("/") || ".",
+    mapping: stableJson(config.mapping ?? {}),
+  };
+  const stateKey = createHash("sha256").update(stableJson(scope)).digest("hex");
+  const baselinePath = path.join(directory, ".cardstock", `${stateKey}.json`);
+  let baseline: Baseline | undefined;
+  let baselineText: string | undefined;
+  try {
+    baselineText = await readFile(baselinePath, "utf8");
+    baseline = baselineSchema.parse(JSON.parse(baselineText));
+    if (stableJson(baseline.scope) !== stableJson(scope))
+      throw new Error("Baseline belongs to another board or tracker.");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+      throw new Error(
+        `Cannot use baseline ${baselinePath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+  }
+  const loadLocal = async () => {
+    const entries = await readdir(tracker, { withFileTypes: true });
+    return Promise.all(
+      entries
+        .filter((entry) => entry.isFile() && /^\d+\.md$/.test(entry.name))
+        .sort(
+          (a, b) => Number(a.name.slice(0, -3)) - Number(b.name.slice(0, -3)),
+        )
+        .map(async (entry) => ({
+          file: entry.name,
+          markdown: await readFile(path.join(tracker, entry.name), "utf8"),
+        })),
+    );
+  };
+  const local = await loadLocal();
+  const url = `${remote}/api/v1/boards/${encodeURIComponent(config.project)}/${encodeURIComponent(config.board)}`;
+  let snapshot: RemoteSnapshot | undefined;
+  let metadata: RemoteMetadata | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    metadata = remoteMetadataSchema.parse(await getJson(url, credential.token));
+    snapshot = remoteSnapshotSchema.parse(
+      await getJson(`${url}/cards`, credential.token),
+    );
+    if (metadata.project !== config.project || metadata.board !== config.board)
+      throw new Error("Snapshot identity does not match the configured board.");
+    // ETags in older servers cover only counts and the newest card timestamp.
+    // Re-read payloads too, so vocabulary edits and mixed card reads are detected.
+    if (metadata.etag === snapshot.etag) {
+      const nextMetadata = remoteMetadataSchema.parse(
+        await getJson(url, credential.token),
+      );
+      const nextSnapshot = remoteSnapshotSchema.parse(
+        await getJson(`${url}/cards`, credential.token),
+      );
+      if (
+        stableJson(metadata) === stableJson(nextMetadata) &&
+        stableJson(snapshot) === stableJson(nextSnapshot)
+      )
+        break;
+    }
+    if (attempt === 2)
+      throw new Error(
+        "Board changed while reading snapshots. Retry the preview.",
+      );
+  }
+  if (!snapshot || !metadata)
+    throw new Error("No board snapshot was returned.");
+  if (stableJson(local) !== stableJson(await loadLocal()))
+    throw new Error(
+      "Tracker files changed while reading the board. Retry the preview.",
+    );
+  const diagnostics = validateTracker(
+    local.map((card) => ({ name: card.file, text: card.markdown })),
+    config.scheme,
+  ).diagnostics;
+  const plan = planSync({
+    local,
+    remote: snapshot.cards,
+    baseline,
+    vocabulary: metadata,
+    mapping: config.mapping,
+  });
+  const ok = !plan.counts.conflicts && !diagnostics.length;
+  let saved = false;
+  if (command === "baseline" && ok && plan.clean) {
+    const state: Baseline = {
+      version: 1,
+      scope,
+      etag: snapshot.etag,
+      cards: snapshot.cards.map((card) => ({
+        ...card,
+        file: `${card.externalId}.md`,
+      })),
+    };
+    await mkdir(path.dirname(baselinePath), { recursive: true });
+    const lockPath = `${baselinePath}.lock`;
+    // Exclusive lock and comparison prevent two CLI instances from replacing newer state.
+    await writeFile(lockPath, "baseline\n", { flag: "wx", mode: 0o600 });
+    const temporary = `${baselinePath}.${process.pid}.tmp`;
+    let wroteTemporary = false;
+    try {
+      let current: string | undefined;
+      try {
+        current = await readFile(baselinePath, "utf8");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      if (current !== baselineText)
+        throw new Error("Baseline changed during this operation; retry.");
+      await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, {
+        flag: "wx",
+        mode: 0o600,
+      });
+      wroteTemporary = true;
+      await rename(temporary, baselinePath);
+      wroteTemporary = false;
+      saved = true;
+    } finally {
+      if (wroteTemporary) await unlink(temporary);
+      await unlink(lockPath);
+    }
+  }
+  const result = {
+    ok: ok && (command !== "baseline" || saved),
+    dryRun: command !== "baseline",
+    remote,
+    project: config.project,
+    board: config.board,
+    etag: snapshot.etag,
+    baseline: { path: baselinePath, present: !!baseline, saved },
+    ...plan,
+    diagnostics,
+  };
+  if (values.json) console.log(JSON.stringify(result, null, 2));
+  else {
+    console.log(
+      `${config.project}/${config.board}: ${plan.counts.uploads} upload, ${plan.counts.downloads} download, ${plan.counts.equal} equal changes, ${plan.counts.conflicts} conflicts.`,
+    );
+    if (!baseline)
+      console.log(
+        "No saved baseline; differences on existing cards require reconciliation.",
+      );
+    for (const card of plan.cards) {
+      console.log(
+        `#${card.externalId} ${card.action}${card.reason ? ` — ${card.reason}` : ""}`,
+      );
+      for (const change of card.changes)
+        console.log(
+          `  ${change.direction} ${change.field}${change.reason ? ` (${change.reason})` : ""}`,
+        );
+    }
+    for (const diagnostic of diagnostics)
+      console.error(`${diagnostic.file}: ${diagnostic.message}`);
+    if (saved) console.log(`Saved agreed baseline: ${baselinePath}`);
+    else if (command === "baseline")
+      console.error(
+        "Baseline was not saved. Both sides must agree and validation must pass first.",
+      );
+    else console.log("Preview only; no files or board data changed.");
+  }
+  return result.ok ? 0 : 1;
+}

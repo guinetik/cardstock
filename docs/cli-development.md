@@ -28,6 +28,7 @@ npm pack ./packages/cli
 
 The packed executable embeds the version from its own package.json. It supports
 `init` (including legacy configuration import), `validate`, `login`, `logout`,
+`status`, `sync --dry-run`, `baseline`,
 `--help`, and `--version` (`-v`). See the CLI README for usage
 and exit codes. `bun run --cwd packages/cli test` builds and tests the Node CLI.
 The npm package contains the compiled executable, manifest, README and license.
@@ -98,11 +99,38 @@ Run `bun test packages/core/test` for scheme rules and
 legacy board configurations and synthetic Markdown. The fixtures are local and
 contain no credentials or private card content. To run the same integration suite
 against an installed tarball, set `CARDSTOCK_TEST_ENTRY` to its absolute
-`dist/index.js` path, then run `node --test packages/cli/test/cli.test.mjs`.
+`dist/index.js` path, then run
+`node --test packages/cli/test/cli.test.mjs packages/cli/test/preview.test.mjs`.
 
 This stage preserves mapping configuration but does not add remote sync or retire
 the Python clients. Mapping execution through the API and three-way sync remain
 separate implementation stages.
+
+## Sync previews (#17)
+
+`packages/core/src/sync-plan.ts` compares local, baseline and remote cards per
+field without filesystem or network operations. `packages/cli/src/preview.ts`
+reads credentials and snapshots, checks the board scope and snapshot consistency,
+and formats the resulting plan. Both `status` and `sync --dry-run` call that path.
+They do not POST to the API's import planner or write any local state.
+
+An explicit `baseline` command records only fully agreed, valid state. The
+baseline contract stores remote Markdown, revisions and local filenames, scoped
+by remote/project/board/tracker/mapping. Writes take a per-baseline lock, compare
+the originally read state and atomically rename a temporary file. #18 can reuse
+the contract, but must advance it only after verifying applied results.
+
+The client re-reads both metadata and card payloads because older server ETags do
+not capture every vocabulary edit. A changing snapshot or tracker aborts preview.
+This is a stable observed snapshot, not a transaction lock on the board; #18 must
+still enforce server revisions when applying changes. API identity currently uses
+external IDs; detecting deletion/recreation under a reused ID will require an
+immutable remote identity in the later sync integration.
+
+Core tests exercise three-way decisions, identity collisions, missing files and
+unknown fields. Node integration tests run a local HTTP server with isolated
+credentials and assert that previews make only GET requests and preserve local
+files/baselines. No production tokens or board writes are needed for those tests.
 
 ## Board API
 

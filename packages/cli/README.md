@@ -1,7 +1,8 @@
 # Cardstock CLI
 
 Command-line companion for [Cardstock](https://github.com/guinetik/cardstock).
-Initialize tracker configuration and validate Markdown offline. Remote sync is not implemented yet.
+Initialize tracker configuration, validate Markdown offline, and preview local and
+remote changes. Applying remote sync is not implemented yet.
 
 Requires Node.js 22 or newer. Bun is only needed by package developers.
 
@@ -12,6 +13,8 @@ cardstock init --project staffeto --board designer --dir tracker
 cardstock validate
 cardstock validate --json
 cardstock login --remote https://cardstock.example.com
+cardstock status --remote https://cardstock.example.com
+cardstock sync --dry-run --remote https://cardstock.example.com --json
 cardstock logout --remote https://cardstock.example.com
 ```
 
@@ -86,3 +89,60 @@ token remotely and removes the local credential.
 
 Pass `--remote` or configure a `remote` URL with `cardstock init`. Use
 `--no-browser` to print the approval URL without opening it.
+
+## Preview and baseline
+
+`status` and `sync --dry-run` produce the same plan. Both support `--config`,
+`--remote`, and `--json`, use the credential saved by `login`, and make only GET
+requests to the board API. They write no tracker files, configuration or baseline
+state. An empty tracker can preview cards to download; no missing file is treated
+as an instruction to delete a remote card.
+
+The planner compares each frontmatter field and the body against a saved baseline.
+It reports local-only edits as uploads, remote-only edits as downloads, identical
+edits on both sides as equal changes, and different edits to one field as conflicts.
+One card may have both upload and download fields. JSON includes each field's
+baseline, local and remote values and whether the field is present; removing a
+field differs from setting it to null. Counts are per card and directions can
+overlap. Unknown nested fields are compared, tags/relations compare as sets, and
+tag aliases and unambiguous bare tags use the board vocabulary. Formatting-only
+frontmatter changes, CRLF versus LF and the leading title H1 do not create edits.
+To avoid ambiguous comparisons, preview requires valid YAML even when a minimal
+configuration permits lenient parsing during `validate`.
+
+Without a baseline, a local-only card is a proposed upload and a remote-only card
+is a proposed download. Differing existing cards require reconciliation; the CLI
+does not infer which side changed. Different titles under the same ID are flagged
+as a possible identity collision. A previously tracked card disappearing remotely
+is a conflict, never an automatic recreation or deletion. Duplicate IDs and
+filename/ID mismatches fail planning.
+
+Once both sides agree and validation passes, explicitly record their agreed state:
+
+```sh
+cardstock baseline --remote https://cardstock.example.com
+```
+
+This writes only `.cardstock/<scope-hash>.json` beside the configuration. The scope
+includes remote, project, board, relative tracker path and mapping, keeping state
+separate for each checkout and board. Ignore `.cardstock/` in version control;
+baseline files contain card Markdown. They contain no credentials. Equal edits
+since a previous baseline can be recorded with the same command. `status` and
+`sync --dry-run` never advance it.
+
+Baseline writes use an exclusive lock and atomic replacement. Corrupt, mismatched
+or concurrently changed state fails without resetting it. If a run is interrupted,
+inspect the reported baseline path and make sure no CLI process is using it before
+removing its stale `.lock`/`.tmp` artifacts. Preserve the last valid JSON file;
+discarding it loses the information needed to classify earlier edits. Recreating
+a missing baseline still requires agreement on both sides.
+
+Preview exit codes: 0 for a successfully computed plan without conflicts or
+validation errors (pending uploads/downloads can still exist); 1 for conflicts,
+scheme validation errors, or a refused baseline; 2 for configuration, credentials,
+filesystem, malformed input/snapshot, or network errors. `clean` means there are
+no pending data changes or conflicts; check `ok`/diagnostics as well before using
+a plan. Snapshot and tracker changes during a read require retrying the preview.
+
+`sync` without `--dry-run` refuses to run. Applying changes, conflict resolution,
+API mapping overrides, and interrupted-sync recovery remain part of #18/#19.

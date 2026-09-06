@@ -4,14 +4,19 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { parseConfig, validateTracker } from "@cardstock/core";
 import { version } from "../package.json";
+import { findConfig } from "./config";
 import { credentialFor, removeCredential, saveCredential } from "./credentials";
 import { INIT_HELP, init } from "./init";
+import { PREVIEW_HELP, preview } from "./preview";
 
 const HELP = `Usage: cardstock <command>
 
   init --project <slug> --board <slug> [--dir tracker] [--remote <url>]
   init --from <board.json> [--out <file>] [--remote <url>] [--dry-run] [--json]
   validate [--config <file>] [--json]
+  status [--config <file>] [--remote <url>] [--json]
+  sync --dry-run [--config <file>] [--remote <url>] [--json]
+  baseline [--config <file>] [--remote <url>] [--json]
   login --remote <url> [--no-browser]
   logout --remote <url>
   --version, -v
@@ -31,25 +36,6 @@ const LOGOUT_HELP = `Usage: cardstock logout [--remote <url>]
 
 Revoke the saved personal access token and remove it from this computer.
 Pass --remote, or set remote in cardstock.json with cardstock init.`;
-
-async function findConfig(cwd: string): Promise<string> {
-  let directory = path.resolve(cwd);
-  while (true) {
-    const candidate = path.join(directory, "cardstock.json");
-    try {
-      await readFile(candidate, "utf8");
-      return candidate;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-    const parent = path.dirname(directory);
-    if (parent === directory)
-      throw new Error(
-        "No cardstock.json found. Run cardstock init --project <slug> --board <slug>.",
-      );
-    directory = parent;
-  }
-}
 
 async function remoteFor(cwd: string, explicit?: string): Promise<string> {
   if (explicit) return explicit.replace(/\/$/, "");
@@ -80,7 +66,8 @@ const wait = (milliseconds: number) =>
 
 export async function run(args: string[], cwd: string): Promise<number> {
   const json =
-    ["validate", "init"].includes(args[0]) && args.includes("--json");
+    ["validate", "init", "status", "sync", "baseline"].includes(args[0]) &&
+    args.includes("--json");
   try {
     if (args.length === 1 && ["--version", "-v"].includes(args[0])) {
       console.log(version);
@@ -95,6 +82,10 @@ export async function run(args: string[], cwd: string): Promise<number> {
     }
     const command = args[0];
     if (args.length === 2 && ["--help", "-h"].includes(args[1])) {
+      if (["status", "sync", "baseline"].includes(command)) {
+        console.log(PREVIEW_HELP);
+        return 0;
+      }
       if (command === "init") {
         console.log(INIT_HELP);
         return 0;
@@ -111,6 +102,8 @@ export async function run(args: string[], cwd: string): Promise<number> {
     if (command === "init") {
       return await init(args.slice(1), cwd);
     }
+    if (["status", "sync", "baseline"].includes(command))
+      return await preview(command, args.slice(1), cwd);
     if (command === "validate") {
       const { values } = parseArgs({
         args: args.slice(1),

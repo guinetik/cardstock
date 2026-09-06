@@ -138,7 +138,7 @@ export async function init(args: string[], cwd: string): Promise<number> {
       `Seed ${seed} is retained as a provisioning/recovery reference; no SQL is executed.`,
     );
     notes.push(
-      "Remote sync and board vocabulary checks are not available yet. Keep the existing sync scripts until round-trip parity is verified.",
+      "Use status or sync --dry-run to preview board changes. Sync apply and provisioning checks are not available yet; keep existing sync scripts until round-trip parity is verified.",
     );
     if (!values.remote)
       notes.push(
