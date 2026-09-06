@@ -62,3 +62,4 @@ dev.log
 
 # db:pull-prod dumps of the hosted database
 backups/
+tmp
