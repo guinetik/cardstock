@@ -42,6 +42,8 @@ try {
 
     bun run check:packages
     if ($LASTEXITCODE -ne 0) { throw 'Package checks failed' }
+    bun run --cwd packages/cli test
+    if ($LASTEXITCODE -ne 0) { throw 'CLI tests failed' }
 
     if ($Bump -ne 'current') {
         $text = Get-Content -Raw packages/cli/package.json

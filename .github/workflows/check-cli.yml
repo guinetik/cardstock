@@ -31,6 +31,7 @@ jobs:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
       - run: bun run check:packages
+      - run: bun run --cwd packages/cli test
       - name: Verify npm installation
         run: |
           mkdir -p "$RUNNER_TEMP/cardstock-pack"

@@ -5,7 +5,13 @@
   "type": "module",
   "description": "Internal shared logic for the Cardstock website and CLI",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./parse": "./src/parse.ts",
+    "./schema": "./src/schema.ts",
+    "./card-color": "./src/card-color.ts"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   },
   "scripts": {
     "check": "tsc --noEmit"

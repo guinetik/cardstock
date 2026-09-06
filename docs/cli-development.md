@@ -5,8 +5,10 @@ private `@cardstock/core` workspace; `packages/cli` is the public
 `@guinetik/cardstock-cli` package. One root `bun.lock` installs all three.
 Existing web, ETL and deployment commands keep their current working directory.
 
-The core currently has an empty entry point. Future shared parsing, validation
-and sync planning belongs there, without Next.js, filesystem or database imports.
+The core holds the shared parser, frontmatter schema, color vocabulary, config
+schema and offline validation. Parsing uses Node crypto for source hashes;
+schema/color subpath exports keep that dependency out of browser imports.
+Future sync planning belongs there, without Next.js, filesystem or database imports.
 Both consumers declare a workspace dependency (the CLI uses a dev dependency
 because shared code is bundled at build time). Next.js consumes core TypeScript
 directly; the CLI's Bun build targets Node and bundles imported code. No core
@@ -24,8 +26,9 @@ node packages/cli/dist/index.js --version
 npm pack ./packages/cli
 ```
 
-The packed executable embeds the version from its own package.json. The only
-supported arguments are `--version` and `-v`; other invocations exit 1 with usage.
+The packed executable embeds the version from its own package.json. It supports
+`init`, `validate`, `--help`, and `--version` (`-v`). See the CLI README for usage
+and exit codes. `bun run --cwd packages/cli test` builds and tests the Node CLI.
 The npm package contains the compiled executable, manifest, README and license.
 Do not add Next.js or workspace runtime dependencies to its published manifest.
 

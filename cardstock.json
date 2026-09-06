@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "project": "cardstock",
+  "board": "cardstock-dev",
+  "tracker": "backlog/tracker"
+}

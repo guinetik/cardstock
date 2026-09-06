@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-import { version } from "../package.json";
+import { run } from "./run";
 
-const args = process.argv.slice(2);
-if (args.length === 1 && (args[0] === "--version" || args[0] === "-v")) {
-  console.log(version);
-} else {
-  console.error("Usage: cardstock --version");
-  process.exitCode = 1;
-}
+process.exitCode = await run(process.argv.slice(2), process.cwd());
