@@ -480,6 +480,54 @@ export async function moveCard(
   return { ok: true };
 }
 
+/**
+ * Weigh a card on the priorities planning screen: `priority` is the band,
+ * `priority_rank` the stakeholder-importance ordering (distinct from lane
+ * `rank`, which is execution order). Null priority unweighs and clears the
+ * rank. When the client names the band's order, the band renormalises if
+ * any member is unranked or the fractional gaps have gotten too tight.
+ */
+export async function prioritizeCard(
+  cardId: string,
+  priority: 1 | 2 | 3 | null,
+  priorityRank: number | null,
+  orderedIds?: string[],
+): Promise<Result> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
+  if (priority != null && !([1, 2, 3] as const).includes(priority))
+    return { ok: false, error: "Invalid priority." };
+  const patch =
+    priority == null
+      ? { priority: null, priority_rank: null }
+      : { priority, priority_rank: priorityRank };
+  const { error } = await c.db.from("cards").update(patch).eq("id", cardId);
+  if (error) return { ok: false, error: error.message };
+  await c.db.from("card_events").insert({
+    card_id: cardId,
+    actor: c.me.email,
+    kind: "edited",
+    payload: patch,
+  });
+  if (priority != null && orderedIds?.length) {
+    const { data: band } = await c.db
+      .from("cards")
+      .select("id, priority_rank")
+      .in("id", orderedIds);
+    const ranks = (band ?? []).map((x) => x.priority_rank);
+    if (ranks.some((r) => r == null) || needsNormalize(ranks as number[])) {
+      const next = normalized(orderedIds);
+      await Promise.all(
+        [...next].map(([id, r]) =>
+          c.db.from("cards").update({ priority_rank: r }).eq("id", id),
+        ),
+      );
+    }
+  }
+  return { ok: true };
+}
+
 export interface CardPatch {
   summary?: string | null;
   /** Frontmatter `area`; blank falls back to "general", never null — the
