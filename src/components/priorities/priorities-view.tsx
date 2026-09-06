@@ -9,7 +9,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { prioritizeCard } from "@/app/p/[project]/b/[board]/actions";
+import { prioritizeCard } from "@/app/(app)/p/[project]/b/[board]/actions";
 import {
   type PriorityCard,
   partitionBands,
