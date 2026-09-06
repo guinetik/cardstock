@@ -76,11 +76,15 @@ export function PrioritiesView(props: PrioritiesViewProps) {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => setCards(props.cards), [props.cards]);
 
-  const scoped =
-    props.boardSlug === null && props.selectedBoards
-      ? cards.filter((card) => props.selectedBoards?.includes(card.board_slug))
-      : cards;
-  const { bands, unweighed } = useMemo(() => partitionBands(scoped), [scoped]);
+  const { bands, unweighed } = useMemo(() => {
+    const scoped =
+      props.boardSlug === null && props.selectedBoards
+        ? cards.filter((card) =>
+            props.selectedBoards?.includes(card.board_slug),
+          )
+        : cards;
+    return partitionBands(scoped);
+  }, [cards, props.boardSlug, props.selectedBoards]);
 
   const p1 = bands[1];
   const p2 = bands[2];

@@ -498,6 +498,8 @@ export async function prioritizeCard(
   if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
   if (priority != null && !([1, 2, 3] as const).includes(priority))
     return { ok: false, error: "Invalid priority." };
+  if (priorityRank != null && !Number.isFinite(priorityRank))
+    return { ok: false, error: "Invalid priority rank." };
   const patch =
     priority == null
       ? { priority: null, priority_rank: null }
