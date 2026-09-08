@@ -191,6 +191,7 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
 
       <ProjectSection
         id="boards-heading"
+        className="folder--boards"
         title="boards"
         count={String(boards.length)}
         empty={boards.length === 0}

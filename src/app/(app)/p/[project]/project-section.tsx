@@ -7,6 +7,7 @@ export function ProjectSection({
   id,
   title,
   count,
+  className = "",
   empty = false,
   aside,
   children,
@@ -14,13 +15,14 @@ export function ProjectSection({
   id: string;
   title: string;
   count?: string;
+  className?: string;
   empty?: boolean;
   aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section
-      className={`folder folder--section${empty ? " folder--empty" : ""}`}
+      className={`folder folder--section${empty ? " folder--empty" : ""} ${className}`}
       aria-labelledby={id}
     >
       <div className="folder-tab">

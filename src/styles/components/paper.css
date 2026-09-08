@@ -1725,6 +1725,26 @@
   .folder--section .folder-aside {
     justify-content: flex-end;
   }
+  /* Board covers fill the folder; each added board extends it downward. */
+  .folder--boards > .folder-body,
+  .folder--boards .binders {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .folder--boards > .folder-body > .folder-aside {
+    grid-row: auto;
+    grid-column: 1;
+    min-width: 0;
+    height: auto;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  .folder--boards .binder-foot,
+  .folder--boards .binder-links {
+    flex-wrap: wrap;
+  }
+  .folder--boards .binder-cockpit {
+    white-space: nowrap;
+  }
   /* Nested dossiers (profile stock) sit as white files in the manila drawer. */
   .folder--section .folders .folder-tab {
     background: var(--surface-card);
