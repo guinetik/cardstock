@@ -275,8 +275,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   }, [cards, lanes, inboxSort]);
 
   const visible = useCallback(
-    (c: Card) => matches(c, filters, data.groups, lanes),
-    [filters, data.groups, lanes],
+    (c: Card) =>
+      matches(c, filters, data.groups, lanes, { today, watchDays, gates }),
+    [filters, data.groups, lanes, today, watchDays, gates],
   );
 
   function findLane(id: string): string | null {

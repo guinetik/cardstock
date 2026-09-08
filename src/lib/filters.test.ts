@@ -6,9 +6,11 @@ import {
   emptyFilters,
   isFiltering,
   matches,
+  type SmartTag,
   sortInbox,
   toCsv,
 } from "./filters";
+import { resolveBoardGates } from "./gates";
 import type { Card, Lane, TagGroup } from "./types";
 
 /** Only the fields sortInbox reads. */
@@ -99,6 +101,147 @@ const task = (patch: Partial<Card> = {}): Card => ({
   lane_entered_at: null,
   color: null,
   ...patch,
+});
+
+describe("smart tag filters", () => {
+  const waiting: Lane = {
+    ...work,
+    id: "waiting",
+    kind: "waiting",
+    sla_days: 3,
+  };
+  const lanes = [work, waiting];
+  const context = {
+    today: "2026-09-08",
+    now: new Date("2026-09-08T12:00:00Z"),
+    watchDays: 14,
+    gates: resolveBoardGates(undefined, lanes),
+  };
+  const filter = (...tags: SmartTag[]) => ({
+    ...emptyFilters(),
+    smartTags: new Set(tags),
+  });
+  const accepts = (patch: Partial<Card>, ...tags: SmartTag[]) =>
+    matches(task(patch), filter(...tags), [], lanes, context);
+
+  test("smart tags start empty and count as active filters when selected", () => {
+    expect(emptyFilters().smartTags.size).toBe(0);
+    expect(isFiltering(filter())).toBe(false);
+    expect(isFiltering(filter("late"))).toBe(true);
+  });
+
+  test("late matches the waiting-lane warning only after the SLA is exceeded", () => {
+    const patch = {
+      lane_id: "waiting",
+      lane_entered_at: "2026-09-04T12:00:00Z",
+    };
+    expect(accepts(patch, "late")).toBe(true);
+    expect(
+      accepts({ ...patch, lane_entered_at: "2026-09-05T12:00:00Z" }, "late"),
+    ).toBe(false);
+    expect(accepts({ ...patch, lane_id: "work" }, "late")).toBe(false);
+    expect(accepts({ lane_id: "waiting" }, "late")).toBe(false);
+    expect(
+      matches(
+        task(patch),
+        filter("late"),
+        [],
+        [{ ...waiting, sla_days: null }],
+        context,
+      ),
+    ).toBe(false);
+  });
+
+  test("forgotten respects the project watch window and excludes planned work", () => {
+    const patch = { raised_on: "2026-08-25" };
+    expect(accepts(patch, "forgotten")).toBe(true);
+    expect(accepts({ raised_on: "2026-08-26" }, "forgotten")).toBe(false);
+    expect(
+      accepts({ ...patch, target_label: "Next quarter" }, "forgotten"),
+    ).toBe(false);
+    expect(accepts({ ...patch, target_date: "2026-09-20" }, "forgotten")).toBe(
+      false,
+    );
+    expect(accepts({}, "forgotten")).toBe(false);
+    expect(
+      matches(task(patch), filter("forgotten"), [], lanes, {
+        ...context,
+        watchDays: 21,
+      }),
+    ).toBe(false);
+  });
+
+  test("overdue uses calendar dates, including cards without a raised date", () => {
+    expect(accepts({ target_date: "2026-09-07" }, "overdue")).toBe(true);
+    expect(accepts({ target_date: "2026-09-08" }, "overdue")).toBe(false);
+    expect(accepts({ target_date: "2026-09-09" }, "overdue")).toBe(false);
+    expect(
+      accepts(
+        { target_date: "2026-09-07", raised_on: "2026-08-01" },
+        "forgotten",
+      ),
+    ).toBe(false);
+  });
+
+  test("shipped cards and custom shipped gates suppress age warnings", () => {
+    const patch = { target_date: "2026-09-01", raised_on: "2026-08-01" };
+    expect(
+      accepts({ ...patch, shipped_on: "2026-09-02" }, "overdue", "forgotten"),
+    ).toBe(false);
+    expect(accepts({ ...patch, status: "done" }, "overdue", "forgotten")).toBe(
+      false,
+    );
+    expect(
+      matches(task(patch), filter("overdue"), [], lanes, {
+        ...context,
+        gates: [
+          {
+            id: "delivered",
+            name: "Delivered",
+            statuses: [],
+            lane_ids: ["work"],
+            outcome: "shipped",
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  test("multiple smart tags match any selected warning, including overlapping warnings", () => {
+    expect(accepts({ target_date: "2026-09-01" }, "forgotten", "overdue")).toBe(
+      true,
+    );
+    expect(accepts({ raised_on: "2026-08-01" }, "forgotten", "overdue")).toBe(
+      true,
+    );
+    expect(accepts({}, "forgotten", "overdue")).toBe(false);
+    const patch = {
+      lane_id: "waiting",
+      lane_entered_at: "2026-09-01T00:00:00Z",
+      target_date: "2026-09-01",
+    };
+    expect(accepts(patch, "late")).toBe(true);
+    expect(accepts(patch, "overdue")).toBe(true);
+  });
+
+  test("smart tags combine with priority, search, and visibility filters", () => {
+    const f = filter("overdue");
+    f.priority.add(1);
+    f.query = "Task";
+    f.showInternal = false;
+    const patch = { priority: 1 as const, target_date: "2026-09-01" };
+    expect(matches(task(patch), f, [], lanes, context)).toBe(true);
+    for (const excluded of [
+      { priority: 2 as const },
+      { title: "Something else" },
+      { audience: "internal" as const },
+      { archived_at: "2026-09-01T00:00:00Z" },
+    ]) {
+      expect(
+        matches(task({ ...patch, ...excluded }), f, [], lanes, context),
+      ).toBe(false);
+    }
+  });
 });
 
 describe("boardStatuses", () => {

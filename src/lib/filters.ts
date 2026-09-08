@@ -1,4 +1,19 @@
+import { type BoardGate, cardGate, resolveBoardGates } from "./gates";
+import {
+  DEFAULT_FORGOTTEN_AFTER_DAYS,
+  timelineSignal,
+  timelineToday,
+} from "./timeline";
 import type { Card, Lane, TagGroup } from "./types";
+
+export type SmartTag = "late" | "forgotten" | "overdue";
+
+export interface SmartTagContext {
+  today: string;
+  watchDays: number;
+  gates: readonly BoardGate[];
+  now?: Date;
+}
 
 /** Filter value for cards with no epic assigned. */
 export const EPIC_FILTER_NONE = "__none__";
@@ -10,6 +25,8 @@ export interface Filters {
   query: string;
   tags: Set<string>; // tag ids; OR within a group, AND across groups
   priority: Set<1 | 2 | 3>;
+  /** Match any selected smart tag, combined with the other filters. */
+  smartTags: Set<SmartTag>;
   effort: Set<"L" | "M" | "H">;
   /** One tracker status, or null for every status. */
   status: string | null;
@@ -27,6 +44,7 @@ export function emptyFilters(showInternal = true): Filters {
     query: "",
     tags: new Set(),
     priority: new Set(),
+    smartTags: new Set(),
     effort: new Set(),
     status: null,
     epic: null,
@@ -42,6 +60,7 @@ export function isFiltering(f: Filters): boolean {
     !!f.query.trim() ||
     f.tags.size > 0 ||
     f.priority.size > 0 ||
+    f.smartTags.size > 0 ||
     f.effort.size > 0 ||
     f.status != null ||
     f.epic != null ||
@@ -87,6 +106,7 @@ export function matches(
   f: Filters,
   groups: TagGroup[],
   lanes: Lane[],
+  context?: SmartTagContext,
 ): boolean {
   const lane = lanes.find((l) => l.id === card.lane_id);
   if (!f.showArchived && (card.archived_at || lane?.kind === "archive"))
@@ -105,6 +125,20 @@ export function matches(
     return false;
   if (f.priority.size && !(card.priority && f.priority.has(card.priority)))
     return false;
+  if (f.smartTags.size) {
+    const signal = timelineSignal(
+      card,
+      context?.today ?? timelineToday(),
+      context?.watchDays ?? DEFAULT_FORGOTTEN_AFTER_DAYS,
+      cardGate(card, context?.gates ?? resolveBoardGates(undefined, lanes)),
+    );
+    const late =
+      f.smartTags.has("late") && isLateInLane(card, lane, context?.now);
+    const ageMatch =
+      (signal === "forgotten" || signal === "overdue") &&
+      f.smartTags.has(signal);
+    if (!late && !ageMatch) return false;
+  }
   if (f.effort.size && !(card.effort && f.effort.has(card.effort)))
     return false;
   if (f.status && card.status !== f.status) return false;
@@ -155,6 +189,17 @@ export function daysInLane(card: Card, now = new Date()): number | null {
   return Math.floor(
     (now.getTime() - new Date(card.lane_entered_at).getTime()) / 86_400_000,
   );
+}
+
+/** The waiting-lane warning shown on cards once their lane's SLA is exceeded. */
+export function isLateInLane(
+  card: Card,
+  lane: Lane | undefined,
+  now?: Date,
+): boolean {
+  if (lane?.kind !== "waiting" || lane.sla_days == null) return false;
+  const days = daysInLane(card, now);
+  return days != null && days > lane.sla_days;
 }
 
 export function toCsv(

@@ -8,7 +8,7 @@ import { CardReferenceText } from "@/components/card-reference-text";
 import { EpicLabel } from "@/components/epic-label";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
 import { CARD_STATUSES, statusChipClass } from "@/lib/card-status";
-import { daysInLane } from "@/lib/filters";
+import { daysInLane, isLateInLane } from "@/lib/filters";
 import type { BoardGate } from "@/lib/gates";
 import {
   type Card,
@@ -94,8 +94,7 @@ export function CardItem(props: {
   const colorClass = cardColorModifier(color) ?? "";
   const pinned = !!props.pinned;
   const days = lane?.kind === "waiting" ? daysInLane(card) : null;
-  const overSla =
-    days != null && lane?.sla_days != null && days > lane.sla_days;
+  const overSla = isLateInLane(card, lane);
   // A tag wears its group's highlighter, so the same word is the same colour
   // in the filter bar, on the card, and on the card page.
   const tagName = new Map<

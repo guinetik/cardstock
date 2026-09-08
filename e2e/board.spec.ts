@@ -143,6 +143,60 @@ test("filters: search narrows, P1 chip filters, clear restores", async ({
   expect(p1).toBeLessThan(total);
 });
 
+test("filters: smart tags match card warnings, combine with priority, and clear", async ({
+  page,
+}) => {
+  const articles = page.locator("article:visible");
+  const total = await articles.count();
+  const filters = page.locator("#filters");
+  const smartTags = filters.getByRole("group", { name: "Smart tags" });
+  await expect(
+    filters
+      .locator("fieldset")
+      .filter({ has: page.locator("legend", { hasText: /^Priority$/ }) })
+      .locator("+ fieldset"),
+  ).toHaveText(/Smart tags/);
+
+  const warnings = [
+    {
+      label: "Late",
+      selector: ':has([title="Days in this lane"].stat--blocked)',
+    },
+    { label: "Forgotten", selector: '[data-timeline-signal="forgotten"]' },
+    { label: "Overdue", selector: '[data-timeline-signal="overdue"]' },
+  ];
+  for (const { label, selector } of warnings) {
+    const count = await page.locator(`article:visible${selector}`).count();
+    const button = smartTags.getByRole("button", { name: label, exact: true });
+    await button.click();
+    await expect(button).toHaveAttribute("aria-pressed", "true");
+    await expect(articles).toHaveCount(count);
+    await expect(page.locator(`article:visible${selector}`)).toHaveCount(count);
+    await button.click();
+    await expect(button).toHaveAttribute("aria-pressed", "false");
+    await expect(articles).toHaveCount(total);
+  }
+
+  const ageWarnings =
+    'article:visible:is([data-timeline-signal="forgotten"], [data-timeline-signal="overdue"])';
+  const warningCount = await page.locator(ageWarnings).count();
+  const p1Count = await page
+    .locator(`${ageWarnings}:has(.card-rest [title="Priority 1"])`)
+    .count();
+  await smartTags
+    .getByRole("button", { name: "Forgotten", exact: true })
+    .click();
+  await smartTags.getByRole("button", { name: "Overdue", exact: true }).click();
+  await expect(articles).toHaveCount(warningCount);
+  await filters.getByRole("button", { name: "P1", exact: true }).click();
+  await expect(articles).toHaveCount(p1Count);
+  await filters
+    .getByRole("button", { name: "Clear filters", exact: true })
+    .click();
+  await expect(articles).toHaveCount(total);
+  await expect(smartTags.locator('[aria-pressed="true"]')).toHaveCount(0);
+});
+
 test("filters: status menu narrows, clear restores", async ({ page }) => {
   const total = await page.locator("article:visible").count();
   const status = page

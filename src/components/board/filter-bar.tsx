@@ -3,12 +3,25 @@ import { useEffect, useRef, useState } from "react";
 import { EpicLabel } from "@/components/epic-label";
 import { type Person, personLabel } from "@/lib/assignee";
 import { statusChipClass } from "@/lib/card-status";
-import type { Filters, InboxSort } from "@/lib/filters";
+import type { Filters, InboxSort, SmartTag } from "@/lib/filters";
 import { ASSIGNEE_FILTER_NONE, EPIC_FILTER_NONE } from "@/lib/filters";
 import { EFFORT_LABEL, type Epic, markHue, type TagGroup } from "@/lib/types";
 
 const PEN = { 1: "sq--red", 2: "sq--blue", 3: "sq--violet" } as const;
 const EFF = { L: "sq--green", M: "sq--amber", H: "sq--red" } as const;
+const SMART_TAGS: { value: SmartTag; label: string; hint: string }[] = [
+  { value: "late", label: "Late", hint: "Past the waiting lane's time limit" },
+  {
+    value: "forgotten",
+    label: "Forgotten",
+    hint: "No target past the project's watch window",
+  },
+  {
+    value: "overdue",
+    label: "Overdue",
+    hint: "Target date has passed and the card has not shipped",
+  },
+];
 
 function Caret() {
   return (
@@ -197,6 +210,24 @@ export function FilterBar(props: {
             onClick={() => onChange({ ...f, priority: toggle(f.priority, p) })}
           >
             P{p}
+          </button>
+        ))}
+      </fieldset>
+
+      <fieldset className="fieldset">
+        <legend>Smart tags</legend>
+        {SMART_TAGS.map(({ value, label, hint }) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={f.smartTags.has(value)}
+            className={`sq ${f.smartTags.has(value) ? "sq--on sq--red" : ""}`}
+            title={hint}
+            onClick={() =>
+              onChange({ ...f, smartTags: toggle(f.smartTags, value) })
+            }
+          >
+            {label}
           </button>
         ))}
       </fieldset>
@@ -469,6 +500,7 @@ export function FilterBar(props: {
               query: "",
               tags: new Set(),
               priority: new Set(),
+              smartTags: new Set(),
               effort: new Set(),
               status: null,
               epic: null,
