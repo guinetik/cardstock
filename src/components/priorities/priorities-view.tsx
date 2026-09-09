@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +9,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react";
 import { prioritizeCard } from "@/app/(app)/p/[project]/b/[board]/actions";
@@ -20,6 +22,14 @@ import type { PrioritiesBoard } from "@/lib/priorities-data";
 import { PriorityCard as PlanningCard } from "./priority-card";
 
 const STONE_CAP = 6;
+const WIDE_DESK = "(min-width: 1440px)";
+function subscribeDeskWidth(onChange: () => void) {
+  const query = window.matchMedia(WIDE_DESK);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+const wideDeskSnapshot = () => window.matchMedia(WIDE_DESK).matches;
+const serverDeskSnapshot = () => false;
 const BAND_LABEL: Record<1 | 2 | 3, string> = {
   1: "Stones",
   2: "Pebbles",
@@ -75,6 +85,13 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     index: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const wideDesk = useSyncExternalStore(
+    subscribeDeskWidth,
+    wideDeskSnapshot,
+    serverDeskSnapshot,
+  );
+  const pageSize = wideDesk ? 4 : 2;
+  const [deskPage, setDeskPage] = useState(0);
   useEffect(() => setCards(props.cards), [props.cards]);
 
   const { bands, unweighed } = useMemo(() => {
@@ -86,6 +103,19 @@ export function PrioritiesView(props: PrioritiesViewProps) {
         : cards;
     return partitionBands(scoped);
   }, [cards, props.boardSlug, props.selectedBoards]);
+
+  const pageCount = Math.max(1, Math.ceil(unweighed.length / pageSize));
+  const page = Math.min(deskPage, pageCount - 1);
+  const pageStart = page * pageSize;
+  const deskCards = unweighed.slice(pageStart, pageStart + pageSize);
+  const scope = props.boardSlug ?? props.selectedBoards?.join(",") ?? "all";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new board selection or layout starts a fresh desk page.
+  useEffect(() => {
+    setDeskPage(0);
+  }, [scope, pageSize]);
+  useEffect(() => {
+    setDeskPage((current) => Math.min(current, pageCount - 1));
+  }, [pageCount]);
 
   const p1 = bands[1];
   const p2 = bands[2];
@@ -159,6 +189,14 @@ export function PrioritiesView(props: PrioritiesViewProps) {
 
     if (priority === null) {
       if (card.priority === null) return; // already unweighed — no-op
+      // Show the returned note even if its lane order puts it on another page.
+      const returned = partitionBands([
+        ...unweighed,
+        { ...card, priority: null, priority_rank: null },
+      ]).unweighed;
+      setDeskPage(
+        Math.floor(returned.findIndex((item) => item.id === cardId) / pageSize),
+      );
       setCards((prev) =>
         prev.map((c) =>
           c.id === cardId ? { ...c, priority: null, priority_rank: null } : c,
@@ -449,8 +487,45 @@ export function PrioritiesView(props: PrioritiesViewProps) {
               in; drag a sheet out here to unweigh it.
             </span>
           </div>
-          <div className="priority-grid pt-2.5">
-            {unweighed.map((card, index) => (
+          {unweighed.length > 0 && (
+            <nav
+              className="flex items-center justify-between gap-2"
+              aria-label="Unweighed pages"
+            >
+              <output className="font-mono text-[11px] text-[var(--color-grey)]">
+                {pageStart + 1}–
+                {Math.min(pageStart + pageSize, unweighed.length)} of{" "}
+                {unweighed.length}
+              </output>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="priority-page-button"
+                  aria-label="Previous unweighed page"
+                  disabled={page === 0 || isPending || dragId !== null}
+                  onClick={() => setDeskPage(page - 1)}
+                >
+                  <ChevronLeft size={14} aria-hidden="true" />
+                </button>
+                <span className="px-1 font-mono text-[11px] text-[var(--color-grey)]">
+                  {page + 1} / {pageCount}
+                </span>
+                <button
+                  type="button"
+                  className="priority-page-button"
+                  aria-label="Next unweighed page"
+                  disabled={
+                    page === pageCount - 1 || isPending || dragId !== null
+                  }
+                  onClick={() => setDeskPage(page + 1)}
+                >
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+              </div>
+            </nav>
+          )}
+          <div className="priority-grid priority-desk-grid pt-2.5">
+            {deskCards.map((card, index) => (
               <div
                 key={card.id}
                 className="priority-slot"

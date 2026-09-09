@@ -283,6 +283,25 @@
   .priority-card {
     width: 100%;
   }
+  .priority-page-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-btn);
+    background: var(--surface-card);
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+  .priority-page-button:hover:not(:disabled) {
+    border-color: var(--color-ink);
+  }
+  .priority-page-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
   .priority-card[draggable="true"] {
     cursor: grab;
   }
@@ -326,6 +345,18 @@
         calc(var(--priority-card-width) + 2rem),
         var(--priority-step-width)
       );
+    }
+  }
+  @media (min-width: 1440px) {
+    .priority-layout {
+      grid-template-columns: calc(2 * var(--priority-card-width) + 1.5rem) minmax(
+          0,
+          1fr
+        );
+    }
+    .priority-desk-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 

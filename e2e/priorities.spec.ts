@@ -243,8 +243,73 @@ test("priority cards keep their details, dimensions, and order across bands", as
     await page.reload();
     await expect(band("3").locator("h3")).toHaveText([titles[8]]);
 
+    // A long unweighed list stays on a two-row desk. Removing the only
+    // note on the last page clamps the page; returning it reveals it again.
+    const notes = Array.from({ length: 8 }, () => crypto.randomUUID());
+    check(
+      await admin.from("cards").insert(
+        notes.map((id, i) => ({
+          id,
+          board_id: boardId,
+          external_id: String(100 + i),
+          title: `Unweighed idea ${i + 1}`,
+          lane_id: laneId,
+          rank: 100 + i,
+          status: "backlog",
+          audience: "all",
+        })),
+      ),
+    );
+    await page.setViewportSize({ width: 1800, height: 1000 });
+    await page.reload();
+    const deskNotes = band("desk").locator("[data-priority-card]");
+    const pager = page.getByRole("navigation", { name: "Unweighed pages" });
+    const previous = pager.getByRole("button", {
+      name: "Previous unweighed page",
+    });
+    const next = pager.getByRole("button", { name: "Next unweighed page" });
+    await expect(deskNotes).toHaveCount(4);
+    await expect(pager).toContainText("1–4 of 9");
+    await expect(previous).toBeDisabled();
+    const slots = band("desk").locator(".priority-slot");
+    const positions = await slots.evaluateAll((elements) =>
+      elements.map((element) => ({
+        left: (element as HTMLElement).offsetLeft,
+        top: (element as HTMLElement).offsetTop,
+      })),
+    );
+    expect(positions[1].top).toBe(positions[0].top);
+    expect(positions[1].left).toBeGreaterThan(positions[0].left);
+    expect(positions[2].top).toBeGreaterThan(positions[0].top);
+    await page.screenshot({
+      path: testInfo.outputPath("priorities-paginated.png"),
+      fullPage: true,
+    });
+    await next.click();
+    await expect(pager).toContainText("5–8 of 9");
+    await next.click();
+    await expect(pager).toContainText("9–9 of 9");
+    await expect(deskNotes).toHaveCount(1);
+    await expect(next).toBeDisabled();
+    const lastNote = page.locator(`[data-priority-card="${notes[7]}"]`);
+    await lastNote.dragTo(card(0), { targetPosition: { x: 8, y: 25 } });
+    await expect(pager).toContainText("5–8 of 8");
+    await expect(deskNotes).toHaveCount(4);
+    await expect(previous).toBeEnabled();
+    await previous.click();
+    await expect(pager).toContainText("1–4 of 8");
+    await lastNote.dragTo(band("desk"), { targetPosition: { x: 20, y: 20 } });
+    await expect(pager).toContainText("9–9 of 9");
+    await expect(deskNotes).toHaveCount(1);
+    await expect(deskNotes).toHaveAttribute("data-priority-card", notes[7]);
+    await expect(previous).toBeEnabled();
+    await page.reload();
+    await expect(pager).toContainText("1–4 of 9");
+
     for (const width of [1280, 1024, 768, 390]) {
       await page.setViewportSize({ width, height: 844 });
+      await expect(deskNotes).toHaveCount(2);
+      await expect(pager).toContainText("1–2 of 9");
       await expect(card(0)).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
