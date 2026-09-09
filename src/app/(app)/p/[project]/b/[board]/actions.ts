@@ -560,6 +560,15 @@ export async function updateCard(
   for (const [k, v] of Object.entries(patch))
     if (v !== undefined) clean[k] = v === "" ? null : v;
   if (!Object.keys(clean).length) return { ok: true };
+  if (Object.hasOwn(clean, "title")) {
+    const title = typeof clean.title === "string" ? clean.title.trim() : "";
+    if (!title || title.length > 240)
+      return {
+        ok: false,
+        error: "Title must be between 1 and 240 characters.",
+      };
+    clean.title = title;
+  }
   if (
     Object.hasOwn(clean, "color") &&
     clean.color != null &&
@@ -588,6 +597,7 @@ export async function updateCard(
     kind: "edited",
     payload: clean,
   });
+  if (Object.hasOwn(clean, "title")) refreshBoards();
   revalidatePath("/p/[project]/b/[board]/calendar", "page");
   revalidatePath("/p/[project]/calendar", "page");
   return { ok: true };

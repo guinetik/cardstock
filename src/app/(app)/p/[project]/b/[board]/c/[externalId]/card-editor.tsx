@@ -18,6 +18,7 @@ import { markHue } from "@/lib/types";
 interface CardLite {
   id: string;
   external_id: string;
+  title: string;
   status: string;
   summary: string | null;
   priority: number | null;
@@ -47,7 +48,7 @@ const fieldLabel =
 const OFF_ROSTER = "__off_roster__";
 
 /**
- * Inline editor for summary, status, ratings, dates, the blocker note,
+ * Inline editor for title, summary, status, ratings, dates, the blocker note,
  * audience, color, and tags.
  * Saves on blur/change; lives on the card page as part of the one sheet.
  * Tag groups rest as marked tags only; Edit tags opens the catalog.
@@ -74,6 +75,8 @@ export function CardEditor({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [title, setTitle] = useState(card.title);
+  const [titleError, setTitleError] = useState<string | null>(null);
   const [summary, setSummary] = useState(card.summary ?? "");
   const [needs, setNeeds] = useState(card.needs ?? "");
   const [tags, setTags] = useState(new Set(tagIds));
@@ -97,6 +100,27 @@ export function CardEditor({
     });
   }
 
+  function saveTitle() {
+    const next = title.trim();
+    setTitle(next);
+    if (next === card.title) return;
+    setTitleError(null);
+    setMsg(null);
+    start(async () => {
+      try {
+        const result = await updateCard(card.id, { title: next });
+        if (!result.ok) {
+          setTitleError(result.error);
+          return;
+        }
+        setMsg("Saved");
+        router.refresh();
+      } catch {
+        setTitleError("Could not save the title. Try again.");
+      }
+    });
+  }
+
   /**
    * Toggle a tag on this card and persist the new set.
    *
@@ -115,6 +139,42 @@ export function CardEditor({
 
   return (
     <div className="mt-6 space-y-5">
+      <div>
+        <label className={fieldLabel} htmlFor="card-title">
+          Title
+        </label>
+        <input
+          id="card-title"
+          type="text"
+          className={field}
+          value={title}
+          required
+          maxLength={240}
+          readOnly={pending}
+          aria-invalid={!!titleError}
+          aria-describedby={titleError ? "card-title-error" : undefined}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            setTitleError(null);
+          }}
+          onBlur={saveTitle}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
+          }}
+        />
+        {titleError && (
+          <p
+            id="card-title-error"
+            role="alert"
+            className="mt-1 text-xs text-destructive"
+          >
+            {titleError}
+          </p>
+        )}
+      </div>
       <div>
         <label className={fieldLabel} htmlFor="summary">
           Summary — in plain words
