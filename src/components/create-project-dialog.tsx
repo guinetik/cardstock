@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { createProject } from "@/app/actions";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,7 +37,12 @@ export function CreateProjectDialog() {
             People are added to it from the Users page.
           </DialogDescription>
         </DialogHeader>
-        <form action={action} className="space-y-4">
+        <form
+          data-saving={pending || undefined}
+          aria-busy={pending || undefined}
+          action={action}
+          className="space-y-4"
+        >
           <label htmlFor="project-name" className="block space-y-1.5 text-sm">
             <span className="font-medium">Name</span>
             <Input

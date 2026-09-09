@@ -3,6 +3,7 @@
 import { Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 import { setCardWatch } from "@/app/watch-actions";
+import { trackActivity } from "@/lib/activity";
 
 /** Always visible, including on a resting card; pressing it never starts a drag. */
 export function CardWatchButton({
@@ -29,7 +30,11 @@ export function CardWatchButton({
     setError(null);
     const next = !on;
     try {
-      const result = await setCardWatch(cardId, next);
+      const result = await trackActivity(
+        "saving",
+        () => setCardWatch(cardId, next),
+        cardId,
+      );
       if (!result.ok) {
         setError(result.error);
         return;
@@ -46,6 +51,8 @@ export function CardWatchButton({
   return (
     <span className="relative inline-flex shrink-0">
       <button
+        data-saving={busy || undefined}
+        aria-busy={busy || undefined}
         type="button"
         onPointerDown={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}

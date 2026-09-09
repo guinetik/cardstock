@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { inviteUser } from "./actions";
@@ -27,6 +27,8 @@ export function InviteUserForm({
   if (variant === "slip") {
     return (
       <form
+        data-saving={pending || undefined}
+        aria-busy={pending || undefined}
         action={action}
         className="binder binder--wide roster-slip roster-slip--blank"
       >
@@ -53,7 +55,12 @@ export function InviteUserForm({
     );
   }
   return (
-    <form action={action} className="paper-card space-y-4 p-5">
+    <form
+      data-saving={pending || undefined}
+      aria-busy={pending || undefined}
+      action={action}
+      className="paper-card space-y-4 p-5"
+    >
       <div>
         <h2 className="font-semibold">Invite to a project</h2>
         <p className="mt-1 text-sm text-muted-foreground">

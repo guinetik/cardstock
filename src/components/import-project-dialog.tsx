@@ -1,7 +1,6 @@
 "use client";
 
 import { Inbox } from "lucide-react";
-import { useRouter } from "next/navigation";
 import type React from "react";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -10,6 +9,7 @@ import {
   type ImportPlanResult,
   planProjectImport,
 } from "@/app/import-actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { ImportPlanTable } from "@/components/import-plan-table";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { trackActivity } from "@/lib/activity";
 import { keyFromName } from "@/lib/keys";
 
 /** A binder from a folder of sheets: name it, name its first board, drop the zip, read the plan, create. */
@@ -67,7 +68,7 @@ export function ImportProjectDialog({
     start(async () => {
       let r: ImportPlanResult;
       try {
-        r = await planProjectImport(form(f));
+        r = await trackActivity("loading", () => planProjectImport(form(f)));
       } catch {
         r = TRANSPORT;
       }
@@ -79,7 +80,7 @@ export function ImportProjectDialog({
     start(async () => {
       let r: ImportApplyResult;
       try {
-        r = await applyProjectImport(form(file));
+        r = await trackActivity("saving", () => applyProjectImport(form(file)));
       } catch {
         r = TRANSPORT;
       }

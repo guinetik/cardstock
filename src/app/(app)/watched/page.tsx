@@ -1,7 +1,7 @@
 import { Eye, Folder } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "@/components/activity-link";
 import { CardWatchButton } from "@/components/card-watch-button";
 import { currentMember } from "@/lib/supabase/server";
 import { loadWatchedCards } from "@/lib/watched-cards";

@@ -21,7 +21,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { Columns3, Table2 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -44,9 +44,11 @@ import {
   updateCard,
   updateLane,
 } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { CardReferenceScope } from "@/components/card-reference-scope";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { trackActivity } from "@/lib/activity";
 import type { CardColor } from "@/lib/card-color";
 import { laneColorModifier } from "@/lib/card-color";
 import type { TableSort } from "@/lib/card-table";
@@ -82,6 +84,7 @@ import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
 import { CardTable } from "./card-table";
 import { FilterBar } from "./filter-bar";
+import { FindCardDialog } from "./find-card-dialog";
 import { LaneActionDialog, type LaneActionMode } from "./lane-action-dialog";
 import { KIND_INK, LaneColumn } from "./lane-column";
 import { LaneCrudDialog, type LaneDialogMode } from "./lane-crud-dialog";
@@ -201,6 +204,97 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [cardLane, setCardLane] = useState<Lane | null>(null);
   // Cards left open on the desk. Per tab, on purpose: a pin is a reading aid.
   const [pinned, setPinned] = useState<ReadonlySet<string>>(() => new Set());
+  const [findOpen, setFindOpen] = useState(false);
+  const [found, setFound] = useState<{ id: string; sequence: number } | null>(
+    null,
+  );
+  const boardRef = useRef<HTMLElement>(null);
+  const revealed = useRef<typeof found>(null);
+  const foundCard = cards.find((card) => card.id === found?.id);
+
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (
+        !(event.ctrlKey || event.metaKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== "p"
+      )
+        return;
+      if (!findOpen && document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      setFindOpen(true);
+    };
+    document.addEventListener("keydown", shortcut);
+    return () => document.removeEventListener("keydown", shortcut);
+  }, [findOpen]);
+
+  function findCard(number: string): string | null {
+    const card = cards.find((item) => item.external_id === number);
+    if (!card || !lanes.some((lane) => lane.id === card.lane_id))
+      return `Card #${number} isn’t on this board.`;
+    setFound((previous) => ({
+      id: card.id,
+      sequence: (previous?.sequence ?? 0) + 1,
+    }));
+    setPinned((previous) => new Set(previous).add(card.id));
+    changeView(false);
+    return null;
+  }
+
+  useEffect(() => {
+    if (!found || findOpen || tableView || revealed.current === found) return;
+    const board = boardRef.current;
+    const card = board?.querySelector<HTMLElement>(
+      `[data-card-id="${CSS.escape(found.id)}"]`,
+    );
+    const lane = card?.closest<HTMLElement>("[data-lane]");
+    const stack = card?.closest<HTMLElement>("[data-lane-cards]");
+    if (!board || !card || !lane || !stack) return;
+    revealed.current = found;
+    const reveal = () => {
+      const pinnedLane = board.querySelector<HTMLElement>(
+        '[data-lane][data-pinned="true"]',
+      );
+      const covered =
+        pinnedLane && pinnedLane !== lane ? pinnedLane.offsetWidth + 12 : 0;
+      const laneBox = lane.getBoundingClientRect();
+      if (pinnedLane !== lane)
+        board.scrollTo({
+          left:
+            board.scrollLeft +
+            laneBox.left -
+            board.getBoundingClientRect().left -
+            covered -
+            Math.max(0, (board.clientWidth - covered - laneBox.width) / 2),
+          behavior: "instant",
+        });
+      stack.scrollTo({
+        top:
+          stack.scrollTop +
+          card.getBoundingClientRect().top -
+          stack.getBoundingClientRect().top -
+          Math.max(0, (stack.clientHeight - card.offsetHeight) / 2),
+        behavior: "instant",
+      });
+    };
+    // Follow the lane opening and card expansion until their layout settles.
+    const observer = new ResizeObserver(reveal);
+    observer.observe(card);
+    observer.observe(lane);
+    const frame = requestAnimationFrame(() => {
+      reveal();
+      card
+        .querySelector<HTMLElement>("[data-card-title]")
+        ?.focus({ preventScroll: true });
+    });
+    const timer = setTimeout(() => observer.disconnect(), 600);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [found, findOpen, tableView]);
   const watchDays = useMemo(
     () => forgottenAfterDays(data.project.settings),
     [data.project.settings],
@@ -299,8 +393,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
 
   const visible = useCallback(
     (c: Card) =>
+      c.id === found?.id ||
       matches(c, filters, data.groups, lanes, { today, watchDays, gates }),
-    [filters, data.groups, lanes, today, watchDays, gates],
+    [found?.id, filters, data.groups, lanes, today, watchDays, gates],
   );
 
   function findLane(id: string): string | null {
@@ -348,6 +443,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
    */
   const viewFor = (laneId: string): LaneViewMode => {
     const chosen = laneView[laneId] ?? "";
+    if (laneId === foundCard?.lane_id && chosen === "min") return "";
     if (!COLLAPSE_LANES_ON_DRAG || !active) return chosen;
     if (laneId === dragFrom || laneId === sprung)
       return chosen === "min" ? "" : chosen;
@@ -481,11 +577,16 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       ),
     );
     startTransition(async () => {
-      const r = await moveCard(
+      const r = await trackActivity(
+        "saving",
+        () =>
+          moveCard(
+            card.id,
+            laneId,
+            rank,
+            ordered.map((c) => c.id),
+          ),
         card.id,
-        laneId,
-        rank,
-        ordered.map((c) => c.id),
       );
       if (!r.ok) {
         setError(r.error);
@@ -499,7 +600,11 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       prev.map((c) => (c.id === cardId ? ({ ...c, ...p } as Card) : c)),
     );
     startTransition(async () => {
-      const r = await updateCard(cardId, p);
+      const r = await trackActivity(
+        "saving",
+        () => updateCard(cardId, p),
+        cardId,
+      );
       if (!r.ok) {
         setError(r.error);
         router.refresh();
@@ -528,7 +633,11 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       ),
     );
     startTransition(async () => {
-      const r = await archiveCard(cardId, on);
+      const r = await trackActivity(
+        "saving",
+        () => archiveCard(cardId, on),
+        cardId,
+      );
       if (!r.ok) {
         setError(r.error);
       }
@@ -548,7 +657,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     );
     laneViewsAllRef.current = all;
     startTransition(() => {
-      void savePrefs({ laneViews: all });
+      void trackActivity("saving", () => savePrefs({ laneViews: all }));
     });
   }
 
@@ -566,13 +675,13 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   function changeInboxSort(s: InboxSort) {
     setInboxSort(s);
     startTransition(() => {
-      void savePrefs({ inboxSort: s });
+      void trackActivity("saving", () => savePrefs({ inboxSort: s }));
     });
   }
   function changeShowInternal(v: boolean) {
     setFilters((f) => ({ ...f, showInternal: v }));
     startTransition(() => {
-      void savePrefs({ showInternal: v });
+      void trackActivity("saving", () => savePrefs({ showInternal: v }));
     });
   }
 
@@ -582,7 +691,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   ): Promise<string | null> {
     setLaneBusy("create");
     setError(null);
-    const result = await createLane(data.board.id, name, color);
+    const result = await trackActivity("saving", () =>
+      createLane(data.board.id, name, color),
+    );
     setLaneBusy(null);
     if (!result.ok) return result.error;
     setLanes(result.lanes);
@@ -591,7 +702,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
 
   async function addCard(input: Parameters<typeof createCard>[0]) {
     setError(null);
-    const result = await createCard(input);
+    const result = await trackActivity("saving", () => createCard(input));
     if (!result.ok) {
       setError(result.error);
       return result;
@@ -607,7 +718,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   ): Promise<string | null> {
     setLaneBusy(laneId);
     setError(null);
-    const result = await updateLane(laneId, { name, color });
+    const result = await trackActivity("saving", () =>
+      updateLane(laneId, { name, color }),
+    );
     setLaneBusy(null);
     if (!result.ok) return result.error;
     setLanes(result.lanes);
@@ -627,7 +740,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       });
     });
     setLaneBusy(data.board.id);
-    const result = await reorderLanes(data.board.id, orderedIds);
+    const result = await trackActivity("saving", () =>
+      reorderLanes(data.board.id, orderedIds),
+    );
     setLaneBusy(null);
     if (!result.ok) {
       setLanes(previous);
@@ -643,7 +758,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   ): Promise<string | null> {
     setLaneBusy(laneId);
     setError(null);
-    const result = await deleteLane(laneId, destinationLaneId);
+    const result = await trackActivity("saving", () =>
+      deleteLane(laneId, destinationLaneId),
+    );
     setLaneBusy(null);
     if (!result.ok) return result.error;
     const moved = new Map(
@@ -677,7 +794,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     setLaneBusy(mode.lane.id);
     setError(null);
     if (mode.type === "move-cards") {
-      const result = await moveAllLaneCards(mode.lane.id, mode.destination.id);
+      const result = await trackActivity("saving", () =>
+        moveAllLaneCards(mode.lane.id, mode.destination.id),
+      );
       setLaneBusy(null);
       if (!result.ok) return result.error;
       const ranks = new Map(result.cards.map((card) => [card.id, card.rank]));
@@ -697,7 +816,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       return null;
     }
 
-    const result = await sortLaneCards(mode.lane.id, mode.direction);
+    const result = await trackActivity("saving", () =>
+      sortLaneCards(mode.lane.id, mode.direction),
+    );
     setLaneBusy(null);
     if (!result.ok) return result.error;
     const ranks = new Map(result.cards.map((card) => [card.id, card.rank]));
@@ -844,7 +965,35 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         onInboxSort={changeInboxSort}
         onShowInternal={changeShowInternal}
         showInboxSort={!tableView}
+        onFindCard={() => setFindOpen(true)}
       />
+      <FindCardDialog
+        open={findOpen}
+        onOpenChange={setFindOpen}
+        onFind={findCard}
+      />
+      {foundCard && (
+        <div className="flex items-center gap-3 px-6 py-1.5 text-xs text-[var(--color-ink2)]">
+          <output>
+            Found #{foundCard.external_id} ·{" "}
+            {lanes.find((lane) => lane.id === foundCard.lane_id)?.name}
+            {!matches(foundCard, filters, data.groups, lanes, {
+              today,
+              watchDays,
+              gates,
+            })
+              ? " · Revealed outside your filters"
+              : ""}
+          </output>
+          <button
+            type="button"
+            className="paper-link"
+            onClick={() => setFound(null)}
+          >
+            Clear find
+          </button>
+        </div>
+      )}
       <LaneCrudDialog
         mode={laneDialog}
         lanes={lanes}
@@ -910,6 +1059,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
             onDragCancel={endDrag}
           >
             <main
+              ref={boardRef}
               className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:px-6"
               aria-label="Priority lanes"
             >
@@ -931,6 +1081,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
                       onPatch={patch}
                       onArchive={archive}
                       pinned={pinned}
+                      foundId={found?.id}
                       onPin={pin}
                       onWatch={(id, watching) =>
                         setCards((current) =>
@@ -945,7 +1096,9 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
                       watchDays={watchDays}
                       gates={gates}
                       hiddenByDefault={
-                        lane.kind === "archive" && !filters.showArchived
+                        lane.kind === "archive" &&
+                        !filters.showArchived &&
+                        lane.id !== foundCard?.lane_id
                       }
                       onAddCard={() => setCardLane(lane)}
                       lanePinned={pinnedLane === lane.id}

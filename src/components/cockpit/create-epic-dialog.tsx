@@ -1,9 +1,9 @@
 "use client";
 
 import { RocketIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createEpic } from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { trackActivity } from "@/lib/activity";
 
 const label =
   "mb-1 block text-[10px] font-semibold uppercase tracking-[0.11em] text-[var(--color-grey)]";
@@ -36,7 +37,9 @@ export function CreateEpicDialog({ boardId }: { boardId: string }) {
   async function submit() {
     setBusy(true);
     setError(null);
-    const result = await createEpic(boardId, { name, outcome });
+    const result = await trackActivity("saving", () =>
+      createEpic(boardId, { name, outcome }),
+    );
     setBusy(false);
     if (!result.ok) {
       setError(result.error);

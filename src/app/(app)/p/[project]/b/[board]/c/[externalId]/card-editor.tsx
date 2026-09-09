@@ -1,5 +1,4 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import {
   archiveCard as archiveCardAction,
@@ -8,9 +7,12 @@ import {
   updateCard as updateCardAction,
 } from "@/app/(app)/p/[project]/b/[board]/actions";
 import { assignCardEpic as assignCardEpicAction } from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
+import { useSaving } from "@/components/activity";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { CardColorPicker } from "@/components/board/card-color-picker";
 import { useCardSaves } from "@/components/card-save-scope";
 import { Button } from "@/components/ui/button";
+import { trackActivity } from "@/lib/activity";
 import { findPerson, type Person, personLabel } from "@/lib/assignee";
 import { type CardColor, parseCardColor } from "@/lib/card-color";
 import { CARD_STATUSES, normalizeNeeds } from "@/lib/card-status";
@@ -76,18 +78,27 @@ export function CardEditor({
 }) {
   const router = useRouter();
   const saves = useCardSaves();
+  const saving = useSaving(card.id);
   const updateCard = (...args: Parameters<typeof updateCardAction>) =>
     saves.run(`fields:${Object.keys(args[1]).sort().join(",")}`, () =>
-      updateCardAction(...args),
+      trackActivity("saving", () => updateCardAction(...args), args[0]),
     );
   const assignCard = (...args: Parameters<typeof assignCardAction>) =>
-    saves.run("assignee", () => assignCardAction(...args));
+    saves.run("assignee", () =>
+      trackActivity("saving", () => assignCardAction(...args), args[0]),
+    );
   const setCardTags = (...args: Parameters<typeof setCardTagsAction>) =>
-    saves.run("tags", () => setCardTagsAction(...args));
+    saves.run("tags", () =>
+      trackActivity("saving", () => setCardTagsAction(...args), args[0]),
+    );
   const archiveCard = (...args: Parameters<typeof archiveCardAction>) =>
-    saves.run("archive", () => archiveCardAction(...args));
+    saves.run("archive", () =>
+      trackActivity("saving", () => archiveCardAction(...args), args[0]),
+    );
   const assignCardEpic = (...args: Parameters<typeof assignCardEpicAction>) =>
-    saves.run("epic", () => assignCardEpicAction(...args));
+    saves.run("epic", () =>
+      trackActivity("saving", () => assignCardEpicAction(...args), args[0]),
+    );
 
   const [pending, start] = useTransition();
   const [title, setTitle] = useState(card.title);
@@ -159,7 +170,11 @@ export function CardEditor({
   }
 
   return (
-    <div className="mt-6 space-y-5">
+    <div
+      className="mt-6 space-y-5"
+      data-saving={saving || undefined}
+      aria-busy={saving || undefined}
+    >
       <div>
         <label className={fieldLabel} htmlFor="card-title">
           Title

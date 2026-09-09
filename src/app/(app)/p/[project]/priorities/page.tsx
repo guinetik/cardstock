@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "@/components/activity-link";
 import { PrioritiesView } from "@/components/priorities/priorities-view";
 import { calendarBoards } from "@/lib/calendar";
 import { loadProjectPriorities } from "@/lib/priorities-data";

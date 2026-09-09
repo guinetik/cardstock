@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import Link from "@/components/activity-link";
 import { LaneMap } from "@/components/lane-map";
 import { canManageProject, isSiteOwner } from "@/lib/access";
 import { resolveBoardGates } from "@/lib/gates";

@@ -1,4 +1,5 @@
 "use client";
+import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { EpicLabel } from "@/components/epic-label";
 import { type Person, personLabel } from "@/lib/assignee";
@@ -63,6 +64,7 @@ export function FilterBar(props: {
   onInboxSort: (s: InboxSort) => void;
   onShowInternal: (v: boolean) => void;
   showInboxSort?: boolean;
+  onFindCard: () => void;
 }) {
   const { filters: f, onChange } = props;
   const epicName = new Map(props.epics.map((e) => [e.id, e.source_name]));
@@ -130,15 +132,27 @@ export function FilterBar(props: {
       ref={barRef}
       className="paper-topbar sticky top-0 z-10 flex flex-wrap items-stretch gap-x-3 gap-y-3 border-t border-[var(--border-hairline)] px-4 py-3 sm:px-6"
     >
-      <input
-        type="search"
-        placeholder="Search #id or title"
-        className="paper-field lane-column-width h-auto shrink-0 text-[13.5px]"
-        value={f.query}
-        onChange={(e) => onChange({ ...f, query: e.target.value })}
-        aria-label="Search"
-        id="search"
-      />
+      <div className="board-search-tools flex items-stretch gap-2">
+        <input
+          type="search"
+          placeholder="Search #id or title"
+          className="paper-field board-filter-search h-auto min-w-0 text-[13.5px]"
+          value={f.query}
+          onChange={(e) => onChange({ ...f, query: e.target.value })}
+          aria-label="Search"
+          id="search"
+        />
+        <button
+          type="button"
+          className="paper-btn inline-flex shrink-0 items-center gap-1.5 text-[12.5px]"
+          onClick={props.onFindCard}
+          aria-keyshortcuts="Control+P Meta+P"
+          title="Find a card by number (Ctrl+P / ⌘P)"
+        >
+          <Search size={14} aria-hidden="true" />
+          Find Card
+        </button>
+      </div>
 
       {props.groups.length > 0 && (
         <fieldset className="fieldset relative">

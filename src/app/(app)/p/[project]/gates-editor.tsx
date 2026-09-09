@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { CARD_STATUSES } from "@/lib/card-status";
 import { type BoardGate, GATE_NAME_MAX } from "@/lib/gates";
 import { updateBoardGates } from "./actions";
@@ -151,7 +152,12 @@ function GatesForm({
           Pulse is optional — it fills the Built or Shipped column on the
           timeline.
         </p>
-        <form action={action} className="mt-3 space-y-4">
+        <form
+          data-saving={pending || undefined}
+          aria-busy={pending || undefined}
+          action={action}
+          className="mt-3 space-y-4"
+        >
           <input type="hidden" name="boardId" value={boardId} />
           <input type="hidden" name="projectSlug" value={projectSlug} />
           <input type="hidden" name="boardSlug" value={boardSlug} />

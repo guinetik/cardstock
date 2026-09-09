@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import Link from "@/components/activity-link";
 import { CardCloneButton } from "@/components/board/card-clone-button";
 import { CardDownloadButton } from "@/components/board/card-download-button";
 import { CardHistory } from "@/components/board/card-history";

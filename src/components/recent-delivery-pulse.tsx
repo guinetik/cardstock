@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/activity-link";
 import { TimelineWindowSelect } from "@/components/timeline-window-select";
 import { daysSince } from "@/lib/timeline";
 

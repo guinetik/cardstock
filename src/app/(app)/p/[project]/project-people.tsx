@@ -1,5 +1,6 @@
 import { removeMembership } from "@/app/(app)/users/actions";
 import { InviteUserForm } from "@/app/(app)/users/invite-user-form";
+import { ActivityForm } from "@/components/activity-form";
 import { Portrait } from "@/components/portrait";
 import { memberLabel } from "@/lib/keys";
 
@@ -54,7 +55,7 @@ export function ProjectPeople({
               <div className="roster-meta">
                 <span className="stat stat--flat">{person.role}</span>
                 {canInvite && !you && (
-                  <form action={removeMembership}>
+                  <ActivityForm action={removeMembership}>
                     <input type="hidden" name="projectId" value={projectId} />
                     <input
                       type="hidden"
@@ -68,7 +69,7 @@ export function ProjectPeople({
                     >
                       Remove
                     </button>
-                  </form>
+                  </ActivityForm>
                 )}
               </div>
             </li>

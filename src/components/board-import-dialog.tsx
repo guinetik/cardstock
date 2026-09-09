@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { trackActivity } from "@/lib/activity";
 
 /**
  * Drop → plan → done. The file stays in state and is posted twice: once to
@@ -71,7 +72,7 @@ export function BoardImportDialog({
     start(async () => {
       let r: ImportPlanResult;
       try {
-        r = await planBoardImport(form(f));
+        r = await trackActivity("loading", () => planBoardImport(form(f)));
       } catch {
         r = TRANSPORT;
       }
@@ -82,7 +83,9 @@ export function BoardImportDialog({
     if (!file) return;
     start(async () => {
       try {
-        setDone(await applyBoardImport(form(file)));
+        setDone(
+          await trackActivity("saving", () => applyBoardImport(form(file))),
+        );
       } catch {
         setDone(TRANSPORT);
       }

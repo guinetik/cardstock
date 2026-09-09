@@ -14,10 +14,10 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Inbox } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { updateCard } from "@/app/(app)/p/[project]/b/[board]/actions";
+import Link from "@/components/activity-link";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { CalendarSlip } from "@/components/calendar/calendar-slip";
 import { DraggableCalendarSlip } from "@/components/calendar/draggable-calendar-slip";
 import { useCalendarRealtime } from "@/components/calendar/use-calendar-realtime";
@@ -27,6 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { trackActivity } from "@/lib/activity";
 import {
   addCalendarMonths,
   CALENDAR_WEEKDAYS,
@@ -454,7 +455,11 @@ export function CalendarView(props: {
     applyTarget(cardId, next);
     setPendingDrops((count) => count + 1);
     try {
-      const result = await updateCard(cardId, { target_date: next });
+      const result = await trackActivity(
+        "saving",
+        () => updateCard(cardId, { target_date: next }),
+        cardId,
+      );
       if (!result.ok) {
         applyTarget(cardId, previous.card.target_date);
         setError(result.error);

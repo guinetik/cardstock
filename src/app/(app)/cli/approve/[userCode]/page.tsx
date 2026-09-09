@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { ActivityForm } from "@/components/activity-form";
+import Link from "@/components/activity-link";
 import { approveCliLogin } from "./actions";
 
 export default async function CliApprovalPage(props: {
@@ -24,9 +25,9 @@ export default async function CliApprovalPage(props: {
             again.
           </p>
         ) : (
-          <form action={approveCliLogin.bind(null, userCode)}>
+          <ActivityForm action={approveCliLogin.bind(null, userCode)}>
             <button type="submit">Approve Cardstock CLI</button>
-          </form>
+          </ActivityForm>
         )}
         <Link href="/projects" className="paper-link">
           Cancel

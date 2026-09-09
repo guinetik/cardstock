@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CardTemplateEditor } from "@/app/(app)/p/[project]/card-template-editor";
 import { GatesEditor } from "@/app/(app)/p/[project]/gates-editor";
 import { ProjectSection } from "@/app/(app)/p/[project]/project-section";
 import { TaxonomyEditor } from "@/app/(app)/p/[project]/taxonomy-editor";
+import Link from "@/components/activity-link";
 import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { currentAccess } from "@/lib/access-server";
 import { loadBoardManage } from "@/lib/board-manage-data";

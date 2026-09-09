@@ -1,5 +1,5 @@
 import { Columns3Icon, FlagIcon } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/activity-link";
 import { EpicLabel } from "@/components/epic-label";
 import { TimelineMarks } from "@/components/timeline-mark";
 import { statusChipClass } from "@/lib/card-status";

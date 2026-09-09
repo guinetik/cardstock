@@ -1,5 +1,5 @@
 import { Eye } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/activity-link";
 import type { WatchedCard } from "@/lib/watched-cards";
 
 export function WatchedFolder({ cards }: { cards: WatchedCard[] }) {

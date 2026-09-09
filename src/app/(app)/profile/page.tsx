@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProjectSection } from "@/app/(app)/p/[project]/project-section";
+import Link from "@/components/activity-link";
 import { Binder, type BinderProject } from "@/components/binder";
 import { manageableProjectIds } from "@/lib/access-server";
 import { memberLabel } from "@/lib/keys";

@@ -1,8 +1,9 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye } from "lucide-react";
-import Link from "next/link";
 import { useMemo } from "react";
+import { SavingRow } from "@/components/activity";
+import Link from "@/components/activity-link";
 import { CardWatchButton } from "@/components/card-watch-button";
 import type { Person } from "@/lib/assignee";
 import { statusChipClass } from "@/lib/card-status";
@@ -98,7 +99,11 @@ export function CardTable({
           </thead>
           <tbody>
             {rows.map((card) => (
-              <tr key={card.id} data-card-row={card.external_id}>
+              <SavingRow
+                key={card.id}
+                subject={card.id}
+                data-card-row={card.external_id}
+              >
                 <td>
                   <CardWatchButton
                     cardId={card.id}
@@ -158,7 +163,7 @@ export function CardTable({
                     "—"
                   )}
                 </td>
-              </tr>
+              </SavingRow>
             ))}
           </tbody>
         </table>

@@ -1,11 +1,11 @@
-import Link from "next/link";
+import Link from "@/components/activity-link";
 import { cardColorModifier, laneColorModifier } from "@/lib/card-color";
 import {
   LANE_MAP_MARK,
   LANE_MAP_MAX_ROWS,
   LANE_MAP_SIGNAL,
-  laneMapVisibleSlips,
   type LaneMicrocosmRow,
+  laneMapVisibleSlips,
 } from "@/lib/lane-map";
 
 /**
@@ -74,10 +74,7 @@ export function LaneMap({
                       );
                     })}
                     {packed.overflow > 0 && (
-                      <span
-                        className="lane-map-cell lane-map-cell--more"
-                        aria-label={`${packed.overflow} more cards`}
-                      >
+                      <span className="lane-map-cell lane-map-cell--more">
                         +{packed.overflow} more
                       </span>
                     )}

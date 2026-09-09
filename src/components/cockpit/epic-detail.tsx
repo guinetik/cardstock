@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/activity-link";
 import { LaneMap } from "@/components/lane-map";
 import type { CockpitEpic, EpicOutlook } from "@/lib/cockpit";
 import { OUTLOOK_LABEL } from "@/lib/cockpit";

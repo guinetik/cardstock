@@ -1,6 +1,7 @@
 "use client";
 import { Check, Pencil, Plus, X } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

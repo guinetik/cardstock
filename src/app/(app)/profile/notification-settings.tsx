@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackActivity } from "@/lib/activity";
 import type { NotificationPrefs } from "@/lib/notify";
 import { saveNotificationPrefs } from "./actions";
 
@@ -54,7 +55,9 @@ export function NotificationSettings({
     setBusy(true);
     setNote(null);
     try {
-      const result = await saveNotificationPrefs(next);
+      const result = await trackActivity("saving", () =>
+        saveNotificationPrefs(next),
+      );
       if (!result.ok) {
         setPrefs(before);
         setNote(result.error);
@@ -86,7 +89,11 @@ export function NotificationSettings({
   }
 
   return (
-    <div className="prefs">
+    <div
+      className="prefs"
+      data-saving={busy || undefined}
+      aria-busy={busy || undefined}
+    >
       <label className="pref">
         <input
           type="checkbox"

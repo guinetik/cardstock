@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/activity-link";
 import { Portrait } from "@/components/portrait";
 import { ThemeMenuItem } from "@/components/theme-toggle";
 import {

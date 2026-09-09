@@ -177,6 +177,7 @@ export function LaneColumn(props: {
   onPatch: (id: string, p: CardPatch) => void;
   onArchive: (id: string, on: boolean) => void;
   pinned: ReadonlySet<string>;
+  foundId?: string;
   onPin: (id: string, on: boolean) => void;
   onWatch?: (id: string, on: boolean) => void;
   projectSlug: string;
@@ -381,6 +382,7 @@ export function LaneColumn(props: {
         strategy={verticalListSortingStrategy}
       >
         <div
+          data-lane-cards=""
           className={`flex min-h-[160px] flex-1 flex-col overflow-y-auto ${drawer ? "gap-0" : "gap-2"} ${view === "max" ? "grid grid-cols-2 content-start gap-2" : ""}`}
         >
           {cards.map((c) => (
@@ -393,6 +395,7 @@ export function LaneColumn(props: {
                 onPatch={props.onPatch}
                 onArchive={props.onArchive}
                 pinned={props.pinned.has(c.id)}
+                found={props.foundId === c.id}
                 onPin={props.onPin}
                 onWatch={props.onWatch}
                 projectSlug={props.projectSlug}

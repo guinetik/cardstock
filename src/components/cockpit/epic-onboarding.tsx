@@ -12,16 +12,17 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   assignCardEpic,
   createEpic,
 } from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { PaperTooltip, PaperTooltipLines } from "@/components/paper-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { trackActivity } from "@/lib/activity";
 import { snapCenterToCursor } from "@/lib/dnd";
 import type { Card } from "@/lib/types";
 
@@ -208,7 +209,9 @@ export function EpicOnboarding({
   async function add() {
     setBusy(true);
     setError(null);
-    const result = await createEpic(boardId, { name });
+    const result = await trackActivity("saving", () =>
+      createEpic(boardId, { name }),
+    );
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -236,7 +239,11 @@ export function EpicOnboarding({
       else next.delete(cardId);
       return next;
     });
-    const result = await assignCardEpic(cardId, epicId);
+    const result = await trackActivity(
+      "saving",
+      () => assignCardEpic(cardId, epicId),
+      cardId,
+    );
     if (!result.ok) {
       setAssigned((map) => {
         const next = new Map(map);

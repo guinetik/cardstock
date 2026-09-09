@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { TIMELINE_WINDOW_OPTIONS } from "@/lib/timeline";
 
 /**

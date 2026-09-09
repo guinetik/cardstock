@@ -1,8 +1,6 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   type CSSProperties,
   type DragEvent,
@@ -13,6 +11,9 @@ import {
   useTransition,
 } from "react";
 import { prioritizeCard } from "@/app/(app)/p/[project]/b/[board]/actions";
+import Link from "@/components/activity-link";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
+import { trackActivity } from "@/lib/activity";
 import {
   type PriorityCard,
   partitionBands,
@@ -203,7 +204,11 @@ export function PrioritiesView(props: PrioritiesViewProps) {
         ),
       );
       startTransition(async () => {
-        const result = await prioritizeCard(cardId, null, null);
+        const result = await trackActivity(
+          "saving",
+          () => prioritizeCard(cardId, null, null),
+          cardId,
+        );
         if (!result.ok) {
           setCards(previousCards);
           setError(result.error);
@@ -254,7 +259,11 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     );
 
     startTransition(async () => {
-      const result = await prioritizeCard(cardId, priority, rank, orderedIds);
+      const result = await trackActivity(
+        "saving",
+        () => prioritizeCard(cardId, priority, rank, orderedIds),
+        cardId,
+      );
       if (!result.ok) {
         setCards(previousCards);
         setError(result.error);

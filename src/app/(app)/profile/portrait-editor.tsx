@@ -1,8 +1,8 @@
 "use client";
 
 import { GravatarQuickEditorCore } from "@gravatar-com/quick-editor";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { Portrait } from "@/components/portrait";
 
 const CDN_SETTLE_MS = 1500;

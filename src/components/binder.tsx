@@ -1,5 +1,5 @@
 import { Download, Gauge, Settings } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/activity-link";
 import { BoardImportDialog } from "@/components/board-import-dialog";
 import { SheetContract } from "@/components/sheet-contract";
 

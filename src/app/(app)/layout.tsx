@@ -1,5 +1,7 @@
-import Link from "next/link";
+import { ActivityIndicator } from "@/components/activity";
+import Link from "@/components/activity-link";
 import { BoardPicker } from "@/components/board-picker";
+import { NavigationActivity } from "@/components/navigation-activity";
 import { UserMenu } from "@/components/user-menu";
 import { WatchNotifications } from "@/components/watch-notifications";
 import { notificationPrefs } from "@/lib/notify";
@@ -13,7 +15,7 @@ import { currentMember } from "@/lib/supabase/server";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const member = await currentMember();
   return (
-    <>
+    <NavigationActivity>
       <header className="paper-topbar flex h-12 shrink-0 items-center justify-between px-4">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Link
@@ -27,6 +29,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <UserMenu />
       </header>
       {children}
+      <ActivityIndicator />
       {member && (
         <WatchNotifications
           memberId={member.id}
@@ -36,6 +39,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           )}
         />
       )}
-    </>
+    </NavigationActivity>
   );
 }

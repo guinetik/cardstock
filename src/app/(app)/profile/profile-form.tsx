@@ -1,12 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { updateProfile } from "./actions";
 
 export function ProfileForm({ displayName }: { displayName: string }) {
   const [state, action, pending] = useActionState(updateProfile, null);
   return (
-    <form action={action}>
+    <form
+      data-saving={pending || undefined}
+      aria-busy={pending || undefined}
+      action={action}
+    >
       <div className="identity-fields">
         <label htmlFor="profile-name">
           <span>Name</span>

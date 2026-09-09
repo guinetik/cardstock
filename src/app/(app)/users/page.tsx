@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ActivityForm } from "@/components/activity-form";
+import Link from "@/components/activity-link";
 import { Portrait } from "@/components/portrait";
 import { Button } from "@/components/ui/button";
 import { memberLabel } from "@/lib/keys";
@@ -93,7 +94,7 @@ export default async function UsersPage() {
                           {membership.role}
                         </span>
                         {member.id !== me.id && (
-                          <form action={removeMembership}>
+                          <ActivityForm action={removeMembership}>
                             <input
                               type="hidden"
                               name="projectId"
@@ -112,7 +113,7 @@ export default async function UsersPage() {
                             >
                               Remove
                             </Button>
-                          </form>
+                          </ActivityForm>
                         )}
                       </li>
                     ))}

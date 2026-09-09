@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { updateTimelineSettings } from "./actions";
 
 export function TimelineSettings({
@@ -25,7 +25,12 @@ export function TimelineSettings({
           still have no target date or rough date.
         </p>
       </div>
-      <form action={action} className="flex flex-wrap items-end gap-2">
+      <form
+        data-saving={pending || undefined}
+        aria-busy={pending || undefined}
+        action={action}
+        className="flex flex-wrap items-end gap-2"
+      >
         <input type="hidden" name="projectId" value={projectId} />
         <input type="hidden" name="projectSlug" value={projectSlug} />
         <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-grey)]">

@@ -7,7 +7,7 @@ import {
   Folder,
   Settings,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/activity-link";
 
 const PAGE_ICONS = {
   "Epic Cockpit": Book,

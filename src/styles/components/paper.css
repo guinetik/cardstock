@@ -259,6 +259,62 @@
     box-shadow: var(--shadow-well);
   }
 
+  /* The machine's note in the margin, present only for foreground work. */
+  .app-activity {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--color-ink);
+    border-radius: var(--radius-card);
+    background: var(--surface-card);
+    box-shadow: var(--shadow-card);
+    color: var(--color-ink);
+    font: 11.5px var(--font-mono-stack);
+    pointer-events: none;
+    visibility: hidden;
+  }
+  .app-activity[data-active="true"] {
+    animation: activity-appear 0s 150ms forwards;
+  }
+  .app-activity-mark {
+    width: 5px;
+    height: 5px;
+    margin-left: 0.25rem;
+    background: currentColor;
+    animation: activity-pulse 1s ease-in-out infinite;
+  }
+  [data-saving="true"],
+  form:has(> [data-form-saving="true"]) {
+    opacity: 0.65;
+    cursor: progress;
+  }
+  @keyframes activity-appear {
+    to {
+      visibility: visible;
+    }
+  }
+  @keyframes activity-pulse {
+    50% {
+      opacity: 0.3;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-activity[data-active="true"] {
+      animation: none;
+      visibility: visible;
+    }
+    .app-activity-mark {
+      animation: none;
+    }
+  }
+
   .priorities-view {
     --priority-card-width: 19rem;
   }
@@ -624,7 +680,43 @@
     color: var(--color-grey-faint);
   }
 
-  /** Default kanban column width — the filter search uses the same measure. */
+  .board-filter-search {
+    width: clamp(140px, 11vw, 210px);
+  }
+  .board-search-tools {
+    max-width: 100%;
+  }
+  .find-card-number {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-raised);
+    font: 32px var(--font-mono-stack);
+  }
+  .find-card-number > span {
+    color: var(--color-grey);
+  }
+  .find-card-number > input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+  }
+  .find-card-number:focus-within {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+  .paper-card[data-found="true"] {
+    outline: 2px solid var(--pen-blue);
+    outline-offset: 1px;
+  }
+
+  /** Default kanban column width. */
   .lane-column-width {
     width: clamp(280px, 22vw, 420px);
   }
@@ -1049,6 +1141,23 @@
 }
 
 /* Dialogs are a sheet laid on the desk, not frosted glass over it. */
+[data-slot="dialog-content"].find-card-dialog {
+  top: min(25vh, 12rem);
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  transform: none;
+  animation: none;
+  max-width: min(28rem, calc(100% - 2rem));
+  max-height: calc(75dvh - 2rem);
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-top: 3px solid var(--color-ink);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-lift);
+}
+
 [data-slot="dialog-overlay"] {
   background: var(--scrim);
   backdrop-filter: none;

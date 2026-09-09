@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { createCliToken, revokeCliToken } from "./actions";
 
 export interface CliTokenRow {
@@ -42,6 +43,8 @@ export function CliTokens({ tokens }: { tokens: CliTokenRow[] }) {
   return (
     <div className="roster">
       <form
+        data-saving={minting || undefined}
+        aria-busy={minting || undefined}
         action={mint}
         className="binder binder--wide roster-slip roster-slip--blank"
       >

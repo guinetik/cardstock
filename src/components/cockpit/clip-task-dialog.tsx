@@ -1,9 +1,9 @@
 "use client";
 
 import { PaperclipIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createCard } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { EpicLabel } from "@/components/epic-label";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { trackActivity } from "@/lib/activity";
 import type { Epic, Lane } from "@/lib/types";
 
 const label =
@@ -55,17 +56,19 @@ export function ClipTaskDialog({
   async function submit() {
     setBusy(true);
     setError(null);
-    const result = await createCard({
-      boardId,
-      laneId: lane.id,
-      title,
-      summary,
-      epicId: epic.id,
-      priority: priority ? (Number(priority) as 1 | 2 | 3) : null,
-      effort: (effort || null) as "L" | "M" | "H" | null,
-      plannedStartDate,
-      targetDate,
-    });
+    const result = await trackActivity("saving", () =>
+      createCard({
+        boardId,
+        laneId: lane.id,
+        title,
+        summary,
+        epicId: epic.id,
+        priority: priority ? (Number(priority) as 1 | 2 | 3) : null,
+        effort: (effort || null) as "L" | "M" | "H" | null,
+        plannedStartDate,
+        targetDate,
+      }),
+    );
     setBusy(false);
     if (!result.ok) {
       setError(result.error);

@@ -1,11 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { updateCardBody } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { useCardDraft, useCardSaves } from "@/components/card-save-scope";
 import { Button } from "@/components/ui/button";
+import { trackActivity } from "@/lib/activity";
 
 const Editor = dynamic(() => import("./issue-body-editor"), { ssr: false });
 
@@ -45,7 +46,9 @@ export function IssueBodyPanel({
    */
   function save() {
     start(async () => {
-      const r = await saves.run("body", () => updateCardBody(cardId, draft));
+      const r = await saves.run("body", () =>
+        trackActivity("saving", () => updateCardBody(cardId, draft), cardId),
+      );
       setMsg(r.ok ? null : r.error);
       if (r.ok) {
         saves.draft("body", null);

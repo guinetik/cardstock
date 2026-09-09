@@ -2,8 +2,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Maximize2, Pin, PinOff } from "lucide-react";
-import Link from "next/link";
 import type { CardPatch } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useSaving } from "@/components/activity";
+import Link from "@/components/activity-link";
 import { CardReferenceText } from "@/components/card-reference-text";
 import { CardWatchButton } from "@/components/card-watch-button";
 import { EpicLabel } from "@/components/epic-label";
@@ -81,6 +82,7 @@ export function CardItem(props: {
   onArchive?: (id: string, on: boolean) => void;
   /** Left open on the desk: the peek stays out after the pointer leaves. */
   pinned?: boolean;
+  found?: boolean;
   onPin?: (id: string, on: boolean) => void;
   onWatch?: (id: string, on: boolean) => void;
   projectSlug?: string;
@@ -92,6 +94,7 @@ export function CardItem(props: {
   gates?: readonly BoardGate[];
 }) {
   const { card, lane } = props;
+  const saving = useSaving(card.id);
   const color = parseCardColor(card.color);
   const colorClass = cardColorModifier(color) ?? "";
   const pinned = !!props.pinned;
@@ -135,6 +138,10 @@ export function CardItem(props: {
 
   return (
     <article
+      data-card-id={card.id}
+      data-found={props.found || undefined}
+      data-saving={saving || undefined}
+      aria-busy={saving || undefined}
       className={`group relative paper-card p-2.5 ${props.overlay ? "paper-card--overlay" : ""} ${props.flat && !props.overlay ? "paper-card--flat" : ""} ${card.archived_at ? "opacity-60" : ""} ${colorClass}`}
       data-pinned={pinned ? "true" : undefined}
       data-timeline-signal={age?.signal}
@@ -194,7 +201,7 @@ export function CardItem(props: {
           {props.projectSlug ? (
             // A plain anchor: the issue *page*. Only the rail's maximize is
             // meant to be intercepted into the in-place dialog.
-            <a href={detail} className="hover:underline">
+            <a href={detail} className="hover:underline" data-card-title="">
               {card.title}
             </a>
           ) : (

@@ -1,11 +1,11 @@
 "use client";
-
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   type EpicPatch,
   updateEpic,
 } from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
+import { trackActivity } from "@/lib/activity";
 import type { Epic } from "@/lib/types";
 
 const label =
@@ -29,7 +29,9 @@ export function EpicEditor({ epic }: { epic: Epic }) {
       ) as Epic["confidence"],
     };
     start(async () => {
-      const result = await updateEpic(epic.id, patch);
+      const result = await trackActivity("saving", () =>
+        updateEpic(epic.id, patch),
+      );
       setMessage(result.ok ? "Commitment saved." : result.error);
       if (result.ok) router.refresh();
     });

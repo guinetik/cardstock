@@ -4,7 +4,8 @@ import type {
   DraggableAttributes,
   DraggableSyntheticListeners,
 } from "@dnd-kit/core";
-import Link from "next/link";
+import { useSaving } from "@/components/activity";
+import Link from "@/components/activity-link";
 import { CardAge } from "@/components/board/card-age";
 import type { CalendarSlip as CalendarSlipData } from "@/lib/calendar";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
@@ -157,6 +158,7 @@ export function CalendarSlip(props: {
   overlay?: boolean;
 }) {
   const { card } = props.slip;
+  const saving = useSaving(card.id);
   const href = `/p/${props.projectSlug}/b/${props.slip.boardSlug}/c/${card.external_id}`;
   const color = parseCardColor(card.color);
   const colorClass = cardColorModifier(color) ?? "";
@@ -172,6 +174,8 @@ export function CalendarSlip(props: {
   const feel = `${props.stub ? "calendar-slip--stub " : ""}${props.overlay ? "calendar-slip--lift" : ""}`;
   return (
     <article
+      data-saving={saving || undefined}
+      aria-busy={saving || undefined}
       ref={props.drag?.setNodeRef}
       {...props.drag?.attributes}
       {...props.drag?.listeners}

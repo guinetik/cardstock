@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { Button } from "@/components/ui/button";
 import { CARD_TEMPLATE_MAX } from "@/lib/card-template";
 import { updateCardTemplate } from "./actions";
@@ -19,7 +19,12 @@ export function CardTemplateEditor(props: {
 }) {
   const [state, action, pending] = useActionState(updateCardTemplate, null);
   return (
-    <form action={action} className="max-w-2xl">
+    <form
+      data-saving={pending || undefined}
+      aria-busy={pending || undefined}
+      action={action}
+      className="max-w-2xl"
+    >
       <input type="hidden" name="boardId" value={props.boardId} />
       <input type="hidden" name="projectSlug" value={props.projectSlug} />
       <input type="hidden" name="boardSlug" value={props.boardSlug} />

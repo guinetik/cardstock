@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 /**

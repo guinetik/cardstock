@@ -1,10 +1,11 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { addCardComment } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { useCardDraft, useCardSaves } from "@/components/card-save-scope";
 import { Portrait } from "@/components/portrait";
 import { Button } from "@/components/ui/button";
+import { trackActivity } from "@/lib/activity";
 import { renderCardMarkdown } from "@/lib/card-references";
 import type { IssueComment } from "@/lib/issue-body";
 
@@ -66,7 +67,9 @@ export function IssueComments({
       return;
     }
     start(async () => {
-      const r = await saves.run("comment", () => addCardComment(cardId, text));
+      const r = await saves.run("comment", () =>
+        trackActivity("saving", () => addCardComment(cardId, text), cardId),
+      );
       if (r.ok) {
         saves.draft("comment", null);
         setText("");

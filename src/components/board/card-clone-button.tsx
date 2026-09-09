@@ -1,10 +1,11 @@
 "use client";
 
 import { Copy } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createCard } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useActivityRouter as useRouter } from "@/components/activity-router";
 import { Button } from "@/components/ui/button";
+import { trackActivity } from "@/lib/activity";
 import { CardCreateDialog } from "./card-create-dialog";
 
 /** Reuse the creation form so a clone can be reviewed before a new card is saved. */
@@ -34,7 +35,7 @@ export function CardCloneButton({
         lane={open ? props.lane : null}
         onClose={() => setOpen(false)}
         onCreate={async (input) => {
-          const result = await createCard(input);
+          const result = await trackActivity("saving", () => createCard(input));
           if (result.ok) {
             router.push(`${boardPath}/c/${result.card.external_id}`);
             router.refresh();

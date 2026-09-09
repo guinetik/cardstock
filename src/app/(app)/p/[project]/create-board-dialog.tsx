@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useActivityActionState as useActionState } from "@/components/activity";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +34,12 @@ export function CreateBoardDialog({
             lanes and tags.
           </DialogDescription>
         </DialogHeader>
-        <form action={action} className="space-y-4">
+        <form
+          data-saving={pending || undefined}
+          aria-busy={pending || undefined}
+          action={action}
+          className="space-y-4"
+        >
           <input type="hidden" name="projectId" value={projectId} />
           <input type="hidden" name="projectSlug" value={projectSlug} />
           <label htmlFor="board-name" className="block space-y-1.5 text-sm">

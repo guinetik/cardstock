@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "@/components/activity-link";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { calendarBoards, calendarMonth } from "@/lib/calendar";
 import { loadProjectCalendar } from "@/lib/project-calendar-data";

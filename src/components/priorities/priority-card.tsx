@@ -1,8 +1,9 @@
 "use client";
 
 import { CalendarClock, CalendarDays, UserRound } from "lucide-react";
-import Link from "next/link";
 import type { ComponentProps } from "react";
+import { useSaving } from "@/components/activity";
+import Link from "@/components/activity-link";
 import { EpicLabel } from "@/components/epic-label";
 import { cardColorModifier } from "@/lib/card-color";
 import { statusChipClass } from "@/lib/card-status";
@@ -33,9 +34,12 @@ export function PriorityCard({
   rank?: number;
   showBoard: boolean;
 } & Omit<ComponentProps<"article">, "children">) {
+  const saving = useSaving(card.id);
   return (
     <article
       {...articleProps}
+      data-saving={saving || undefined}
+      aria-busy={saving || undefined}
       data-priority-card={card.id}
       data-timeline-signal={card.signal}
       className={`paper-card paper-card--static priority-card relative flex h-full min-w-0 flex-col gap-2.5 p-3 ${cardColorModifier(card.color) ?? ""} ${articleProps.className ?? ""}`}
