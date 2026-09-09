@@ -56,6 +56,9 @@ export function CardCreateDialog(props: {
   people: Person[];
   /** Board's new-card markdown skeleton; pre-fills the description. */
   bodyTemplate: string;
+  /** Editable values copied from a card; omitted for an ordinary new card. */
+  initialValues?: Partial<Omit<CreateCardInput, "boardId" | "laneId">>;
+  cloneSource?: string;
   onClose: () => void;
   onCreate: (input: CreateCardInput) => Promise<CreateCardResult>;
 }) {
@@ -78,21 +81,29 @@ function CardCreateForm(
     lane: Lane;
   },
 ) {
-  const [title, setTitle] = useState("");
-  const [summary, setSummary] = useState("");
-  const [bodyMarkdown, setBodyMarkdown] = useState(props.bodyTemplate);
-  const [status, setStatus] = useState("backlog");
-  const [epicId, setEpicId] = useState("");
-  const [assigneeId, setAssigneeId] = useState("");
-  const [area, setArea] = useState("");
-  const [priority, setPriority] = useState("");
-  const [effort, setEffort] = useState("");
-  const [audience, setAudience] = useState<"all" | "internal">("all");
-  const [plannedStartDate, setPlannedStartDate] = useState("");
-  const [targetDate, setTargetDate] = useState("");
-  const [targetLabel, setTargetLabel] = useState("");
-  const [tagIds, setTagIds] = useState<Set<string>>(() => new Set());
-  const [color, setColor] = useState<CardColor | null>(null);
+  const initial = props.initialValues;
+  const initialBody = initial?.bodyMarkdown ?? props.bodyTemplate;
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [summary, setSummary] = useState(initial?.summary ?? "");
+  const [bodyMarkdown, setBodyMarkdown] = useState(initialBody);
+  const [status, setStatus] = useState(initial?.status ?? "backlog");
+  const [epicId, setEpicId] = useState(initial?.epicId ?? "");
+  const [assigneeId, setAssigneeId] = useState(initial?.assigneeId ?? "");
+  const [area, setArea] = useState(initial?.area ?? "");
+  const [priority, setPriority] = useState(String(initial?.priority ?? ""));
+  const [effort, setEffort] = useState(initial?.effort ?? "");
+  const [audience, setAudience] = useState<"all" | "internal">(
+    initial?.audience ?? "all",
+  );
+  const [plannedStartDate, setPlannedStartDate] = useState(
+    initial?.plannedStartDate ?? "",
+  );
+  const [targetDate, setTargetDate] = useState(initial?.targetDate ?? "");
+  const [targetLabel, setTargetLabel] = useState(initial?.targetLabel ?? "");
+  const [tagIds, setTagIds] = useState<Set<string>>(
+    () => new Set(initial?.tagIds),
+  );
+  const [color, setColor] = useState<CardColor | null>(initial?.color ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,28 +119,33 @@ function CardCreateForm(
     event.preventDefault();
     setBusy(true);
     setError(null);
-    const result = await props.onCreate({
-      boardId: props.boardId,
-      laneId: props.lane.id,
-      title,
-      summary,
-      bodyMarkdown,
-      status,
-      epicId: epicId || null,
-      assigneeId: assigneeId || null,
-      area,
-      priority: priority ? (Number(priority) as 1 | 2 | 3) : null,
-      effort: (effort || null) as "L" | "M" | "H" | null,
-      audience,
-      plannedStartDate,
-      targetDate,
-      targetLabel,
-      tagIds: [...tagIds],
-      color,
-    });
-    setBusy(false);
-    if (!result.ok) setError(result.error);
-    else props.onClose();
+    try {
+      const result = await props.onCreate({
+        boardId: props.boardId,
+        laneId: props.lane.id,
+        title,
+        summary,
+        bodyMarkdown,
+        status,
+        epicId: epicId || null,
+        assigneeId: assigneeId || null,
+        area,
+        priority: priority ? (Number(priority) as 1 | 2 | 3) : null,
+        effort: (effort || null) as "L" | "M" | "H" | null,
+        audience,
+        plannedStartDate,
+        targetDate,
+        targetLabel,
+        tagIds: [...tagIds],
+        color,
+      });
+      if (!result.ok) setError(result.error);
+      else props.onClose();
+    } catch {
+      setError("Could not create the card. Try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   const selectedEpic = props.epics.find((item) => item.id === epicId);
@@ -139,14 +155,19 @@ function CardCreateForm(
       <form onSubmit={submit} className="contents">
         <DialogHeader className="card-create-masthead">
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-grey)]">
-            <span>New card</span>
+            <span>{props.cloneSource ? "Clone card" : "New card"}</span>
             <span aria-hidden="true">/</span>
             <span className="card-create-lane-tab">{props.lane.name}</span>
           </div>
-          <DialogTitle className="text-xl">Write the issue</DialogTitle>
+          <DialogTitle className="text-xl">
+            {props.cloneSource
+              ? `Clone card #${props.cloneSource}`
+              : "Write the issue"}
+          </DialogTitle>
           <DialogDescription>
-            It will be filed first in {props.lane.name} and kept ready for the
-            Markdown pull.
+            {props.cloneSource
+              ? `Review the copy before creating it in ${props.lane.name}. It starts as backlog, with no comments, history, or blocker note.`
+              : `It will be filed first in ${props.lane.name} and kept ready for the Markdown pull.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -183,7 +204,7 @@ function CardCreateForm(
               <div className="card-create-description">
                 <span className={label}>Description</span>
                 <IssueBodyEditor
-                  markdown={props.bodyTemplate}
+                  markdown={initialBody}
                   onChange={setBodyMarkdown}
                 />
               </div>

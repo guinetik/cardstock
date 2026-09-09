@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CardCloneButton } from "@/components/board/card-clone-button";
 import { CardHistory } from "@/components/board/card-history";
 import { CardReferenceScope } from "@/components/card-reference-scope";
 import { EpicLabel } from "@/components/epic-label";
@@ -10,6 +11,7 @@ import {
   cardReferenceIds,
   renderCardMarkdown,
 } from "@/lib/card-references";
+import { cardTemplate } from "@/lib/card-template";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
@@ -76,12 +78,15 @@ export async function CardSheet({
   ] = await Promise.all([
     db
       .from("lanes")
-      .select("id, key, name, kind")
+      .select("id, key, name, kind, position, sla_days, wip_limit, color")
       .eq("board_id", b.id)
+      .order("position")
       .order("position"),
     db
       .from("tag_groups")
-      .select("id, key, name, tags(id, key, name)")
+      .select(
+        "id, key, name, position, color, tags(id, key, name, color, group_id)",
+      )
       .eq("board_id", b.id)
       .order("position"),
     db.from("card_tags").select("tag_id").eq("card_id", card.id),
@@ -101,7 +106,7 @@ export async function CardSheet({
   ]);
   const { data: epics } = await db
     .from("epics")
-    .select("id, source_name")
+    .select("id, source_name, outcome")
     .eq("board_id", b.id)
     .order("source_name");
   const people = await loadProjectRoster(db, b.project_id);
@@ -138,9 +143,44 @@ export async function CardSheet({
           ← {b.name}
         </Link>
       )}
-      <h1 className="mt-1 text-[27px] leading-tight">
-        #{card.external_id} {card.title}
-      </h1>
+      <div
+        className={`mt-1 flex flex-wrap items-start justify-between gap-3 ${inModal ? "pr-6" : ""}`}
+      >
+        <h1 className="min-w-0 flex-1 text-[27px] leading-tight">
+          #{card.external_id} {card.title}
+        </h1>
+        <CardCloneButton
+          key={card.id}
+          boardPath={boardPath}
+          boardId={b.id}
+          lane={(lanes ?? []).find((item) => item.kind === "inbox") ?? null}
+          groups={groups ?? []}
+          epics={epics ?? []}
+          people={people}
+          bodyTemplate={cardTemplate(b.settings)}
+          cloneSource={card.external_id}
+          initialValues={{
+            title: card.title,
+            summary: card.summary ?? "",
+            bodyMarkdown: issue.body,
+            epicId: card.epic_id,
+            assigneeId: people.some(
+              (person) => person.memberId === card.assignee_id,
+            )
+              ? card.assignee_id
+              : null,
+            area: card.area,
+            priority: card.priority,
+            effort: card.effort,
+            plannedStartDate: card.planned_start_date ?? "",
+            targetDate: card.target_date ?? "",
+            targetLabel: card.target_label ?? "",
+            audience: card.audience,
+            color: parseCardColor(card.color),
+            tagIds: (tags ?? []).map((tag) => tag.tag_id),
+          }}
+        />
+      </div>
       <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span className="stat stat--muted">{card.status}</span>
         {lane && <span className="stat stat--info">{lane.name}</span>}
@@ -165,6 +205,7 @@ export async function CardSheet({
       </div>
 
       <CardEditor
+        key={card.id}
         card={{
           id: card.id,
           title: card.title,
