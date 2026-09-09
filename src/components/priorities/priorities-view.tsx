@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  type CSSProperties,
   type DragEvent,
   useEffect,
   useMemo,
@@ -16,7 +17,7 @@ import {
   rankForDrop,
 } from "@/lib/priorities";
 import type { PrioritiesBoard } from "@/lib/priorities-data";
-import { EFFORT_PEN } from "@/lib/types";
+import { PriorityCard as PlanningCard } from "./priority-card";
 
 const STONE_CAP = 6;
 const BAND_LABEL: Record<1 | 2 | 3, string> = {
@@ -24,7 +25,7 @@ const BAND_LABEL: Record<1 | 2 | 3, string> = {
   2: "Pebbles",
   3: "Sand",
 };
-const STEP_WIDTH: Record<1 | 2 | 3, string> = { 1: "100%", 2: "80%", 3: "60%" };
+const STEP_WIDTH: Record<1 | 2 | 3, string> = { 1: "100%", 2: "85%", 3: "70%" };
 const BAND_PEN_COLOR: Record<1 | 2 | 3, string> = {
   1: "var(--pen-red)",
   2: "var(--pen-blue)",
@@ -191,7 +192,7 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     );
 
     const rank = rankForDrop(bandWithoutDragged, insertAt);
-    const updated = { ...card, priority, priority_rank: rank };
+    const updated = { ...card, priority, priority_rank: insertAt };
     const reordered = [...bandWithoutDragged];
     reordered.splice(insertAt, 0, updated);
     const orderedIds = reordered.map((c) => c.id);
@@ -242,72 +243,45 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     commit(id, target, index);
   }
 
+  function cardDropIndex(event: DragEvent<HTMLElement>, index: number) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return event.clientX < rect.left + rect.width / 2 ? index : index + 1;
+  }
+
   function bandRow(
     card: PriorityCard,
     band: 1 | 2 | 3,
     index: number,
     displayIndex: number,
   ) {
-    const size =
-      band === 1
-        ? "text-[17px]"
-        : band === 2
-          ? "text-[14px]"
-          : "text-[13px] whitespace-nowrap overflow-hidden text-ellipsis";
-    const pad =
-      band === 1 ? "px-4 py-3.5" : band === 2 ? "px-3.5 py-2" : "px-3 py-1";
-    const showDropLine =
+    const before =
       over?.target === band && over.index === index && dragId !== card.id;
+    const after =
+      over?.target === band &&
+      over.index === bands[band].length &&
+      index === bands[band].length - 1 &&
+      dragId !== card.id;
     return (
-      <div key={card.id} className="flex flex-col gap-1.5">
-        {showDropLine && <span className="block h-0.5 bg-[var(--pen-blue)]" />}
-        <article
-          className={`priority-pressed flex items-center gap-3 ${pad}`}
-          draggable
+      <div
+        key={card.id}
+        className="priority-slot"
+        data-drop-before={before || undefined}
+        data-drop-after={after || undefined}
+      >
+        <PlanningCard
+          card={card}
+          href={href(card)}
+          rank={displayIndex}
+          showBoard={showBoard}
+          draggable={!isPending}
+          className={dragId === card.id ? "opacity-40" : ""}
           onDragStart={(event) => onDragStart(event, card.id)}
           onDragEnd={onDragEnd}
-          onDragOver={(event) => onRowDragOver(event, band, index)}
-          onDrop={(event) => onDrop(event, band, index)}
-        >
-          {band === 3 ? (
-            <span
-              className="flex-none font-mono text-[12.5px] font-semibold"
-              style={{ color: BAND_PEN_COLOR[band] }}
-            >
-              {displayIndex}
-            </span>
-          ) : (
-            <span
-              className={`priority-stamp ${band === 1 ? "h-7 w-8 text-[18px]" : "h-5 w-6 text-[12.5px]"}`}
-              style={{ color: BAND_PEN_COLOR[band] }}
-            >
-              {displayIndex}
-            </span>
-          )}
-          <span className="flex-none font-mono text-[11px] text-[var(--color-grey-faint)]">
-            #{card.external_id}
-          </span>
-          <Link
-            href={href(card)}
-            className={`min-w-0 flex-1 font-medium leading-tight ${size}`}
-          >
-            {card.title}
-          </Link>
-          <span className="ml-auto flex flex-none items-center gap-2">
-            {band === 1 && card.epic && (
-              <span className="epic-label">{card.epic}</span>
-            )}
-            <span className="stat stat--faint">{card.lane_name}</span>
-            {showBoard && (
-              <span className="stat stat--faint">{card.board_name}</span>
-            )}
-            {card.effort && (
-              <span className={`sq sq--on ${EFFORT_PEN[card.effort]}`}>
-                {card.effort}
-              </span>
-            )}
-          </span>
-        </article>
+          onDragOver={(event) =>
+            onRowDragOver(event, band, cardDropIndex(event, index))
+          }
+          onDrop={(event) => onDrop(event, band, cardDropIndex(event, index))}
+        />
       </div>
     );
   }
@@ -315,7 +289,7 @@ export function PrioritiesView(props: PrioritiesViewProps) {
   let displayCounter = 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+    <div className="priorities-view flex min-h-0 flex-1 flex-col gap-1.5">
       <header className="flex flex-col gap-2">
         <div>
           <p className="eyebrow">{props.projectName}</p>
@@ -386,23 +360,26 @@ export function PrioritiesView(props: PrioritiesViewProps) {
         is red alert.
       </p>
 
-      <div className="mt-3 flex flex-col gap-4 lg:grid lg:grid-cols-[396px_minmax(0,1fr)] lg:items-start lg:gap-6">
-        <section className="flex flex-col lg:col-start-2 lg:row-start-1">
+      <p className="mt-2 text-[12px] text-[var(--color-grey)]">
+        Drag cards to set priority. Rank runs left to right, then down.
+      </p>
+      <div className="priority-layout mt-3">
+        <section
+          className="priority-bands flex min-w-0 flex-col"
+          aria-label="Ranked priorities"
+        >
           {([1, 2, 3] as const).map((band) => {
             const rows = bands[band];
             const isOver = over?.target === band;
-            const stepPad =
-              band === 1
-                ? "px-6 pt-2 pb-5"
-                : band === 2
-                  ? "px-5 pt-1 pb-4"
-                  : "px-5 pt-1 pb-3.5";
             return (
               // biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern
               <div
                 key={band}
-                className={`priority-step flex w-full flex-col gap-1.5 ${stepPad} ${isOver ? "paper-lane--over" : ""}`}
-                style={{ maxWidth: STEP_WIDTH[band] }}
+                data-priority-band={band}
+                className={`priority-step priority-band flex w-full flex-col gap-3 p-4 ${isOver ? "paper-lane--over" : ""}`}
+                style={
+                  { "--priority-step-width": STEP_WIDTH[band] } as CSSProperties
+                }
                 onDragOver={(event) => onContainerDragOver(event, band)}
                 onDragLeave={(event) => onContainerDragLeave(event, band)}
                 onDrop={(event) => onDrop(event, band, rows.length)}
@@ -431,16 +408,19 @@ export function PrioritiesView(props: PrioritiesViewProps) {
                       : rows.length}
                   </span>
                 </div>
-                {rows.map((card, index) => {
-                  displayCounter += 1;
-                  return bandRow(card, band, index, displayCounter);
-                })}
-                {band === 1 && rows.length === 0 && (
-                  <p className="px-0.5 py-2 text-xs text-[var(--color-grey)]">
-                    No stones yet. Whatever goes in first sets the shape of
-                    everything after it.
-                  </p>
-                )}
+                <div className="priority-grid">
+                  {rows.map((card, index) => {
+                    displayCounter += 1;
+                    return bandRow(card, band, index, displayCounter);
+                  })}
+                </div>
+                <p className="min-h-6 text-[11.5px] text-[var(--color-grey)]">
+                  {rows.length === 0
+                    ? `Drop a card here to make it P${band}.`
+                    : isOver
+                      ? "Drop in the open space to place last."
+                      : ""}
+                </p>
               </div>
             );
           })}
@@ -449,7 +429,8 @@ export function PrioritiesView(props: PrioritiesViewProps) {
 
         {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target mirrors the prototype's div pattern */}
         <div
-          className={`flex flex-col gap-2.5 px-1.5 pb-3.5 pt-1 lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 ${
+          data-priority-band="desk"
+          className={`priority-desk flex min-w-0 flex-col gap-2.5 px-1.5 pb-3.5 pt-1 ${
             over?.target === "desk" ? "paper-lane--over" : ""
           }`}
           onDragOver={(event) => onContainerDragOver(event, "desk")}
@@ -468,32 +449,22 @@ export function PrioritiesView(props: PrioritiesViewProps) {
               in; drag a sheet out here to unweigh it.
             </span>
           </div>
-          <div className="flex flex-wrap gap-3.5 pt-2.5">
+          <div className="priority-grid pt-2.5">
             {unweighed.map((card, index) => (
-              // biome-ignore lint/a11y/noStaticElementInteractions: post-it mirrors the prototype's div pattern
               <div
                 key={card.id}
-                className="flex w-44 flex-col gap-1.5 p-2.5 shadow-[var(--shadow-card)]"
-                style={{
-                  background: "var(--surface-postit)",
-                  rotate: TILTS[index % TILTS.length],
-                }}
-                draggable
-                onDragStart={(event) => onDragStart(event, card.id)}
-                onDragEnd={onDragEnd}
+                className="priority-slot"
+                style={{ rotate: TILTS[index % TILTS.length] }}
               >
-                <span className="font-mono text-[10px] text-[var(--color-grey)]">
-                  #{card.external_id}
-                </span>
-                <Link
+                <PlanningCard
+                  card={card}
                   href={href(card)}
-                  className="text-[12.5px] font-medium leading-tight"
-                >
-                  {card.title}
-                </Link>
-                <span className="stat stat--faint pt-0.5">
-                  {card.lane_name}
-                </span>
+                  showBoard={showBoard}
+                  draggable={!isPending}
+                  className={dragId === card.id ? "opacity-40" : ""}
+                  onDragStart={(event) => onDragStart(event, card.id)}
+                  onDragEnd={onDragEnd}
+                />
               </div>
             ))}
             {unweighed.length === 0 && (

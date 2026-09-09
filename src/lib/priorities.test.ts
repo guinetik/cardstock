@@ -15,6 +15,14 @@ function card(over: Partial<PriorityCard> & { id: string }): PriorityCard {
     lane_rank: 1,
     board_slug: "b",
     board_name: "B",
+    raised_on: null,
+    target_date: null,
+    target_label: null,
+    assignee_label: null,
+    color: null,
+    signal: "active",
+    overdue_days: null,
+    late_days: null,
     ...over,
   };
 }

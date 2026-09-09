@@ -184,7 +184,10 @@ export function sortInbox(cards: Card[], how: InboxSort): Card[] {
 }
 
 /** Days a card has sat in its lane (from the last move event), or null when unknown. */
-export function daysInLane(card: Card, now = new Date()): number | null {
+export function daysInLane(
+  card: Pick<Card, "lane_entered_at">,
+  now = new Date(),
+): number | null {
   if (!card.lane_entered_at) return null;
   return Math.floor(
     (now.getTime() - new Date(card.lane_entered_at).getTime()) / 86_400_000,
@@ -193,7 +196,7 @@ export function daysInLane(card: Card, now = new Date()): number | null {
 
 /** The waiting-lane warning shown on cards once their lane's SLA is exceeded. */
 export function isLateInLane(
-  card: Card,
+  card: Pick<Card, "lane_entered_at">,
   lane: Lane | undefined,
   now?: Date,
 ): boolean {

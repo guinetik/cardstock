@@ -1,7 +1,17 @@
 import { notFound } from "next/navigation";
-import { gateOutcomeSets, resolveBoardGates } from "./gates";
+import { findPerson, type Person, personLabel } from "./assignee";
+import { loadProjectRoster } from "./board-data";
+import { parseCardColor } from "./card-color";
+import { daysInLane, isLateInLane } from "./filters";
+import { cardGate, resolveBoardGates } from "./gates";
 import type { PriorityCard } from "./priorities";
 import { supabaseServer } from "./supabase/server";
+import {
+  daysSince,
+  forgottenAfterDays,
+  timelineSignal,
+  timelineToday,
+} from "./timeline";
 import type { Lane } from "./types";
 
 /** Board identity for the project-level board chips. */
@@ -54,6 +64,13 @@ type CardRow = {
   lane_id: string | null;
   rank: number;
   archived_at: string | null;
+  raised_on: string | null;
+  shipped_on: string | null;
+  target_date: string | null;
+  target_label: string | null;
+  assignee_id: string | null;
+  assignee: string | null;
+  color: string | null;
 };
 
 /**
@@ -66,7 +83,16 @@ export function assemblePriorityCards(
   boards: readonly BoardRow[],
   lanes: readonly LaneRow[],
   cards: readonly CardRow[],
+  context: {
+    settings?: Record<string, unknown>;
+    people?: readonly Person[];
+    enteredAt?: ReadonlyMap<string, string>;
+    now?: Date;
+  } = {},
 ): PriorityCard[] {
+  const now = context.now ?? new Date();
+  const today = timelineToday(now);
+  const watchDays = forgottenAfterDays(context.settings);
   const boardById = new Map(boards.map((board) => [board.id, board]));
   const laneById = new Map(lanes.map((lane) => [lane.id, lane]));
   const lanesByBoard = new Map<string, LaneRow[]>();
@@ -75,15 +101,10 @@ export function assemblePriorityCards(
     list.push(lane);
     lanesByBoard.set(lane.board_id, list);
   }
-  const shippedByBoard = new Map(
+  const gatesByBoard = new Map(
     boards.map((board) => [
       board.id,
-      gateOutcomeSets(
-        resolveBoardGates(
-          board.settings ?? {},
-          lanesByBoard.get(board.id) ?? [],
-        ),
-      ).shipped,
+      resolveBoardGates(board.settings ?? {}, lanesByBoard.get(board.id) ?? []),
     ]),
   );
   const out: PriorityCard[] = [];
@@ -93,9 +114,17 @@ export function assemblePriorityCards(
     const lane = card.lane_id ? laneById.get(card.lane_id) : undefined;
     if (!board || !lane) continue;
     if (lane.kind === "archive") continue;
-    const shipped = shippedByBoard.get(card.board_id);
-    if (shipped?.laneIds.has(lane.id) || shipped?.statuses.has(card.status))
-      continue;
+    const signal = timelineSignal(
+      card,
+      today,
+      watchDays,
+      cardGate(card, gatesByBoard.get(card.board_id) ?? []),
+    );
+    if (signal === "delivered") continue;
+    const person =
+      context.people?.find((p) => p.memberId === card.assignee_id) ??
+      findPerson(context.people ?? [], card.assignee);
+    const timing = { lane_entered_at: context.enteredAt?.get(card.id) ?? null };
     out.push({
       id: card.id,
       external_id: card.external_id,
@@ -110,6 +139,21 @@ export function assemblePriorityCards(
       lane_rank: card.rank,
       board_slug: board.slug,
       board_name: board.name,
+      raised_on: card.raised_on,
+      target_date: card.target_date,
+      target_label: card.target_label,
+      assignee_label: person
+        ? personLabel(person)
+        : card.assignee?.trim() || null,
+      color: parseCardColor(card.color),
+      signal,
+      overdue_days:
+        signal === "overdue" && card.target_date
+          ? daysSince(card.target_date, today)
+          : null,
+      late_days: isLateInLane(timing, lane, now)
+        ? daysInLane(timing, now)
+        : null,
     });
   }
   return out;
@@ -157,20 +201,33 @@ export async function loadProjectPriorities(
   if (ids.length === 0)
     return { project: projectShape, boards: boardsShape, cards: [] };
 
-  const [{ data: lanes }, { data: cards }] = await Promise.all([
-    db
-      .from("lanes")
-      .select(
-        "id, board_id, key, name, position, kind, sla_days, wip_limit, color",
-      )
-      .in("board_id", ids),
-    db
-      .from("cards")
-      .select(
-        "id, board_id, external_id, title, status, epic, effort, priority, priority_rank, lane_id, rank, archived_at",
-      )
-      .in("board_id", ids),
-  ]);
+  const [{ data: lanes }, { data: cards }, people, { data: moves }] =
+    await Promise.all([
+      db
+        .from("lanes")
+        .select(
+          "id, board_id, key, name, position, kind, sla_days, wip_limit, color",
+        )
+        .in("board_id", ids),
+      db
+        .from("cards")
+        .select(
+          "id, board_id, external_id, title, status, epic, effort, priority, priority_rank, lane_id, rank, archived_at, raised_on, shipped_on, target_date, target_label, assignee_id, assignee, color",
+        )
+        .in("board_id", ids),
+      loadProjectRoster(db, project.id),
+      db
+        .from("card_events")
+        .select("card_id, at, cards!inner(board_id)")
+        .in("cards.board_id", ids)
+        .eq("kind", "moved")
+        .order("at", { ascending: false }),
+    ]);
+
+  const enteredAt = new Map<string, string>();
+  for (const move of moves ?? []) {
+    if (!enteredAt.has(move.card_id)) enteredAt.set(move.card_id, move.at);
+  }
 
   return {
     project: projectShape,
@@ -179,6 +236,7 @@ export async function loadProjectPriorities(
       scope,
       (lanes ?? []) as LaneRow[],
       (cards ?? []) as CardRow[],
+      { settings: projectShape.settings, people, enteredAt },
     ),
   };
 }

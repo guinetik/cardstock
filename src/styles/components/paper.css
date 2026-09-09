@@ -259,6 +259,76 @@
     box-shadow: var(--shadow-well);
   }
 
+  .priorities-view {
+    --priority-card-width: 19rem;
+  }
+  .priority-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .priority-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .priority-slot {
+    position: relative;
+    display: flex;
+    width: var(--priority-card-width);
+    max-width: 100%;
+    min-width: 0;
+  }
+  .priority-card {
+    width: 100%;
+  }
+  .priority-card[draggable="true"] {
+    cursor: grab;
+  }
+  .priority-card[draggable="true"]:active {
+    cursor: grabbing;
+  }
+  .priority-slot[data-drop-before]::before,
+  .priority-slot[data-drop-after]::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--pen-blue);
+  }
+  .priority-slot[data-drop-before]::before {
+    left: -7px;
+  }
+  .priority-slot[data-drop-after]::after {
+    right: -7px;
+  }
+  @media (min-width: 1024px) {
+    .priority-layout {
+      display: grid;
+      grid-template-columns: calc(var(--priority-card-width) + 0.75rem) minmax(
+          0,
+          1fr
+        );
+      align-items: start;
+    }
+    .priority-bands {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .priority-desk {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .priority-band {
+      max-width: max(
+        calc(var(--priority-card-width) + 2rem),
+        var(--priority-step-width)
+      );
+    }
+  }
+
   /* Rank as a rubber stamp in pen ink; colour comes from the band. */
   .priority-stamp {
     display: inline-grid;

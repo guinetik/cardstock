@@ -1,4 +1,6 @@
+import type { CardColor } from "./card-color";
 import { rankBetween } from "./rank";
+import type { TimelineSignal } from "./timeline";
 
 /**
  * A card as the priorities planning screen sees it. `priority` is the band
@@ -20,6 +22,14 @@ export interface PriorityCard {
   lane_rank: number;
   board_slug: string;
   board_name: string;
+  raised_on: string | null;
+  target_date: string | null;
+  target_label: string | null;
+  assignee_label: string | null;
+  color: CardColor | null;
+  signal: TimelineSignal;
+  overdue_days: number | null;
+  late_days: number | null;
 }
 
 export interface PriorityBands {
