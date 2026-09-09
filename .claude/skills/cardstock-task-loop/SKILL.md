@@ -1,6 +1,6 @@
 ---
 name: cardstock-task-loop
-description: Use when an operator points you at a backlog tracker item to work on in this repo. Covers the full loop - claim the item into the Now lane, sync and commit an opening fingerprint, do the work, then move it to Building only once it is genuinely done, and never mark it Shipped or Done without the operator's confirmation. Triggers on "work on #N", "pick up tracker item", "take this backlog task", or any request to move a tracker item through the board.
+description: Use for any cardstock board or CLI work in this repo - working a tracker item, grooming the board from a feedback call, filing new cards, or just running validate/status/sync. Covers the full work loop (claim into Now, sync an opening fingerprint, do the work, move to Building only once genuinely done, never mark Shipped or Done without the operator's confirmation), the status/lane field model (two fields, not one - see Field reference), sweeping a call transcript for cardstock feedback and reconciling it against the tracker and git history, and ID allocation when filing. Triggers on "work on #N", "pick up tracker item", "take this backlog task", "sync the board", "check the board", "groom the board", "check <feedback call> for cardstock feedback", or any request to move a tracker item through the board or touch backlog/tracker/*.md.
 ---
 
 # Cardstock task loop
