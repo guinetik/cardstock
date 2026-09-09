@@ -43,6 +43,7 @@ export async function sendMail(message: MailMessage): Promise<MailResult> {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": key },
       body: JSON.stringify(message),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");

@@ -24,6 +24,7 @@ export function useCardEventNotifications(opts: {
   cardTitle: (cardId: string) => string | undefined;
   laneName: (laneId: string) => string | undefined;
   knownCard: (cardId: string) => boolean;
+  isWatching: (cardId: string) => boolean;
 }) {
   const latest = useRef(opts);
   latest.current = opts;
@@ -60,6 +61,13 @@ export function useCardEventNotifications(opts: {
                 ? event.payload?.board_id === now.boardId
                 : now.knownCard(event.card_id);
             if (!onBoard) return;
+            // Watched movement has its own preference and app-wide subscription.
+            if (
+              event.kind === "moved" &&
+              (now.isWatching(event.card_id) ||
+                event.payload?.from_lane === event.payload?.to_lane)
+            )
+              return;
             const notice = cardEventNotice(event, {
               selfEmail: now.selfEmail,
               prefs: now.prefs,

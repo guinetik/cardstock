@@ -72,6 +72,7 @@ export async function loadBoard(
     { data: moves },
     { data: epics },
     people,
+    { data: watches, error: watchError },
   ] = await Promise.all([
     db
       .from("lanes")
@@ -109,7 +110,14 @@ export async function loadBoard(
       .eq("board_id", board.id)
       .order("source_name"),
     loadProjectRoster(db, project.id),
+    db
+      .from("card_watches")
+      .select("card_id, cards!inner(board_id)")
+      .eq("cards.board_id", board.id),
   ]);
+
+  if (watchError) throw new Error("Could not load card watches.");
+  const watched = new Set((watches ?? []).map((watch) => watch.card_id));
 
   const tagsByCard = new Map<string, string[]>();
   for (const ct of cardTags ?? []) {
@@ -142,6 +150,7 @@ export async function loadBoard(
     epics: (epics ?? []) as Pick<Epic, "id" | "source_name" | "outcome">[],
     cards: (cards ?? []).map((c) => ({
       ...c,
+      watching: watched.has(c.id),
       tag_ids: tagsByCard.get(c.id) ?? [],
       lane_entered_at: enteredAt.get(c.id) ?? null,
       built_at: builtAt.get(c.id) ?? null,

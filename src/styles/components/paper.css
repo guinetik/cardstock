@@ -756,6 +756,30 @@
   opacity: 0;
   transition: opacity var(--motion-duration-hover) var(--motion-ease-out);
 }
+
+.card-watch {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-grey);
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+}
+.card-watch:is(:hover, :focus-visible) {
+  color: var(--color-ink);
+  border-color: var(--border-strong);
+  background: var(--surface-panel);
+}
+.card-watch--on {
+  color: var(--pen-blue);
+  border-color: var(--pen-blue);
+  background: var(--surface-panel);
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+.card-watch:disabled {
+  opacity: 0.5;
+}
 .paper-card:is(:hover, :focus-within) .card-rail,
 .paper-card[data-pinned="true"] .card-rail {
   opacity: 1;
@@ -1418,18 +1442,32 @@
 
   /* Binders in the folder: one per board, spine to the left. */
   /*
-   * Even columns that share the shelf: each binder is at least 16rem (the
-   * foot's toolbar in one row) and stretches to split any leftover width,
-   * so a row never ends in an awkward strip of empty desk.
+   * Even columns share the full folder width, fitting three on a desktop
+   * shelf and fewer as the folder narrows.
    */
   .binders {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14.5rem), 1fr));
     gap: 0.75rem;
     grid-column: 1;
   }
   .binders .binder {
     width: auto;
+  }
+  .folder--project > .folder-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .folder--project > .folder-body > .folder-aside {
+    grid-row: auto;
+    grid-column: 1;
+    min-width: 0;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .folder--project .binder-io {
+    flex-wrap: wrap;
   }
   .binder {
     position: relative;

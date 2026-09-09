@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { BoardPicker } from "@/components/board-picker";
 import { UserMenu } from "@/components/user-menu";
+import { WatchNotifications } from "@/components/watch-notifications";
+import { notificationPrefs } from "@/lib/notify";
+import { currentMember } from "@/lib/supabase/server";
 
 /**
  * The app's chrome. Everything behind a session wears the topbar; the landing
  * page at `/` carries its own rail and nav instead, which is why this sits in a
  * route group rather than in the root layout.
  */
-export default function AppLayout({ children }: LayoutProps<"/">) {
+export default async function AppLayout({ children }: LayoutProps<"/">) {
+  const member = await currentMember();
   return (
     <>
       <header className="paper-topbar flex h-12 shrink-0 items-center justify-between px-4">
@@ -23,6 +27,15 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <UserMenu />
       </header>
       {children}
+      {member && (
+        <WatchNotifications
+          memberId={member.id}
+          email={member.email}
+          prefs={notificationPrefs(
+            (member.prefs as Record<string, unknown> | null)?.notifications,
+          )}
+        />
+      )}
     </>
   );
 }

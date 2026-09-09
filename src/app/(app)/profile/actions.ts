@@ -55,6 +55,7 @@ export async function saveNotificationPrefs(
     .eq("id", me.id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/profile");
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

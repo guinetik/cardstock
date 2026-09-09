@@ -220,6 +220,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
     cardTitle: (id) => cards.find((c) => c.id === id)?.title,
     laneName: (id) => lanes.find((l) => l.id === id)?.name,
     knownCard: (id) => cards.some((c) => c.id === id),
+    isWatching: (id) => cards.some((c) => c.id === id && c.watching),
   });
 
   const sensors = useSensors(
@@ -864,6 +865,13 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
                     onArchive={archive}
                     pinned={pinned}
                     onPin={pin}
+                    onWatch={(id, watching) =>
+                      setCards((current) =>
+                        current.map((card) =>
+                          card.id === id ? { ...card, watching } : card,
+                        ),
+                      )
+                    }
                     projectSlug={data.project.slug}
                     boardSlug={data.board.slug}
                     today={today}

@@ -5,6 +5,7 @@ import { Maximize2, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
 import type { CardPatch } from "@/app/(app)/p/[project]/b/[board]/actions";
 import { CardReferenceText } from "@/components/card-reference-text";
+import { CardWatchButton } from "@/components/card-watch-button";
 import { EpicLabel } from "@/components/epic-label";
 import { cardColorModifier, parseCardColor } from "@/lib/card-color";
 import { CARD_STATUSES, statusChipClass } from "@/lib/card-status";
@@ -81,6 +82,7 @@ export function CardItem(props: {
   /** Left open on the desk: the peek stays out after the pointer leaves. */
   pinned?: boolean;
   onPin?: (id: string, on: boolean) => void;
+  onWatch?: (id: string, on: boolean) => void;
   projectSlug?: string;
   boardSlug?: string;
   /** UTC day key for timeline age; defaults to today in the browser. */
@@ -177,8 +179,16 @@ export function CardItem(props: {
         </div>
       )}
       <div className="flex items-baseline gap-2 pr-6">
-        <span className="shrink-0 font-mono text-[11.5px] text-[var(--color-grey-faint)]">
+        <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[11.5px] text-[var(--color-grey-faint)]">
           #{card.external_id}
+          {!props.overlay && props.projectSlug && (
+            <CardWatchButton
+              cardId={card.id}
+              externalId={card.external_id}
+              watching={!!card.watching}
+              onChange={(on) => props.onWatch?.(card.id, on)}
+            />
+          )}
         </span>
         <p className="min-w-0 text-[18px] font-medium leading-snug">
           {props.projectSlug ? (

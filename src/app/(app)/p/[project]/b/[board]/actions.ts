@@ -12,6 +12,7 @@ import {
 } from "@/lib/issue-body";
 import { cleanName, keyFromName } from "@/lib/keys";
 import { needsNormalize, normalized } from "@/lib/rank";
+import { scheduleWatchMail } from "@/lib/schedule-watch-mail";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import type { Card, Lane } from "@/lib/types";
 
@@ -80,6 +81,7 @@ async function laneList(
 }
 
 function refreshBoards() {
+  scheduleWatchMail();
   revalidatePath("/p/[project]", "page");
   revalidatePath("/p/[project]/b/[board]", "page");
 }
@@ -463,6 +465,7 @@ export async function moveCard(
     payload: { from_lane: before?.lane_id, to_lane: laneId, rank },
   });
   // Renormalise if the client tells us the lane order and the gaps are getting tight.
+  scheduleWatchMail();
   if (orderedIds?.length) {
     const { data: laneCards } = await c.db
       .from("cards")

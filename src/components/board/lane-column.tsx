@@ -178,6 +178,7 @@ export function LaneColumn(props: {
   onArchive: (id: string, on: boolean) => void;
   pinned: ReadonlySet<string>;
   onPin: (id: string, on: boolean) => void;
+  onWatch?: (id: string, on: boolean) => void;
   projectSlug: string;
   boardSlug: string;
   today: string;
@@ -393,6 +394,7 @@ export function LaneColumn(props: {
                 onArchive={props.onArchive}
                 pinned={props.pinned.has(c.id)}
                 onPin={props.onPin}
+                onWatch={props.onWatch}
                 projectSlug={props.projectSlug}
                 boardSlug={props.boardSlug}
                 today={props.today}

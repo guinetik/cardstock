@@ -50,6 +50,39 @@ Seeding only fills the allowlist. Each person sets their own password the first 
 - Adding a person: the **owner** (any project, including as a project admin) or a **project admin** (members of that project only). Open the project page (`/p/<slug>`) or, as owner, `/users`. No email is sent; share the app URL so they can set a password on first use. Only the owner can invite another project admin. `MEMBER_EMAILS` + `db:seed-members` remains available for bootstrap and automation.
 - Schema changes: add a migration under `supabase/migrations/`, `bunx supabase db push`.
 
+## Card watching and email delivery
+
+Apply `20260917000000_card_watches.sql` and
+`20260918000000_watch_notifications.sql` before deploying the matching app.
+Set `GUINETIK_MAIL_KEY`, `CARDSTOCK_APP_URL` (the canonical HTTPS app URL), and
+`CRON_SECRET` (a random secret of at least 32 characters) in Vercel. The service-role
+key is also required by the delivery worker. Watch emails are disabled in local
+development unless `CARDSTOCK_NOTIFICATION_EMAILS=true`.
+
+After the app is deployed, run `bun run etl/configure-watch-mail.ts` with
+`SUPABASE_DB_URL` pointing at the deployment database and the same `CARDSTOCK_APP_URL`
+and `CRON_SECRET`. This stores the worker URL and secret in Supabase Vault and
+configures Supabase Cron to call the worker every minute. The setup is repeatable
+and updates the existing named job. It follows Supabase's
+[scheduled HTTP requests with Vault](https://supabase.com/docs/guides/functions/schedule-functions).
+It does not require a Vercel Cron plan. Check the `cardstock-watch-mail` job in
+Supabase Cron and confirm successful HTTP responses after deployment.
+
+App mutations also start delivery after the response. The scheduled worker drains
+larger batches and retries failures while no browser is open. It sends one recipient
+per message, with a shared seven-second send interval. Opt-outs, unwatching, and
+lost project access are checked again before delivery. Failed mail uses exponential
+backoff (up to an hour), and pending mail expires after seven days. A provider
+timeout after accepting a message can cause a duplicate on retry; this is
+at-least-once delivery, not an exactly-once provider contract.
+
+Watch-start announcements go to project members and the site owner, including the
+person starting the watch. Lane movement goes to watchers other than the actor.
+Both email categories default on; browser notifications still require permission.
+Watch-start popups suppress the actor's own action. No emails are sent by applying
+the migration itself. Repeated watch/unwatch toggles are limited to one announcement
+per actor, card, and recipient every five minutes.
+
 ## CLI sync protocol 3 rollout
 
 1. Back up production and confirm the linked Supabase project before reviewing

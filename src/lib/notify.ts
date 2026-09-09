@@ -1,14 +1,19 @@
 /**
- * Browser-notification copy and preferences, kept pure so the board hook
- * stays a thin shell around the Notification API. The prefs live under
- * `members.prefs.notifications`; kinds default to on so that flipping the
- * master switch is one gesture, but the whole feature defaults to off —
- * nobody gets a popup they never asked for.
+ * Notification preferences live under `members.prefs.notifications`.
+ * Browser popups need opt-in; email categories default on independently.
+ * Keeping the parser pure also preserves older saved preference shapes.
  */
 
 export interface NotificationPrefs {
   enabled: boolean;
-  kinds: { created: boolean; moved: boolean; commented: boolean };
+  kinds: {
+    created: boolean;
+    moved: boolean;
+    commented: boolean;
+    watchStarted: boolean;
+    watchedMoved: boolean;
+  };
+  email: { watchStarted: boolean; watchedMoved: boolean };
 }
 
 export function notificationPrefs(raw: unknown): NotificationPrefs {
@@ -26,6 +31,16 @@ export function notificationPrefs(raw: unknown): NotificationPrefs {
       created: kinds.created !== false,
       moved: kinds.moved !== false,
       commented: kinds.commented !== false,
+      watchStarted: kinds.watchStarted !== false,
+      watchedMoved: kinds.watchedMoved !== false,
+    },
+    email: {
+      watchStarted:
+        (o.email as Record<string, unknown> | undefined)?.watchStarted !==
+        false,
+      watchedMoved:
+        (o.email as Record<string, unknown> | undefined)?.watchedMoved !==
+        false,
     },
   };
 }

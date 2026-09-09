@@ -39,6 +39,8 @@ export interface TagGroup {
 }
 
 export interface Card {
+  /** This member's watch, loaded under row-level security. */
+  watching?: boolean;
   id: string;
   external_id: string;
   title: string;

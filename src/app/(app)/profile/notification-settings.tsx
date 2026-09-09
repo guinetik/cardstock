@@ -13,7 +13,17 @@ const KINDS = [
   {
     key: "moved" as const,
     label: "Card moved",
-    hint: "A card changes lanes",
+    hint: "An unwatched card changes lanes on the board you have open",
+  },
+  {
+    key: "watchStarted" as const,
+    label: "Someone starts watching",
+    hint: "A teammate starts watching a card in one of your projects",
+  },
+  {
+    key: "watchedMoved" as const,
+    label: "A watched card moves",
+    hint: "A card you watch changes lanes, even on another board",
   },
   {
     key: "commented" as const,
@@ -35,16 +45,25 @@ export function NotificationSettings({
   const [prefs, setPrefs] = useState(initial);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const allEmail = prefs.email.watchStarted && prefs.email.watchedMoved;
+  const someEmail = prefs.email.watchStarted || prefs.email.watchedMoved;
 
   async function save(next: NotificationPrefs) {
     const before = prefs;
     setPrefs(next);
     setBusy(true);
-    const result = await saveNotificationPrefs(next);
-    setBusy(false);
-    if (!result.ok) {
+    setNote(null);
+    try {
+      const result = await saveNotificationPrefs(next);
+      if (!result.ok) {
+        setPrefs(before);
+        setNote(result.error);
+      }
+    } catch {
       setPrefs(before);
-      setNote(result.error);
+      setNote("Could not save your preferences. Please try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -78,8 +97,9 @@ export function NotificationSettings({
         <span>
           <span className="pref-label">Notify me about board activity</span>
           <span className="pref-hint">
-            While a board tab is open, teammates&apos; changes show as system
-            notifications. Off by default; your own actions never notify you.
+            While cardstock is open, watch activity appears as system
+            notifications. Other activity is limited to the board you have open.
+            Off by default; your own actions never notify you.
           </span>
         </span>
       </label>
@@ -104,6 +124,67 @@ export function NotificationSettings({
             <span>
               <span className="pref-label">{kind.label}</span>
               <span className="pref-hint">{kind.hint}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <label className="pref mt-5">
+        <input
+          type="checkbox"
+          checked={allEmail}
+          ref={(input) => {
+            if (input) input.indeterminate = someEmail && !allEmail;
+          }}
+          disabled={busy}
+          onChange={(event) =>
+            void save({
+              ...prefs,
+              email: {
+                watchStarted: event.target.checked,
+                watchedMoved: event.target.checked,
+              },
+            })
+          }
+        />
+        <span>
+          <span className="pref-label">Email notifications</span>
+          <span className="pref-hint">
+            Check or uncheck all. On by default; these also arrive when
+            cardstock is closed.
+          </span>
+        </span>
+      </label>
+      <fieldset className="prefs-kinds" disabled={busy}>
+        <legend className="sr-only">Email notifications</legend>
+        {(
+          [
+            [
+              "watchStarted",
+              "Someone starts watching",
+              "An email when someone starts watching a card in your project",
+            ],
+            [
+              "watchedMoved",
+              "A watched card moves",
+              "An email when a card you watch changes lanes",
+            ],
+          ] as const
+        ).map(([key, label, hint]) => (
+          <label className="pref" key={key}>
+            <input
+              type="checkbox"
+              checked={prefs.email[key]}
+              onChange={(event) =>
+                void save({
+                  ...prefs,
+                  email: { ...prefs.email, [key]: event.target.checked },
+                })
+              }
+            />
+            <span>
+              <span className="pref-label">{label}</span>
+              <span className="pref-hint">{hint}</span>
             </span>
           </label>
         ))}

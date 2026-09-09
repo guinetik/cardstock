@@ -3,8 +3,10 @@ import { Binder, type BinderProject } from "@/components/binder";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { ImportProjectDialog } from "@/components/import-project-dialog";
 import { SheetContract } from "@/components/sheet-contract";
+import { WatchedFolder } from "@/components/watched-folder";
 import { manageableProjectIds } from "@/lib/access-server";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
+import { loadWatchedCards } from "@/lib/watched-cards";
 
 /** The shape `boards(..., cards(count))` comes back in. */
 interface ProjectRow {
@@ -21,7 +23,7 @@ export default async function Home() {
   const member = await currentMember();
   if (!member) redirect("/login?error=member");
   const db = await supabaseServer();
-  const [{ data }, canManage] = await Promise.all([
+  const [{ data }, canManage, watchedCards] = await Promise.all([
     db
       .from("projects")
       .select(
@@ -29,6 +31,7 @@ export default async function Home() {
       )
       .order("name"),
     manageableProjectIds(member),
+    loadWatchedCards(),
   ]);
   const projects: (BinderProject & { id: string })[] = (
     (data ?? []) as ProjectRow[]
@@ -65,13 +68,13 @@ export default async function Home() {
           </div>
         )}
       </header>
-      {projects.length > 0 ? (
-        <ul className="folders">
-          {projects.map((p) => (
-            <Binder key={p.id} project={p} />
-          ))}
-        </ul>
-      ) : (
+      <ul className="folders">
+        {projects.map((p) => (
+          <Binder key={p.id} project={p} />
+        ))}
+        <WatchedFolder cards={watchedCards} />
+      </ul>
+      {projects.length === 0 && (
         <div className="folder folder--empty max-w-xl">
           <span className="folder-tab">
             <span>{owner ? "No projects yet" : "No projects to show"}</span>

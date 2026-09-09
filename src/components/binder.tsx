@@ -38,7 +38,9 @@ export function Binder({ project }: { project: BinderProject }) {
   // schema it reads off stays out of the client bundle either way.
   const contract = <SheetContract />;
   return (
-    <li className={`folder${boards.length ? "" : " folder--empty"}`}>
+    <li
+      className={`folder folder--project${boards.length ? "" : " folder--empty"}`}
+    >
       <Link href={href} className="folder-tab">
         <span>{project.name}</span>
       </Link>

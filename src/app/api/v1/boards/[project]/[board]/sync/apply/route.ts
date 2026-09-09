@@ -1,6 +1,7 @@
 import { apiError, apiJson } from "@/lib/api/errors";
 import { withToken } from "@/lib/api/route";
 import { syncColumns, syncRequestSchema } from "@/lib/api/sync";
+import { scheduleWatchMail } from "@/lib/schedule-watch-mail";
 
 export const POST = withToken(
   async ({ db, board, member, canManage }, request) => {
@@ -36,6 +37,7 @@ export const POST = withToken(
         return apiError("invalid_request", error.message);
       throw new Error(error.message);
     }
+    scheduleWatchMail();
     return apiJson({ protocol: 4, operationId, ...data });
   },
 );

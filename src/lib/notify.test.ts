@@ -7,14 +7,28 @@ import {
 
 const on: NotificationPrefs = {
   enabled: true,
-  kinds: { created: true, moved: true, commented: true },
+  kinds: {
+    created: true,
+    moved: true,
+    commented: true,
+    watchStarted: true,
+    watchedMoved: true,
+  },
+  email: { watchStarted: true, watchedMoved: true },
 };
 
 describe("notificationPrefs", () => {
   test("defaults to off with every kind pre-checked for later", () => {
     expect(notificationPrefs(undefined)).toEqual({
       enabled: false,
-      kinds: { created: true, moved: true, commented: true },
+      kinds: {
+        created: true,
+        moved: true,
+        commented: true,
+        watchStarted: true,
+        watchedMoved: true,
+      },
+      email: { watchStarted: true, watchedMoved: true },
     });
     expect(notificationPrefs("garbage").enabled).toBe(false);
   });
@@ -27,6 +41,20 @@ describe("notificationPrefs", () => {
     expect(prefs.enabled).toBe(true);
     expect(prefs.kinds.moved).toBe(false);
     expect(prefs.kinds.created).toBe(true);
+  });
+
+  test("email defaults on independently of browser permission, and preserves opt-outs", () => {
+    expect(
+      notificationPrefs({ enabled: false, email: { watchStarted: false } })
+        .email,
+    ).toEqual({ watchStarted: false, watchedMoved: true });
+    expect(
+      notificationPrefs({
+        kinds: { watchedMoved: false },
+        email: { watchedMoved: false },
+      }).kinds.watchedMoved,
+    ).toBe(false);
+    expect(notificationPrefs({ email: null }).email.watchedMoved).toBe(true);
   });
 });
 
