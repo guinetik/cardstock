@@ -47,6 +47,8 @@ control; neither an `internal` tag nor any area/epic name sets it automatically.
 
 ## Tags — two groups, this vocabulary only
 
+Both bare tags (`enhancement`, `card`) and qualified references (`kind:enhancement`, `surface:card`) are accepted. Cards created on the board export qualified references; existing tracker files can keep their bare tags.
+
 **Kind** — exactly one: `bug` · `enhancement` · `nice-to-have` · `question` · `internal`
 
 **Surface** — at most one, where in the app it lives: `board` · `card` · `planning` · `timeline` · `calendar` · `project` · `import-export` · `sign-in` · `admin`

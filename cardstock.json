@@ -19,6 +19,7 @@
     "closed_statuses": ["shipped", "done"],
     "lanes": [
       "unsorted",
+      "planned",
       "now",
       "next",
       "later",
@@ -50,7 +51,18 @@
     "tag_groups": {
       "kind": {
         "cardinality": "exactly-one",
-        "tags": ["bug", "enhancement", "nice-to-have", "question", "internal"]
+        "tags": [
+          "bug",
+          "enhancement",
+          "nice-to-have",
+          "question",
+          "internal",
+          "kind:bug",
+          "kind:enhancement",
+          "kind:nice-to-have",
+          "kind:question",
+          "kind:internal"
+        ]
       },
       "surface": {
         "cardinality": "at-most-one",
@@ -63,7 +75,16 @@
           "project",
           "import-export",
           "sign-in",
-          "admin"
+          "admin",
+          "surface:board",
+          "surface:card",
+          "surface:planning",
+          "surface:timeline",
+          "surface:calendar",
+          "surface:project",
+          "surface:import-export",
+          "surface:sign-in",
+          "surface:admin"
         ]
       }
     },
@@ -73,7 +94,7 @@
     "scheme_doc": "backlog/tracker/README-scheme.md"
   },
   "mapping": {
-    "$comment": "cardstock tag mapping for the Cardstock dev board. Tags resolve against the board's own tag groups; this file only adds group aliases, overrides and the audience rule. The cardstock scheme uses bare tags in two groups, so there is nothing to alias.",
+    "$comment": "cardstock tag mapping for the Cardstock dev board. Bare tags and qualified group:tag references resolve against the board's own tag groups; no group aliases are needed.",
     "group_aliases": {},
     "by_tag": {},
     "by_epic": {},
