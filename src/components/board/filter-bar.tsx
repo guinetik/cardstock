@@ -62,6 +62,7 @@ export function FilterBar(props: {
   inboxSort: InboxSort;
   onInboxSort: (s: InboxSort) => void;
   onShowInternal: (v: boolean) => void;
+  showInboxSort?: boolean;
 }) {
   const { filters: f, onChange } = props;
   const epicName = new Map(props.epics.map((e) => [e.id, e.source_name]));
@@ -475,20 +476,22 @@ export function FilterBar(props: {
         </label>
       </fieldset>
 
-      <fieldset className="fieldset">
-        <legend>Unsorted order</legend>
-        <select
-          className="paper-field h-7 px-1.5 text-[12.5px]"
-          value={props.inboxSort}
-          onChange={(e) => props.onInboxSort(e.target.value as InboxSort)}
-          aria-label="Unsorted order"
-        >
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-          <option value="id-asc"># ascending</option>
-          <option value="id-desc"># descending</option>
-        </select>
-      </fieldset>
+      {props.showInboxSort !== false && (
+        <fieldset className="fieldset">
+          <legend>Unsorted order</legend>
+          <select
+            className="paper-field h-7 px-1.5 text-[12.5px]"
+            value={props.inboxSort}
+            onChange={(e) => props.onInboxSort(e.target.value as InboxSort)}
+            aria-label="Unsorted order"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="id-asc"># ascending</option>
+            <option value="id-desc"># descending</option>
+          </select>
+        </fieldset>
+      )}
 
       {props.filtering && (
         <button

@@ -20,7 +20,8 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { useRouter } from "next/navigation";
+import { Columns3, Table2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -48,6 +49,7 @@ import { CardReferenceScope } from "@/components/card-reference-scope";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CardColor } from "@/lib/card-color";
 import { laneColorModifier } from "@/lib/card-color";
+import type { TableSort } from "@/lib/card-table";
 import { cardTemplate } from "@/lib/card-template";
 import {
   boardStatuses,
@@ -78,6 +80,7 @@ import { forgottenAfterDays, timelineToday } from "@/lib/timeline";
 import type { BoardData, Card, Lane } from "@/lib/types";
 import { CardCreateDialog } from "./card-create-dialog";
 import { CardItem } from "./card-item";
+import { CardTable } from "./card-table";
 import { FilterBar } from "./filter-bar";
 import { LaneActionDialog, type LaneActionMode } from "./lane-action-dialog";
 import { KIND_INK, LaneColumn } from "./lane-column";
@@ -144,6 +147,24 @@ export interface Me {
 
 export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tableView = searchParams.get("view") === "table";
+  const [tableSort, setTableSort] = useState<TableSort>({
+    column: "lane",
+    direction: "asc",
+  });
+  const boardPath = `/p/${data.project.slug}/b/${data.board.slug}`;
+  function changeView(table: boolean) {
+    if (table === tableView) return;
+    const url = new URL(window.location.href);
+    if (table) url.searchParams.set("view", "table");
+    else url.searchParams.delete("view");
+    window.history.pushState(
+      null,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }
   const [cards, setCards] = useState<Card[]>(data.cards);
   const [lanes, setLanes] = useState<Lane[]>(data.lanes);
   const [filters, setFilters] = useState<Filters>(() =>
@@ -754,22 +775,50 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
             Configuration
           </a>
         </nav>
-        <fieldset className="m-0 ml-auto flex items-center gap-2 border-0 p-0 pb-0.5">
+        <fieldset className="m-0 ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 border-0 p-0 pb-0.5">
           <legend className="sr-only">Board actions</legend>
-          <button
-            type="button"
-            className="inline-flex h-7 items-center rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 text-[12.5px] font-medium text-[var(--surface-card)] hover:opacity-90 disabled:opacity-50"
-            onClick={() => setLaneDialog({ type: "add" })}
-            disabled={laneBusy !== null}
+          <fieldset
+            className="m-0 flex items-center gap-1 border-0 p-0"
+            aria-label="Card view"
           >
-            Add lane
-          </button>
-          <a
-            className="inline-flex h-7 items-center rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 text-[12.5px] font-medium text-[var(--surface-card)] hover:opacity-90"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/export?internal=${filters.showInternal ? 1 : 0}${filters.showArchived ? "&archived=1" : ""}${filters.tags.size ? `&tags=${[...filters.tags].join(",")}` : ""}${filters.query ? `&q=${encodeURIComponent(filters.query)}` : ""}`}
-          >
-            Export CSV
-          </a>
+            <span className="mr-1 text-[12.5px] text-[var(--color-grey)]">
+              View:
+            </span>
+            {[
+              { table: false, label: "Kanban", icon: Columns3 },
+              { table: true, label: "Table", icon: Table2 },
+            ].map(({ table, label, icon: Icon }) => (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={tableView === table}
+                onClick={() => changeView(table)}
+                className={`inline-flex h-7 items-center gap-1.5 rounded-[var(--radius-btn)] border px-2.5 text-[12.5px] ${tableView === table ? "border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--surface-card)]" : "border-[var(--border-hairline)] bg-[var(--surface-card)] text-[var(--color-ink2)] hover:border-[var(--color-ink)]"}`}
+              >
+                <Icon size={14} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </fieldset>
+          <div className="flex items-center gap-2">
+            <span className="text-[12.5px] text-[var(--color-grey)]">
+              Actions:
+            </span>
+            <button
+              type="button"
+              className="inline-flex h-7 items-center rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 text-[12.5px] font-medium text-[var(--surface-card)] hover:opacity-90 disabled:opacity-50"
+              onClick={() => setLaneDialog({ type: "add" })}
+              disabled={laneBusy !== null}
+            >
+              Add lane
+            </button>
+            <a
+              className="inline-flex h-7 items-center rounded-[var(--radius-btn)] border border-[var(--color-ink)] bg-[var(--color-ink)] px-3 text-[12.5px] font-medium text-[var(--surface-card)] hover:opacity-90"
+              href={`/p/${data.project.slug}/b/${data.board.slug}/export?internal=${filters.showInternal ? 1 : 0}${filters.showArchived ? "&archived=1" : ""}${filters.tags.size ? `&tags=${[...filters.tags].join(",")}` : ""}${filters.query ? `&q=${encodeURIComponent(filters.query)}` : ""}`}
+            >
+              Export CSV
+            </a>
+          </div>
         </fieldset>
         {error && (
           <p className="basis-full border-l-2 border-[var(--pen-red)] bg-[var(--surface-card)] px-3 py-2 text-sm text-[var(--color-ink)]">
@@ -794,6 +843,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         inboxSort={inboxSort}
         onInboxSort={changeInboxSort}
         onShowInternal={changeShowInternal}
+        showInboxSort={!tableView}
       />
       <LaneCrudDialog
         mode={laneDialog}
@@ -830,132 +880,150 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       />
       <CardReferenceScope cards={cards} scope="board" />
       <TooltipProvider delay={300}>
-        <DndContext
-          id="board-dnd"
-          sensors={sensors}
-          collisionDetection={boardCollisionDetection}
-          // Lanes collapse and spring open mid-drag, so the cached droppable
-          // rects from drag start are wrong the moment a card is picked up.
-          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-          onDragStart={onDragStart}
-          onDragOver={onDragOver}
-          onDragEnd={onDragEnd}
-          onDragCancel={endDrag}
-        >
-          <main
-            className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:px-6"
-            aria-label="Priority lanes"
+        {tableView ? (
+          <CardTable
+            cards={cards.filter(visible)}
+            lanes={lanes}
+            people={data.people}
+            boardPath={boardPath}
+            sort={tableSort}
+            onSort={setTableSort}
+            onWatch={(id, watching) =>
+              setCards((current) =>
+                current.map((card) =>
+                  card.id === id ? { ...card, watching } : card,
+                ),
+              )
+            }
+          />
+        ) : (
+          <DndContext
+            id="board-dnd"
+            sensors={sensors}
+            collisionDetection={boardCollisionDetection}
+            // Lanes collapse and spring open mid-drag, so the cached droppable
+            // rects from drag start are wrong the moment a card is picked up.
+            measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDragEnd={onDragEnd}
+            onDragCancel={endDrag}
           >
-            <SortableContext
-              items={laneIds}
-              strategy={horizontalListSortingStrategy}
+            <main
+              className="flex min-h-0 flex-1 gap-3 overflow-x-auto px-4 pb-4 sm:px-6"
+              aria-label="Priority lanes"
             >
-              {displayLanes.map((lane) => {
-                const laneIndex = globalIndex.get(lane.id) ?? 0;
-                return (
-                  <LaneColumn
-                    key={lane.id}
-                    lane={lane}
-                    cards={byLane.get(lane.id) ?? []}
-                    visible={visible}
-                    groups={data.groups}
-                    view={viewFor(lane.id)}
-                    onView={(v) => changeLaneView(lane.id, v)}
-                    onPatch={patch}
-                    onArchive={archive}
-                    pinned={pinned}
-                    onPin={pin}
-                    onWatch={(id, watching) =>
-                      setCards((current) =>
-                        current.map((card) =>
-                          card.id === id ? { ...card, watching } : card,
-                        ),
-                      )
-                    }
-                    projectSlug={data.project.slug}
-                    boardSlug={data.board.slug}
-                    today={today}
-                    watchDays={watchDays}
-                    gates={gates}
-                    hiddenByDefault={
-                      lane.kind === "archive" && !filters.showArchived
-                    }
-                    onAddCard={() => setCardLane(lane)}
-                    lanePinned={pinnedLane === lane.id}
-                    onPinLane={(on) => pinLane(lane.id, on)}
-                    manage={{
-                      disabled: laneBusy !== null,
-                      canDelete: !PROTECTED_KINDS.has(lane.kind),
-                      canMoveCardsLeft:
-                        lane.kind !== "archive" &&
-                        laneIndex > 0 &&
-                        lanes[laneIndex - 1]?.kind !== "archive",
-                      canMoveCardsRight:
-                        lane.kind !== "archive" &&
-                        laneIndex < lanes.length - 1 &&
-                        lanes[laneIndex + 1]?.kind !== "archive",
-                      canSortCards:
-                        lane.kind !== "archive" && lane.kind !== "inbox",
-                      onRename: () => setLaneDialog({ type: "rename", lane }),
-                      onMoveCards: (delta) => {
-                        const destination = lanes[laneIndex + delta];
-                        if (!destination || destination.kind === "archive")
-                          return;
-                        setLaneAction({
-                          type: "move-cards",
-                          lane,
-                          destination,
-                          cardCount: byLane.get(lane.id)?.length ?? 0,
-                        });
-                      },
-                      onSortCards: (direction) =>
-                        setLaneAction({
-                          type: "sort-cards",
-                          lane,
-                          direction,
-                          cardCount: byLane.get(lane.id)?.length ?? 0,
-                        }),
-                      onDelete: () => setLaneDialog({ type: "delete", lane }),
-                    }}
-                  />
-                );
-              })}
-            </SortableContext>
-            {/* Outside the SortableContext on purpose: it is not a sortable
-                item, and listing it would corrupt the index math. */}
-            <button
-              type="button"
-              className="flex min-h-28 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground hover:border-foreground/30 hover:bg-muted/30 hover:text-foreground disabled:opacity-50"
-              onClick={() => setLaneDialog({ type: "add" })}
-              disabled={laneBusy !== null}
-            >
-              + Add lane
-            </button>
-          </main>
-          <DragOverlay>
-            {activeLane ? (
-              <div
-                className={`paper-lane lane-column-width p-2 opacity-90 ${laneColorModifier(activeLane.color) ?? ""}`}
+              <SortableContext
+                items={laneIds}
+                strategy={horizontalListSortingStrategy}
               >
-                <div className="lane-head">
-                  <h2 className={`lane-name ${KIND_INK[activeLane.kind]}`}>
-                    {activeLane.name}
-                  </h2>
+                {displayLanes.map((lane) => {
+                  const laneIndex = globalIndex.get(lane.id) ?? 0;
+                  return (
+                    <LaneColumn
+                      key={lane.id}
+                      lane={lane}
+                      cards={byLane.get(lane.id) ?? []}
+                      visible={visible}
+                      groups={data.groups}
+                      view={viewFor(lane.id)}
+                      onView={(v) => changeLaneView(lane.id, v)}
+                      onPatch={patch}
+                      onArchive={archive}
+                      pinned={pinned}
+                      onPin={pin}
+                      onWatch={(id, watching) =>
+                        setCards((current) =>
+                          current.map((card) =>
+                            card.id === id ? { ...card, watching } : card,
+                          ),
+                        )
+                      }
+                      projectSlug={data.project.slug}
+                      boardSlug={data.board.slug}
+                      today={today}
+                      watchDays={watchDays}
+                      gates={gates}
+                      hiddenByDefault={
+                        lane.kind === "archive" && !filters.showArchived
+                      }
+                      onAddCard={() => setCardLane(lane)}
+                      lanePinned={pinnedLane === lane.id}
+                      onPinLane={(on) => pinLane(lane.id, on)}
+                      manage={{
+                        disabled: laneBusy !== null,
+                        canDelete: !PROTECTED_KINDS.has(lane.kind),
+                        canMoveCardsLeft:
+                          lane.kind !== "archive" &&
+                          laneIndex > 0 &&
+                          lanes[laneIndex - 1]?.kind !== "archive",
+                        canMoveCardsRight:
+                          lane.kind !== "archive" &&
+                          laneIndex < lanes.length - 1 &&
+                          lanes[laneIndex + 1]?.kind !== "archive",
+                        canSortCards:
+                          lane.kind !== "archive" && lane.kind !== "inbox",
+                        onRename: () => setLaneDialog({ type: "rename", lane }),
+                        onMoveCards: (delta) => {
+                          const destination = lanes[laneIndex + delta];
+                          if (!destination || destination.kind === "archive")
+                            return;
+                          setLaneAction({
+                            type: "move-cards",
+                            lane,
+                            destination,
+                            cardCount: byLane.get(lane.id)?.length ?? 0,
+                          });
+                        },
+                        onSortCards: (direction) =>
+                          setLaneAction({
+                            type: "sort-cards",
+                            lane,
+                            direction,
+                            cardCount: byLane.get(lane.id)?.length ?? 0,
+                          }),
+                        onDelete: () => setLaneDialog({ type: "delete", lane }),
+                      }}
+                    />
+                  );
+                })}
+              </SortableContext>
+              {/* Outside the SortableContext on purpose: it is not a sortable
+                item, and listing it would corrupt the index math. */}
+              <button
+                type="button"
+                className="flex min-h-28 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground hover:border-foreground/30 hover:bg-muted/30 hover:text-foreground disabled:opacity-50"
+                onClick={() => setLaneDialog({ type: "add" })}
+                disabled={laneBusy !== null}
+              >
+                + Add lane
+              </button>
+            </main>
+            <DragOverlay>
+              {activeLane ? (
+                <div
+                  className={`paper-lane lane-column-width p-2 opacity-90 ${laneColorModifier(activeLane.color) ?? ""}`}
+                >
+                  <div className="lane-head">
+                    <h2 className={`lane-name ${KIND_INK[activeLane.kind]}`}>
+                      {activeLane.name}
+                    </h2>
+                  </div>
                 </div>
-              </div>
-            ) : active ? (
-              <CardItem
-                card={active}
-                groups={data.groups}
-                lane={lanes.find((l) => l.id === active.lane_id)}
-                today={today}
-                watchDays={watchDays}
-                gates={gates}
-                overlay
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+              ) : active ? (
+                <CardItem
+                  card={active}
+                  groups={data.groups}
+                  lane={lanes.find((l) => l.id === active.lane_id)}
+                  today={today}
+                  watchDays={watchDays}
+                  gates={gates}
+                  overlay
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
       </TooltipProvider>
     </div>
   );

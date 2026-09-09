@@ -1,0 +1,98 @@
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  padding: 0 1.5rem 1.5rem;
+}
+.count {
+  padding: 0.6rem 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-grey);
+}
+.scroll {
+  overflow: auto;
+  border: 1px solid var(--border-hairline);
+  border-left: 4px solid var(--color-ink);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+}
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+  color: var(--color-ink2);
+}
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-panel);
+  border-bottom: 2px solid var(--color-ink);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.table th,
+.table td {
+  padding: 0.7rem 0.65rem;
+}
+.table th button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.table th[aria-sort="ascending"],
+.table th[aria-sort="descending"] {
+  color: var(--pen-blue);
+}
+.table td {
+  border-bottom: 1px solid var(--border-hairline);
+  vertical-align: middle;
+  max-width: 16rem;
+  overflow-wrap: anywhere;
+}
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table tbody tr:hover,
+.table tbody tr:focus-within {
+  background: var(--surface-panel);
+}
+.title {
+  min-width: 15rem;
+  width: 30%;
+}
+.title a {
+  font-family: var(--font-display-stack);
+  font-size: 17px;
+  line-height: 1.25;
+  color: var(--color-ink);
+}
+.title a:hover {
+  text-decoration: underline;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.empty {
+  padding: 2rem;
+  font-size: 14px;
+  color: var(--color-grey);
+}
+@media (max-width: 640px) {
+  .main {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+}
