@@ -1,0 +1,164 @@
+/* A manila index tab with a dark binder spine. Keep the topbar's 48px rhythm. */
+.trigger {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 30px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px 3px 14px;
+  border: 1px solid var(--color-ink2);
+  border-radius: var(--radius-btn);
+  background: var(--surface-well);
+  color: var(--color-ink);
+  box-shadow: 2px 2px 0 var(--border-strong);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  transition:
+    background 150ms var(--motion-ease-out),
+    box-shadow 150ms var(--motion-ease-out),
+    translate 150ms var(--motion-ease-settle);
+}
+
+.trigger::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--color-ink2);
+}
+
+.trigger:hover,
+.trigger[data-popup-open] {
+  background: var(--surface-card);
+  box-shadow: 3px 3px 0 var(--border-strong);
+  translate: 0 -1px;
+}
+
+.trigger:active {
+  translate: 1px 1px;
+  box-shadow: 1px 1px 0 var(--border-strong);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 4px;
+}
+
+/* An opaque index sheet, with ruled entries and a second sheet showing below. */
+.menu {
+  width: 19rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0;
+  border: 1px solid var(--color-ink2);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  color: var(--color-ink);
+  box-shadow:
+    4px 4px 0 var(--surface-well),
+    5px 5px 0 var(--border-strong);
+  animation: none;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 8px;
+  border-bottom: 2px solid var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.masthead > :last-child {
+  color: var(--color-grey);
+  font-size: 9px;
+}
+
+.project {
+  padding: 10px 8px 0;
+}
+
+.projectLabel {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--border-strong);
+  border-bottom: 0;
+  background: var(--surface-well);
+  color: var(--color-ink2);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.item {
+  min-height: 36px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-hairline);
+  border-radius: 0;
+  background: var(--surface-card);
+  font-size: 13.5px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.item[aria-current="page"] {
+  background: var(--surface-panel);
+  box-shadow: inset 3px 0 0 var(--color-ink);
+  font-weight: 600;
+}
+
+.item[data-highlighted],
+.item:focus-visible {
+  background: var(--surface-well);
+  color: var(--color-ink-strong);
+  outline: 1px solid var(--border-strong);
+  outline-offset: -1px;
+}
+
+.separator {
+  height: 1px;
+  margin: 8px 0 0;
+  background: var(--border-strong);
+}
+
+.footer {
+  justify-content: space-between;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 0;
+  background: var(--surface-panel);
+  color: var(--color-ink2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.footer[data-highlighted],
+.footer:focus-visible {
+  background: var(--surface-well);
+  color: var(--color-ink-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+
+  .trigger:hover,
+  .trigger[data-popup-open],
+  .trigger:active {
+    translate: none;
+  }
+}

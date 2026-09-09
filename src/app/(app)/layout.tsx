@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BoardPicker } from "@/components/board-picker";
 import { UserMenu } from "@/components/user-menu";
 
 /**
@@ -10,12 +11,15 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <header className="paper-topbar flex h-12 shrink-0 items-center justify-between px-4">
-        <Link
-          href="/projects"
-          className="font-heading text-[15px] font-semibold tracking-tight"
-        >
-          cardstock
-        </Link>
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <Link
+            href="/projects"
+            className="shrink-0 font-heading text-[15px] font-semibold tracking-tight"
+          >
+            cardstock
+          </Link>
+          <BoardPicker />
+        </div>
         <UserMenu />
       </header>
       {children}
