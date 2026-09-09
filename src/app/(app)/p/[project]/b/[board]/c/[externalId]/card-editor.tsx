@@ -1,14 +1,15 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
-  archiveCard,
-  assignCard,
-  setCardTags,
-  updateCard,
+  archiveCard as archiveCardAction,
+  assignCard as assignCardAction,
+  setCardTags as setCardTagsAction,
+  updateCard as updateCardAction,
 } from "@/app/(app)/p/[project]/b/[board]/actions";
-import { assignCardEpic } from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
+import { assignCardEpic as assignCardEpicAction } from "@/app/(app)/p/[project]/b/[board]/cockpit/actions";
 import { CardColorPicker } from "@/components/board/card-color-picker";
+import { useCardSaves } from "@/components/card-save-scope";
 import { Button } from "@/components/ui/button";
 import { findPerson, type Person, personLabel } from "@/lib/assignee";
 import { type CardColor, parseCardColor } from "@/lib/card-color";
@@ -74,6 +75,20 @@ export function CardEditor({
   backHref: string;
 }) {
   const router = useRouter();
+  const saves = useCardSaves();
+  const updateCard = (...args: Parameters<typeof updateCardAction>) =>
+    saves.run(`fields:${Object.keys(args[1]).sort().join(",")}`, () =>
+      updateCardAction(...args),
+    );
+  const assignCard = (...args: Parameters<typeof assignCardAction>) =>
+    saves.run("assignee", () => assignCardAction(...args));
+  const setCardTags = (...args: Parameters<typeof setCardTagsAction>) =>
+    saves.run("tags", () => setCardTagsAction(...args));
+  const archiveCard = (...args: Parameters<typeof archiveCardAction>) =>
+    saves.run("archive", () => archiveCardAction(...args));
+  const assignCardEpic = (...args: Parameters<typeof assignCardEpicAction>) =>
+    saves.run("epic", () => assignCardEpicAction(...args));
+
   const [pending, start] = useTransition();
   const [title, setTitle] = useState(card.title);
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -82,6 +97,12 @@ export function CardEditor({
   const [tags, setTags] = useState(new Set(tagIds));
   const [editingTags, setEditingTags] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => {
+    if (title.trim() === card.title) saves.clear("fields:title");
+    if (summary === (card.summary ?? "")) saves.clear("fields:summary");
+    if (normalizeNeeds(needs) === normalizeNeeds(card.needs))
+      saves.clear("fields:needs");
+  }, [saves, title, summary, needs, card.title, card.summary, card.needs]);
   const assigned =
     people.find((p) => p.memberId === card.assignee_id) ??
     findPerson(people, card.assignee);

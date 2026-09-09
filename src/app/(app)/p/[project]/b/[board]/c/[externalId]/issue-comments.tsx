@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { addCardComment } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useCardDraft, useCardSaves } from "@/components/card-save-scope";
 import { Portrait } from "@/components/portrait";
 import { Button } from "@/components/ui/button";
 import { renderCardMarkdown } from "@/lib/card-references";
@@ -46,9 +47,15 @@ export function IssueComments({
   leftover: string;
 }) {
   const router = useRouter();
+  const saves = useCardSaves();
   const [pending, start] = useTransition();
   const [text, setText] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+
+  useCardDraft(
+    "comment",
+    text.trim() ? "Post or clear your comment before downloading." : null,
+  );
 
   /**
    * Post the composer value. Empty input stays on the client.
@@ -59,8 +66,9 @@ export function IssueComments({
       return;
     }
     start(async () => {
-      const r = await addCardComment(cardId, text);
+      const r = await saves.run("comment", () => addCardComment(cardId, text));
       if (r.ok) {
+        saves.draft("comment", null);
         setText("");
         setMsg(null);
         router.refresh();
@@ -113,7 +121,10 @@ export function IssueComments({
             data-testid="comment-composer"
             className="min-h-20 w-full rounded-[var(--radius-input)] border border-[var(--border-input)] bg-[var(--surface-input)] p-3 text-sm text-[var(--color-ink)]"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              if (!e.target.value.trim()) saves.clear("comment");
+            }}
             placeholder="Write a comment"
           />
           <div className="flex items-center gap-3">

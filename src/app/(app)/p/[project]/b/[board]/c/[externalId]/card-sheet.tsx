@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CardCloneButton } from "@/components/board/card-clone-button";
+import { CardDownloadButton } from "@/components/board/card-download-button";
 import { CardHistory } from "@/components/board/card-history";
 import { CardReferenceScope } from "@/components/card-reference-scope";
+import { CardSaveScope } from "@/components/card-save-scope";
 import { EpicLabel } from "@/components/epic-label";
 import { loadProjectRoster } from "@/lib/board-data";
 import { parseCardColor } from "@/lib/card-color";
@@ -127,185 +129,193 @@ export async function CardSheet({
   const Root = inModal ? "div" : "main";
 
   return (
-    <Root
-      className="paper-card paper-card--static mx-auto w-full max-w-4xl p-6"
-      data-card-reference-scope={`card-sheet-${card.id}`}
-    >
-      <CardReferenceScope
-        cards={referenceCards ?? []}
-        scope={`card-sheet-${card.id}`}
-      />
-      {!inModal && (
-        <Link
-          href={backHref}
-          className="text-xs text-muted-foreground hover:underline"
-        >
-          ← {b.name}
-        </Link>
-      )}
-      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
-        <h1 className="min-w-0 flex-1 text-[27px] leading-tight">
-          #{card.external_id} {card.title}
-        </h1>
-        <CardCloneButton
+    <CardSaveScope key={card.id}>
+      <Root
+        className="paper-card paper-card--static mx-auto w-full max-w-4xl p-6"
+        data-card-reference-scope={`card-sheet-${card.id}`}
+      >
+        <CardReferenceScope
+          cards={referenceCards ?? []}
+          scope={`card-sheet-${card.id}`}
+        />
+        {!inModal && (
+          <Link
+            href={backHref}
+            className="text-xs text-muted-foreground hover:underline"
+          >
+            ← {b.name}
+          </Link>
+        )}
+        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="min-w-0 flex-1 basis-full text-[27px] leading-tight sm:basis-0">
+            #{card.external_id} {card.title}
+          </h1>
+          <div className="ml-auto flex max-w-full flex-wrap items-start justify-end gap-2">
+            <CardDownloadButton
+              href={`${boardPath}/c/${card.external_id}/download`}
+              externalId={card.external_id}
+            />
+            <CardCloneButton
+              key={card.id}
+              boardPath={boardPath}
+              boardId={b.id}
+              lane={(lanes ?? []).find((item) => item.kind === "inbox") ?? null}
+              groups={groups ?? []}
+              epics={epics ?? []}
+              people={people}
+              bodyTemplate={cardTemplate(b.settings)}
+              cloneSource={card.external_id}
+              initialValues={{
+                title: card.title,
+                summary: card.summary ?? "",
+                bodyMarkdown: issue.body,
+                epicId: card.epic_id,
+                assigneeId: people.some(
+                  (person) => person.memberId === card.assignee_id,
+                )
+                  ? card.assignee_id
+                  : null,
+                area: card.area,
+                priority: card.priority,
+                effort: card.effort,
+                plannedStartDate: card.planned_start_date ?? "",
+                targetDate: card.target_date ?? "",
+                targetLabel: card.target_label ?? "",
+                audience: card.audience,
+                color: parseCardColor(card.color),
+                tagIds: (tags ?? []).map((tag) => tag.tag_id),
+              }}
+            />
+          </div>
+        </div>
+        <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span className="stat stat--muted">{card.status}</span>
+          {lane && <span className="stat stat--info">{lane.name}</span>}
+          {card.needs && (
+            <span className="stat stat--attention">needs {card.needs}</span>
+          )}
+          {card.priority && (
+            <span className="stat stat--muted">
+              {PRIORITY_LABEL[card.priority as 1 | 2 | 3]}
+            </span>
+          )}
+          {card.effort && (
+            <span className="stat stat--muted">
+              Effort {EFFORT_LABEL[card.effort as "L" | "M" | "H"]}
+            </span>
+          )}
+          {card.archived_at && (
+            <span className="stat stat--muted">
+              archived by {card.archived_by}
+            </span>
+          )}
+        </div>
+
+        <CardEditor
           key={card.id}
-          boardPath={boardPath}
-          boardId={b.id}
-          lane={(lanes ?? []).find((item) => item.kind === "inbox") ?? null}
-          groups={groups ?? []}
-          epics={epics ?? []}
-          people={people}
-          bodyTemplate={cardTemplate(b.settings)}
-          cloneSource={card.external_id}
-          initialValues={{
+          card={{
+            id: card.id,
             title: card.title,
-            summary: card.summary ?? "",
-            bodyMarkdown: issue.body,
-            epicId: card.epic_id,
-            assigneeId: people.some(
-              (person) => person.memberId === card.assignee_id,
-            )
-              ? card.assignee_id
-              : null,
-            area: card.area,
+            status: card.status,
+            summary: card.summary,
             priority: card.priority,
             effort: card.effort,
-            plannedStartDate: card.planned_start_date ?? "",
-            targetDate: card.target_date ?? "",
-            targetLabel: card.target_label ?? "",
+            planned_start_date: card.planned_start_date,
+            target_date: card.target_date,
+            target_label: card.target_label,
+            needs: card.needs,
             audience: card.audience,
+            archived_at: card.archived_at,
+            external_id: card.external_id,
             color: parseCardColor(card.color),
-            tagIds: (tags ?? []).map((tag) => tag.tag_id),
+            area: card.area,
+            epic_id: card.epic_id,
+            assignee_id: card.assignee_id,
+            assignee: card.assignee,
           }}
+          epics={epics ?? []}
+          people={people}
+          groups={
+            (groups ?? []) as unknown as {
+              id: string;
+              name: string;
+              tags: { id: string; name: string }[];
+            }[]
+          }
+          tagIds={(tags ?? []).map((t) => t.tag_id)}
+          backHref={backHref}
         />
-      </div>
-      <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span className="stat stat--muted">{card.status}</span>
-        {lane && <span className="stat stat--info">{lane.name}</span>}
-        {card.needs && (
-          <span className="stat stat--attention">needs {card.needs}</span>
-        )}
-        {card.priority && (
-          <span className="stat stat--muted">
-            {PRIORITY_LABEL[card.priority as 1 | 2 | 3]}
-          </span>
-        )}
-        {card.effort && (
-          <span className="stat stat--muted">
-            Effort {EFFORT_LABEL[card.effort as "L" | "M" | "H"]}
-          </span>
-        )}
-        {card.archived_at && (
-          <span className="stat stat--muted">
-            archived by {card.archived_by}
-          </span>
-        )}
-      </div>
 
-      <CardEditor
-        key={card.id}
-        card={{
-          id: card.id,
-          title: card.title,
-          status: card.status,
-          summary: card.summary,
-          priority: card.priority,
-          effort: card.effort,
-          planned_start_date: card.planned_start_date,
-          target_date: card.target_date,
-          target_label: card.target_label,
-          needs: card.needs,
-          audience: card.audience,
-          archived_at: card.archived_at,
-          external_id: card.external_id,
-          color: parseCardColor(card.color),
-          area: card.area,
-          epic_id: card.epic_id,
-          assignee_id: card.assignee_id,
-          assignee: card.assignee,
-        }}
-        epics={epics ?? []}
-        people={people}
-        groups={
-          (groups ?? []) as unknown as {
-            id: string;
-            name: string;
-            tags: { id: string; name: string }[];
-          }[]
-        }
-        tagIds={(tags ?? []).map((t) => t.tag_id)}
-        backHref={backHref}
-      />
+        <dl className="mt-6 grid grid-cols-[6.5rem_1fr] gap-x-4 border-t border-[var(--border-hairline)] pt-5 text-sm [&>dd]:border-b [&>dd]:border-[var(--border-hairline)] [&>dd]:py-2 [&>dt]:border-b [&>dt]:border-[var(--border-hairline)] [&>dt]:py-2 [&>dt]:text-[10px] [&>dt]:font-semibold [&>dt]:uppercase [&>dt]:tracking-[0.11em] [&>dt]:text-[var(--color-grey-faint)]">
+          <dt>Epic</dt>
+          <dd>{card.epic ? <EpicLabel name={card.epic} /> : "—"}</dd>
+          <dt>Area</dt>
+          <dd>{card.area}</dd>
+          {card.raised_by && (
+            <>
+              <dt>Raised</dt>
+              <dd>
+                {card.raised_by}
+                {card.raised_on ? ` · ${card.raised_on}` : ""}
+              </dd>
+            </>
+          )}
+          {card.shipped_on && (
+            <>
+              <dt>Shipped</dt>
+              <dd>{card.shipped_on}</dd>
+            </>
+          )}
+          {!!links?.length && (
+            <>
+              <dt>Related</dt>
+              <dd className="flex flex-wrap items-baseline gap-3">
+                {links.map((l) => {
+                  const t = l.cards as unknown as {
+                    external_id: string;
+                    title: string;
+                  } | null;
+                  return t ? (
+                    <Link
+                      key={`${l.kind}-${l.to_card}`}
+                      href={`/p/${project}/b/${board}/c/${t.external_id}`}
+                      className="paper-link"
+                      title={t.title}
+                    >
+                      #{t.external_id}
+                      {l.kind === "blocked_by" ? " (blocks)" : ""}
+                    </Link>
+                  ) : null;
+                })}
+              </dd>
+            </>
+          )}
+          {Object.keys(card.frontmatter_extra ?? {}).length > 0 && (
+            <>
+              <dt>Extra</dt>
+              <dd className="font-mono text-xs">
+                {JSON.stringify(card.frontmatter_extra)}
+              </dd>
+            </>
+          )}
+        </dl>
 
-      <dl className="mt-6 grid grid-cols-[6.5rem_1fr] gap-x-4 border-t border-[var(--border-hairline)] pt-5 text-sm [&>dd]:border-b [&>dd]:border-[var(--border-hairline)] [&>dd]:py-2 [&>dt]:border-b [&>dt]:border-[var(--border-hairline)] [&>dt]:py-2 [&>dt]:text-[10px] [&>dt]:font-semibold [&>dt]:uppercase [&>dt]:tracking-[0.11em] [&>dt]:text-[var(--color-grey-faint)]">
-        <dt>Epic</dt>
-        <dd>{card.epic ? <EpicLabel name={card.epic} /> : "—"}</dd>
-        <dt>Area</dt>
-        <dd>{card.area}</dd>
-        {card.raised_by && (
-          <>
-            <dt>Raised</dt>
-            <dd>
-              {card.raised_by}
-              {card.raised_on ? ` · ${card.raised_on}` : ""}
-            </dd>
-          </>
-        )}
-        {card.shipped_on && (
-          <>
-            <dt>Shipped</dt>
-            <dd>{card.shipped_on}</dd>
-          </>
-        )}
-        {!!links?.length && (
-          <>
-            <dt>Related</dt>
-            <dd className="flex flex-wrap items-baseline gap-3">
-              {links.map((l) => {
-                const t = l.cards as unknown as {
-                  external_id: string;
-                  title: string;
-                } | null;
-                return t ? (
-                  <Link
-                    key={`${l.kind}-${l.to_card}`}
-                    href={`/p/${project}/b/${board}/c/${t.external_id}`}
-                    className="paper-link"
-                    title={t.title}
-                  >
-                    #{t.external_id}
-                    {l.kind === "blocked_by" ? " (blocks)" : ""}
-                  </Link>
-                ) : null;
-              })}
-            </dd>
-          </>
-        )}
-        {Object.keys(card.frontmatter_extra ?? {}).length > 0 && (
-          <>
-            <dt>Extra</dt>
-            <dd className="font-mono text-xs">
-              {JSON.stringify(card.frontmatter_extra)}
-            </dd>
-          </>
-        )}
-      </dl>
+        <IssueBodyPanel
+          cardId={card.id}
+          bodyMarkdown={issue.body}
+          bodyHtml={html}
+        />
 
-      <IssueBodyPanel
-        cardId={card.id}
-        bodyMarkdown={issue.body}
-        bodyHtml={html}
-      />
+        <IssueComments
+          cardId={card.id}
+          boardPath={boardPath}
+          memberEmail={me.email}
+          comments={issue.comments}
+          leftover={issue.leftover}
+        />
 
-      <IssueComments
-        cardId={card.id}
-        boardPath={boardPath}
-        memberEmail={me.email}
-        comments={issue.comments}
-        leftover={issue.leftover}
-      />
-
-      <CardHistory events={events ?? []} lanes={lanes ?? []} />
-    </Root>
+        <CardHistory events={events ?? []} lanes={lanes ?? []} />
+      </Root>
+    </CardSaveScope>
   );
 }

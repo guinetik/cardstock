@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { updateCardBody } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { useCardDraft, useCardSaves } from "@/components/card-save-scope";
 import { Button } from "@/components/ui/button";
 
 const Editor = dynamic(() => import("./issue-body-editor"), { ssr: false });
@@ -25,20 +26,29 @@ export function IssueBodyPanel({
   bodyHtml: string;
 }) {
   const router = useRouter();
+  const saves = useCardSaves();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(bodyMarkdown);
   const [failed, setFailed] = useState(false);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
+  useCardDraft(
+    "body",
+    editing && draft !== bodyMarkdown
+      ? "Save or cancel your body edits before downloading."
+      : null,
+  );
+
   /**
    * Persist the draft and return to read mode.
    */
   function save() {
     start(async () => {
-      const r = await updateCardBody(cardId, draft);
+      const r = await saves.run("body", () => updateCardBody(cardId, draft));
       setMsg(r.ok ? null : r.error);
       if (r.ok) {
+        saves.draft("body", null);
         setEditing(false);
         router.refresh();
       }
@@ -110,6 +120,7 @@ export function IssueBodyPanel({
           size="sm"
           disabled={pending}
           onClick={() => {
+            saves.clear("body");
             setDraft(bodyMarkdown);
             setEditing(false);
             setMsg(null);
