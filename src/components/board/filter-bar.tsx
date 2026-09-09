@@ -132,7 +132,7 @@ export function FilterBar(props: {
       ref={barRef}
       className="paper-topbar sticky top-0 z-10 flex flex-wrap items-stretch gap-x-3 gap-y-3 border-t border-[var(--border-hairline)] px-4 py-3 sm:px-6"
     >
-      <div className="board-search-tools flex items-stretch gap-2">
+      <div className="board-search-tools lane-column-width flex shrink-0 items-stretch gap-2">
         <input
           type="search"
           placeholder="Search #id or title"

@@ -851,10 +851,10 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       className="flex h-full min-h-0 flex-1 flex-col"
       data-card-reference-scope="board"
     >
-      <header className="flex flex-wrap items-end gap-x-5 gap-y-2 px-4 pt-5 pb-3 sm:px-6">
-        <div className="min-w-0">
+      <header className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 pt-5 pb-3 sm:px-6">
+        <div className="min-w-0 basis-full [&>nav]:mb-0">
           <BoardBreadcrumbs project={data.project} board={data.board} />
-          <h1 className="text-[27px] leading-none">{data.board.name}</h1>
+          <h1 className="sr-only">{data.board.name}</h1>
         </div>
         <span className="pb-0.5 font-mono text-xs text-[var(--color-grey)]">
           <b className="font-medium text-[var(--color-ink)]">{open}</b> open ·{" "}

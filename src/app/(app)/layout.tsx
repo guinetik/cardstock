@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Link
             href="/projects"
-            className="shrink-0 font-heading text-[15px] font-semibold tracking-tight"
+            className="relative top-0.5 shrink-0 font-heading text-[18px] font-semibold tracking-tight"
           >
             cardstock
           </Link>

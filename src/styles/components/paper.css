@@ -681,7 +681,8 @@
   }
 
   .board-filter-search {
-    width: clamp(140px, 11vw, 210px);
+    flex: 1;
+    width: 0;
   }
   .board-search-tools {
     max-width: 100%;
