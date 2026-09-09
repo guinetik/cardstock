@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import {
   RecentDeliveryPulse,
   type RecentOutcomeItem,
@@ -200,12 +201,11 @@ export default async function TimelinePage(
 
   return (
     <main className="mx-auto w-full max-w-5xl p-6 pb-14">
-      <Link
-        href={back}
-        className="text-xs text-muted-foreground hover:underline"
-      >
-        ← {data.board.name}
-      </Link>
+      <BoardBreadcrumbs
+        project={data.project}
+        board={data.board}
+        page="Timeline"
+      />
 
       <header className="mt-1 border-b border-[var(--border-strong)] pb-5">
         <h1 className="text-[30px] leading-tight">Timeline</h1>
@@ -217,9 +217,6 @@ export default async function TimelinePage(
           className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
           aria-label="Board views"
         >
-          <Link className="paper-link" href={back}>
-            Board
-          </Link>
           <Link className="paper-link" href={`${back}/cockpit`}>
             Epic Cockpit
           </Link>
@@ -230,10 +227,7 @@ export default async function TimelinePage(
             Priorities
           </Link>
           <Link className="paper-link" href={`${back}/manage`}>
-            Manage
-          </Link>
-          <Link className="paper-link" href={`/p/${project}`}>
-            Project
+            Configuration
           </Link>
           <Link className="paper-link" href={`/p/${project}#settings-heading`}>
             {watchDays}-day project window

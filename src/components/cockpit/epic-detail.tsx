@@ -105,7 +105,7 @@ export function EpicDetail({
               Priorities
             </Link>
             <Link className="paper-link" href={`${boardHref}/manage`}>
-              Manage
+              Configuration
             </Link>
             <Link
               className="paper-link"

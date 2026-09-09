@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { PrioritiesView } from "@/components/priorities/priorities-view";
 import { loadProjectPriorities } from "@/lib/priorities-data";
 import { currentMember } from "@/lib/supabase/server";
@@ -18,12 +18,11 @@ export default async function BoardPrioritiesPage(
   const data = await loadProjectPriorities(project, board);
   return (
     <main className="mx-auto w-full max-w-[var(--page-max)] px-4 pt-5 pb-16 sm:px-6">
-      <Link
-        href={`/p/${project}/b/${board}`}
-        className="mb-4 inline-block text-xs text-muted-foreground hover:underline"
-      >
-        ← Board
-      </Link>
+      <BoardBreadcrumbs
+        project={data.project}
+        board={data.boards.find((item) => item.slug === board)!}
+        page="Priorities"
+      />
       <PrioritiesView
         projectSlug={project}
         projectName={data.project.name}

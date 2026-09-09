@@ -25,7 +25,13 @@ test("the letterhead links the project; views stay in the menu", async ({
   await expect(page.locator(`header a[href="${projectHref}"]`)).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Board views" }).getByRole("link"),
-  ).toHaveText(["Epic Cockpit", "Calendar", "Timeline", "Manage"]);
+  ).toHaveText([
+    "Epic Cockpit",
+    "Calendar",
+    "Timeline",
+    "Priorities",
+    "Configuration",
+  ]);
   const actions = page.getByRole("group", { name: "Board actions" });
   await expect(actions.getByRole("button", { name: "Add lane" })).toBeVisible();
   await expect(actions.getByRole("link", { name: "Export CSV" })).toBeVisible();

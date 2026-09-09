@@ -34,9 +34,11 @@ test("the board header opens this board's concepts and gates", async ({
 }) => {
   await signIn(page);
   await page.goto(BOARD);
-  await page.getByRole("link", { name: "Manage", exact: true }).click();
+  await page.getByRole("link", { name: "Configuration", exact: true }).click();
   await expect(page).toHaveURL(MANAGE);
-  await expect(page.getByRole("heading", { name: "Manage" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Configuration" }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "concepts" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "gates" })).toBeVisible();
   await expect(page.getByLabel("New tag group")).toBeVisible();

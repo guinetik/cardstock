@@ -43,6 +43,7 @@ import {
   updateCard,
   updateLane,
 } from "@/app/(app)/p/[project]/b/[board]/actions";
+import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { CardReferenceScope } from "@/components/card-reference-scope";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CardColor } from "@/lib/card-color";
@@ -708,13 +709,8 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
       data-card-reference-scope="board"
     >
       <header className="flex flex-wrap items-end gap-x-5 gap-y-2 px-4 pt-5 pb-3 sm:px-6">
-        <div>
-          <a
-            href={`/p/${data.project.slug}`}
-            className="mb-1 inline-block font-mono text-[10px] uppercase tracking-[0.11em] text-[var(--color-grey-faint)] hover:text-[var(--color-ink)]"
-          >
-            {data.project.name}
-          </a>
+        <div className="min-w-0">
+          <BoardBreadcrumbs project={data.project} board={data.board} />
           <h1 className="text-[27px] leading-none">{data.board.name}</h1>
         </div>
         <span className="pb-0.5 font-mono text-xs text-[var(--color-grey)]">
@@ -754,7 +750,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
             className="paper-link"
             href={`/p/${data.project.slug}/b/${data.board.slug}/manage`}
           >
-            Manage
+            Configuration
           </a>
         </nav>
         <fieldset className="m-0 ml-auto flex items-center gap-2 border-0 p-0 pb-0.5">

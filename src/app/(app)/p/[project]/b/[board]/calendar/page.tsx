@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { loadBoard } from "@/lib/board-data";
 import { type CalendarSlip, calendarMonth } from "@/lib/calendar";
 import { resolveBoardGates } from "@/lib/gates";
-import { currentMember, supabaseServer } from "@/lib/supabase/server";
+import { currentMember } from "@/lib/supabase/server";
 import { forgottenAfterDays, timelineToday } from "@/lib/timeline";
 
 export const dynamic = "force-dynamic";
@@ -21,12 +21,6 @@ export default async function BoardCalendarPage(
   const me = await currentMember();
   if (!me) redirect("/login?error=member");
   const data = await loadBoard(project, board);
-  const db = await supabaseServer();
-  const { data: siblingBoards } = await db
-    .from("boards")
-    .select("slug, name")
-    .eq("project_id", data.project.id)
-    .order("name");
   const today = timelineToday();
   const month = calendarMonth((await props.searchParams).month, today);
   const gates = resolveBoardGates(
@@ -44,12 +38,11 @@ export default async function BoardCalendarPage(
   const path = `/p/${project}/b/${board}/calendar`;
   return (
     <main className="flex h-full min-h-0 flex-1 flex-col px-4 pt-5 pb-4 sm:px-6">
-      <Link
-        href={`/p/${project}/b/${board}`}
-        className="mb-4 inline-block text-xs text-muted-foreground hover:underline"
-      >
-        ← {data.board.name}
-      </Link>
+      <BoardBreadcrumbs
+        project={data.project}
+        board={data.board}
+        page="Calendar"
+      />
       <CalendarView
         projectSlug={project}
         projectName={data.project.name}
@@ -60,7 +53,7 @@ export default async function BoardCalendarPage(
         watchDays={forgottenAfterDays(data.project.settings)}
         slips={slips}
         boards={[]}
-        allBoards={siblingBoards ?? []}
+        allBoards={[]}
         boardIds={[data.board.id]}
         selectedBoards={null}
         path={path}

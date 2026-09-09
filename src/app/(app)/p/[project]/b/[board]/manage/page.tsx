@@ -5,6 +5,7 @@ import { CardTemplateEditor } from "@/app/(app)/p/[project]/card-template-editor
 import { GatesEditor } from "@/app/(app)/p/[project]/gates-editor";
 import { ProjectSection } from "@/app/(app)/p/[project]/project-section";
 import { TaxonomyEditor } from "@/app/(app)/p/[project]/taxonomy-editor";
+import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { currentAccess } from "@/lib/access-server";
 import { loadBoardManage } from "@/lib/board-manage-data";
 import { cardTemplate } from "@/lib/card-template";
@@ -13,7 +14,7 @@ import { currentMember } from "@/lib/supabase/server";
 import { markHue } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Manage" };
+export const metadata: Metadata = { title: "Configuration" };
 
 /** `{n} concept` / `{n} concepts` for the letterhead stats. */
 function plural(n: number, one: string, many: string) {
@@ -37,7 +38,6 @@ export default async function BoardManagePage(
   if (!access) notFound();
 
   const boardHref = `/p/${data.project.slug}/b/${data.board.slug}`;
-  const projectHref = `/p/${data.project.slug}`;
   const groups = [...data.groups]
     .sort((a, b) => a.position - b.position)
     .map((group, i) => ({
@@ -54,17 +54,15 @@ export default async function BoardManagePage(
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
-      <Link
-        href={boardHref}
-        className="eyebrow mb-4 inline-block hover:text-[var(--color-ink)]"
-      >
-        ← {data.board.name}
-      </Link>
+      <BoardBreadcrumbs
+        project={data.project}
+        board={data.board}
+        page="Configuration"
+      />
 
       <header className="letterhead">
         <div className="min-w-0">
-          <p className="eyebrow">{data.project.name}</p>
-          <h1>Manage</h1>
+          <h1>Configuration</h1>
           <p className="folder-blurb">
             Concepts and gates for {data.board.name}. People, boards, and the
             forgotten-work window stay on the project.
@@ -73,9 +71,6 @@ export default async function BoardManagePage(
             className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
             aria-label="Board views"
           >
-            <Link className="paper-link" href={boardHref}>
-              Board
-            </Link>
             <Link className="paper-link" href={`${boardHref}/cockpit`}>
               Epic Cockpit
             </Link>
@@ -87,9 +82,6 @@ export default async function BoardManagePage(
             </Link>
             <Link className="paper-link" href={`${boardHref}/priorities`}>
               Priorities
-            </Link>
-            <Link className="paper-link" href={projectHref}>
-              Project
             </Link>
           </nav>
         </div>

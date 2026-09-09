@@ -68,8 +68,8 @@ export function Binder({ project }: { project: BinderProject }) {
                     <Link
                       href={`${href}/b/${b.slug}/manage`}
                       className="binder-tool"
-                      aria-label={`Manage ${b.name}`}
-                      title={`Manage ${b.name}`}
+                      aria-label={`Configuration for ${b.name}`}
+                      title={`Configuration for ${b.name}`}
                     >
                       <Settings size={14} aria-hidden="true" />
                     </Link>

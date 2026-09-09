@@ -292,7 +292,7 @@ export function PrioritiesView(props: PrioritiesViewProps) {
     <div className="priorities-view flex min-h-0 flex-1 flex-col gap-1.5">
       <header className="flex flex-col gap-2">
         <div>
-          <p className="eyebrow">{props.projectName}</p>
+          {showBoard && <p className="eyebrow">{props.projectName}</p>}
           <h1 className="text-[27px] leading-none">The jar</h1>
           <p className="mt-1 text-sm text-[var(--color-grey)]">
             <b className="font-mono text-[var(--color-ink)]">{p1.length}</b>{" "}

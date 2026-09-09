@@ -251,9 +251,9 @@ export default async function ProjectPage(props: PageProps<"/p/[project]">) {
                       <Link
                         href={`${boardHref}/manage`}
                         className="binder-cockpit paper-link"
-                        aria-label={`Manage ${board.name}`}
+                        aria-label={`Configuration for ${board.name}`}
                       >
-                        Manage
+                        Configuration
                       </Link>
                       {canManage && (
                         <a

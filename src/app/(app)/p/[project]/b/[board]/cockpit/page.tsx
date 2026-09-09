@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { CockpitView } from "@/components/cockpit/cockpit-view";
 import { buildCockpitModel } from "@/lib/cockpit";
 import { loadCockpit } from "@/lib/cockpit-data";
@@ -23,12 +24,11 @@ export default async function CockpitPage(props: {
   return (
     <main className="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6">
       <header className="mb-8">
-        <Link
-          href={boardBase}
-          className="text-xs text-muted-foreground hover:underline"
-        >
-          ← {data.board.name}
-        </Link>
+        <BoardBreadcrumbs
+          project={data.project}
+          board={data.board}
+          page="Epic Cockpit"
+        />
         <h1 className="mt-1 text-[27px] leading-tight">Epic Cockpit</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           The whole delivery fleet, without the task-level noise. Open an epic
@@ -38,9 +38,6 @@ export default async function CockpitPage(props: {
           className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
           aria-label="Board views"
         >
-          <Link className="paper-link" href={boardBase}>
-            Board
-          </Link>
           <Link className="paper-link" href={`${boardBase}/timeline`}>
             Timeline
           </Link>
@@ -54,10 +51,7 @@ export default async function CockpitPage(props: {
             Priorities
           </Link>
           <Link className="paper-link" href={`${boardBase}/manage`}>
-            Manage
-          </Link>
-          <Link className="paper-link" href={`/p/${project}`}>
-            Project
+            Configuration
           </Link>
         </nav>
       </header>

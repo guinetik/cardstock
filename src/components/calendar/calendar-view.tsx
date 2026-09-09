@@ -366,7 +366,7 @@ function CalendarDayCell(props: {
  * @param props.watchDays - Forgotten watch window.
  * @param props.slips - Live slips already filtered by the server.
  * @param props.boards - Known boards for filter chips.
- * @param props.allBoards - Every project board, for the board-switcher select.
+ * @param props.allBoards - Boards offered by the project calendar's switcher.
  * @param props.selectedBoards - Chip filter, or null for all.
  * @param props.path - Page path for month and chip links.
  */
@@ -468,27 +468,26 @@ export function CalendarView(props: {
     <div className="flex min-h-0 flex-1 flex-col gap-1.5">
       <header className="flex flex-col gap-2">
         <div>
-          <p className="eyebrow">{props.projectName}</p>
+          {!boardBase && <p className="eyebrow">{props.projectName}</p>}
           <h1 className="text-[27px] leading-none">{monthLabel}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="text-sm text-[var(--color-grey)]">
-              {props.heading}
-            </p>
-            <BoardSwitcher
-              projectSlug={props.projectSlug}
-              boardSlug={props.boardSlug}
-              boards={props.allBoards}
-            />
-          </div>
+          {!boardBase && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-sm text-[var(--color-grey)]">
+                {props.heading}
+              </p>
+              <BoardSwitcher
+                projectSlug={props.projectSlug}
+                boardSlug={props.boardSlug}
+                boards={props.allBoards}
+              />
+            </div>
+          )}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
             {boardBase ? (
               <nav
                 className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
                 aria-label="Board views"
               >
-                <Link className="paper-link" href={boardBase}>
-                  Board
-                </Link>
                 <Link className="paper-link" href={`${boardBase}/cockpit`}>
                   Epic Cockpit
                 </Link>
@@ -499,10 +498,7 @@ export function CalendarView(props: {
                   Priorities
                 </Link>
                 <Link className="paper-link" href={`${boardBase}/manage`}>
-                  Manage
-                </Link>
-                <Link className="paper-link" href={projectHref}>
-                  Project
+                  Configuration
                 </Link>
               </nav>
             ) : (
