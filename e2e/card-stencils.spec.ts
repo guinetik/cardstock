@@ -333,6 +333,58 @@ test("blank cards keep the existing flow with and without stencils", async ({
   ).toContainText("Describe the work.");
 });
 
+test("Enter inserts and focuses a checklist step without submitting the stencil", async ({
+  page,
+}) => {
+  await signInAs(page, email, password);
+  await page.goto(`${boardPath}/manage`);
+  const row = page.locator("li", {
+    has: page.getByText("Integration", { exact: true }),
+  });
+  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const step = (index: number) =>
+    dialog.getByRole("textbox", { name: `Step ${index}`, exact: true });
+  await step(1).press("Enter");
+  await expect(dialog).toBeVisible();
+  await expect(step(2)).toBeFocused();
+  await expect(step(2)).toHaveValue("");
+  await expect(step(3)).toHaveValue("Field mapping");
+  await step(2).press("Enter");
+  await expect(dialog.getByRole("textbox", { name: /^Step / })).toHaveCount(4);
+  await expect(step(2)).toBeFocused();
+  await step(2).fill("Confirm credentials");
+  await step(4).press("Enter");
+  await expect(step(5)).toBeFocused();
+  await step(5).fill("Handoff");
+  await dialog.getByRole("button", { name: "Add step", exact: true }).click();
+  await expect(step(6)).toBeFocused();
+  await step(6).fill("Follow up");
+  const { data: before, error: beforeError } = await admin
+    .from("card_stencils")
+    .select("body_md")
+    .eq("id", stencilId)
+    .single();
+  if (beforeError) throw beforeError;
+  expect(before.body_md).not.toContain("Confirm credentials");
+  await dialog
+    .getByRole("button", { name: "Save stencil", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  await expect(row).toContainText("6 steps");
+  await row.getByRole("button", { name: "Edit", exact: true }).click();
+  for (const [index, label] of [
+    "Credentialing",
+    "Confirm credentials",
+    "Field mapping",
+    "Go live",
+    "Handoff",
+    "Follow up",
+  ].entries()) {
+    await expect(step(index + 1)).toHaveValue(label);
+  }
+});
+
 test("ordinary members see the stencil section without management controls", async ({
   page,
 }) => {
@@ -343,6 +395,67 @@ test("ordinary members see the stencil section without management controls", asy
   await expect(
     section.getByRole("button", { name: "Add stencil", exact: true }),
   ).toHaveCount(0);
+  await expect(
+    section.getByRole("button", { name: "Duplicate", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("duplicating preserves the stencil fields and tags in an independent copy", async ({
+  page,
+}) => {
+  await signInAs(page, email, password);
+  await page.goto(`${boardPath}/manage`);
+  const row = (name: string) =>
+    page.locator("li", { has: page.getByText(name, { exact: true }) });
+  const source = row("Integration");
+  await source.getByRole("button", { name: "Duplicate", exact: true }).click();
+  const copy = row("Integration (copy)");
+  await expect(copy).toContainText("3 steps · 2 tags");
+  await source.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await expect(row("Integration (copy 2)")).toContainText("3 steps · 2 tags");
+  const { data: rows, error } = await admin
+    .from("card_stencils")
+    .select(
+      "id, name, title, summary, body_md, area, effort, card_stencil_tags(tag_id)",
+    )
+    .eq("board_id", boardId)
+    .order("name");
+  if (error) throw error;
+  expect(rows).toHaveLength(3);
+  for (const duplicate of rows.slice(1)) {
+    expect(duplicate.id).not.toBe(rows[0].id);
+    for (const field of [
+      "title",
+      "summary",
+      "body_md",
+      "area",
+      "effort",
+    ] as const)
+      expect(duplicate[field]).toEqual(rows[0][field]);
+    expect(
+      duplicate.card_stencil_tags.map(({ tag_id }) => tag_id).sort(),
+    ).toEqual(tagIds.toSorted());
+  }
+  await copy.getByRole("button", { name: "Edit", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("textbox", { name: "Step 1", exact: true })
+    .fill("Custom credentialing");
+  await dialog.getByRole("button", { name: "Delivery", exact: true }).click();
+  await dialog
+    .getByRole("button", { name: "Save stencil", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  await expect(copy).toContainText("3 steps · 1 tag");
+  await copy.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(copy).toHaveCount(0);
+  await source.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(
+    dialog.getByRole("textbox", { name: "Step 1", exact: true }),
+  ).toHaveValue("Credentialing");
+  await expect(
+    dialog.getByRole("button", { name: "Delivery", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 });
 
 test("unbulleted template steps import with a notice and leave the board template unchanged", async ({

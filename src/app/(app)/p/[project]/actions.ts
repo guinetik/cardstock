@@ -518,6 +518,77 @@ export async function createStencil(
   return null;
 }
 
+/** Copy a board's stencil, including its tag links, under a fresh name. */
+export async function duplicateStencil(
+  _prev: StencilResult,
+  form: FormData,
+): Promise<StencilResult> {
+  const gate = await requireBoardManager(String(form.get("projectSlug") ?? ""));
+  if ("error" in gate) return { error: gate.error };
+  const stencilId = String(form.get("stencilId") ?? "");
+  if (!stencilId || !(await stencilInProject(stencilId, gate.projectId)))
+    return { error: "Stencil not found." };
+  const db = await supabaseServer();
+  const { data: source, error: sourceError } = await db
+    .from("card_stencils")
+    .select(
+      "board_id, name, title, summary, body_md, area, effort, card_stencil_tags(tag_id)",
+    )
+    .eq("id", stencilId)
+    .single();
+  if (sourceError) return { error: "Could not load the stencil to duplicate." };
+  const { card_stencil_tags: tags, ...fields } = source;
+
+  // The unique constraint settles concurrent copies; retry with a fresh name.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: existing, error: namesError } = await db
+      .from("card_stencils")
+      .select("name")
+      .eq("board_id", source.board_id);
+    if (namesError) return { error: "Could not name the duplicate stencil." };
+    const names = new Set(existing.map((row) => row.name));
+    let name: string;
+    let number = 1;
+    do {
+      const suffix = number === 1 ? " (copy)" : ` (copy ${number})`;
+      name =
+        source.name.slice(0, STENCIL_NAME_MAX - suffix.length).trimEnd() +
+        suffix;
+      number++;
+    } while (names.has(name));
+    const { data: copy, error: copyError } = await db
+      .from("card_stencils")
+      .insert({ ...fields, name })
+      .select("id")
+      .single();
+    if (copyError?.code === "23505") continue;
+    if (copyError) return { error: "Could not duplicate the stencil." };
+    if (tags.length) {
+      const { error: tagError } = await db
+        .from("card_stencil_tags")
+        .insert(tags.map(({ tag_id }) => ({ stencil_id: copy.id, tag_id })));
+      if (tagError) {
+        // Remove only this new copy if its tag links could not be copied.
+        const { error: cleanupError } = await db
+          .from("card_stencils")
+          .delete()
+          .eq("id", copy.id);
+        revalidateStencils();
+        return {
+          error: cleanupError
+            ? `“${name}” was created without its tags. Edit it to restore them, or delete it and try again.`
+            : "Could not copy the stencil's tags. Please try again.",
+        };
+      }
+    }
+    revalidateStencils();
+    return null;
+  }
+  return {
+    error: "Another copy was created at the same time. Please try again.",
+  };
+}
+
 export async function saveStencil(
   _prev: StencilResult,
   form: FormData,

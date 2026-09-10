@@ -10,7 +10,7 @@ import {
   type StencilTagGroup,
   stencilStepCount,
 } from "@/lib/stencils";
-import { createStencil, deleteStencil } from "./actions";
+import { createStencil, deleteStencil, duplicateStencil } from "./actions";
 import { StencilDialog } from "./stencil-dialog";
 
 /**
@@ -108,6 +108,8 @@ function StencilRow(props: {
   canEdit: boolean;
 }) {
   const [removeState, remove, removing] = useActionState(deleteStencil, null);
+  const [copyState, copy, copying] = useActionState(duplicateStencil, null);
+  const busy = removing || copying;
   const steps = stencilStepCount(props.stencil);
   const tags = props.stencil.tag_ids.length;
   return (
@@ -118,7 +120,7 @@ function StencilRow(props: {
         {tags ? ` · ${tags} ${tags === 1 ? "tag" : "tags"}` : ""}
       </span>
       {props.canEdit && (
-        <form action={remove} className="ml-auto">
+        <form action={remove} className="ml-auto flex shrink-0 items-center">
           <input type="hidden" name="stencilId" value={props.stencil.id} />
           <input type="hidden" name="projectSlug" value={props.projectSlug} />
           <input type="hidden" name="boardSlug" value={props.boardSlug} />
@@ -126,12 +128,21 @@ function StencilRow(props: {
             type="button"
             variant="ghost"
             size="sm"
-            disabled={removing}
+            disabled={busy}
             onClick={props.onEdit}
           >
             Edit
           </Button>
-          <Button type="submit" variant="ghost" size="sm" disabled={removing}>
+          <Button
+            type="submit"
+            formAction={copy}
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+          >
+            {copying ? "Duplicating…" : "Duplicate"}
+          </Button>
+          <Button type="submit" variant="ghost" size="sm" disabled={busy}>
             Delete
           </Button>
         </form>
@@ -139,6 +150,11 @@ function StencilRow(props: {
       {removeState?.error && (
         <span className="text-xs text-destructive" role="alert">
           {removeState.error}
+        </span>
+      )}
+      {copyState?.error && (
+        <span className="text-xs text-destructive" role="alert">
+          {copyState.error}
         </span>
       )}
     </li>

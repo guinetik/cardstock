@@ -47,6 +47,7 @@ export function StencilDialog(props: {
     parsed.items.map((item, id) => ({ id, label: item.label })),
   );
   const nextId = useRef(steps.length);
+  const focusStepId = useRef<number | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [templateNotice, setTemplateNotice] = useState<string | null>(null);
@@ -129,6 +130,18 @@ export function StencilDialog(props: {
       const next = [...current];
       [next[index], next[index + delta]] = [next[index + delta], next[index]];
       return next;
+    });
+  }
+
+  function addStep(afterId?: number) {
+    const step = { id: nextId.current++, label: "" };
+    focusStepId.current = step.id;
+    setSteps((current) => {
+      const at =
+        afterId === undefined
+          ? current.length
+          : current.findIndex((item) => item.id === afterId) + 1;
+      return [...current.slice(0, at), step, ...current.slice(at)];
     });
   }
 
@@ -263,10 +276,27 @@ export function StencilDialog(props: {
                         </span>
                         <input
                           aria-label={`Step ${index + 1}`}
+                          ref={(input) => {
+                            if (input && focusStepId.current === step.id) {
+                              input.focus();
+                              focusStepId.current = null;
+                            }
+                          }}
                           className={field}
                           value={step.label}
                           required
                           disabled={saving}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter") return;
+                            event.preventDefault();
+                            if (
+                              event.nativeEvent.isComposing ||
+                              event.repeat ||
+                              !step.label.trim()
+                            )
+                              return;
+                            addStep(step.id);
+                          }}
                           onChange={(event) =>
                             setSteps((current) =>
                               current.map((item) =>
@@ -320,12 +350,7 @@ export function StencilDialog(props: {
                     size="sm"
                     className="mt-3"
                     disabled={saving}
-                    onClick={() =>
-                      setSteps((current) => [
-                        ...current,
-                        { id: nextId.current++, label: "" },
-                      ])
-                    }
+                    onClick={() => addStep()}
                   >
                     <Plus size={14} />
                     Add step

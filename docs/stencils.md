@@ -9,12 +9,17 @@ chosen lane; epic, priority, assignee, and dates are decided for each card.
 
 Open the board's Configuration page and find **stencils**, below **card
 template**. Owners and project admins can add a named stencil, edit it, or
-delete it. Names are unique within a board and listed alphabetically. Each row
+delete it. **Duplicate** copies all fields, checklist steps, and tags into an
+independent stencil on the same board. Copies receive names such as
+"Integration (copy)" and "Integration (copy 2)"; use **Edit** to rename or adapt
+them. Names are unique within a board and listed alphabetically. Each row
 shows its checklist step count and, when present, tag count.
 
 The editor has a writing column, filing fields, and tag buttons. Add checklist
 steps with **Add step**, edit their labels, and use the arrow buttons to reorder
-them. Steps always start unchecked. An empty stencil offers **Start from the
+them. Press **Enter** in a filled step to insert and focus the next step;
+an empty step keeps focus without submitting the stencil. **Save stencil**
+saves the form. Steps always start unchecked. An empty stencil offers **Start from the
 board's card template** to copy the board's section skeleton into the editor.
 
 When importing a template, checkbox lines such as `[ ] T1` gain the missing
