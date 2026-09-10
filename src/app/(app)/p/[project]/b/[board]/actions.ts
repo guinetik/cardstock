@@ -1,5 +1,7 @@
 "use server";
+import { checklistSection, parseChecklist } from "@cardstock/core";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { normaliseEmail } from "@/lib/assignee";
 import { loadBoard } from "@/lib/board-data";
 import { type CardColor, isCardColor } from "@/lib/card-color";
@@ -14,7 +16,7 @@ import { cleanName, keyFromName } from "@/lib/keys";
 import { needsNormalize, normalized } from "@/lib/rank";
 import { scheduleWatchMail } from "@/lib/schedule-watch-mail";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
-import type { Card, Lane } from "@/lib/types";
+import type { Card, CardChecklistItem, Lane } from "@/lib/types";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -182,6 +184,15 @@ export async function createCard(
       ),
     ) + 1;
   const now = new Date().toISOString();
+  let checklist: ReturnType<typeof parseChecklist>;
+  try {
+    checklist = parseChecklist(
+      input.bodyMarkdown?.trim() ||
+        cardTemplate(boardRow?.settings as Record<string, unknown> | null),
+    );
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
   const row = {
     board_id: input.boardId,
     lane_id: input.laneId,
@@ -189,9 +200,13 @@ export async function createCard(
     summary: input.summary?.trim() || null,
     // An empty body starts from the board's template so a site-born card has
     // the same section skeleton a markdown-born one must.
-    body_md:
-      input.bodyMarkdown?.trim() ||
-      cardTemplate(boardRow?.settings as Record<string, unknown> | null),
+    body_md: checklist.body.trim(),
+    ...(checklist.present
+      ? {
+          checklist_input: checklistSection(checklist),
+          checklist_edited_at: now,
+        }
+      : {}),
     // Frontmatter parity with imported sheets: markdown-born cards carry who
     // raised them and when; site-born cards must too, or age goes blank.
     raised_on: now.slice(0, 10),
@@ -615,29 +630,65 @@ export async function updateCard(
 export async function updateCardBody(
   cardId: string,
   bodyMarkdown: string,
+  expectedBody?: string,
+  expectedChecklistRevision?: number,
 ): Promise<Result> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Not signed in." };
   if (!UUID.test(cardId)) return { ok: false, error: "Invalid card." };
   const { data: card } = await c.db
     .from("cards")
-    .select("body_md")
+    .select("body_md, updated_at, checklist_revision")
     .eq("id", cardId)
     .single();
   if (!card) return { ok: false, error: "Card not found." };
+  let checklist: ReturnType<typeof parseChecklist>;
+  try {
+    checklist = parseChecklist(bodyMarkdown);
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+  if (
+    expectedBody !== undefined &&
+    splitIssueBody(card.body_md ?? "").body !== expectedBody
+  )
+    return {
+      ok: false,
+      error: "The body changed. Reload before saving your draft.",
+    };
   const { comments, leftover } = splitIssueBody(card.body_md ?? "");
-  const body_md = joinIssueBody(bodyMarkdown, comments, leftover);
-  const { error } = await c.db
+  const body_md = joinIssueBody(checklist.body.trim(), comments, leftover);
+  const { data: saved, error } = await c.db
     .from("cards")
-    .update({ body_md, body_edited_at: new Date().toISOString() })
-    .eq("id", cardId);
+    .update({
+      body_md,
+      body_edited_at: new Date().toISOString(),
+      ...(checklist.present
+        ? {
+            checklist_input: checklistSection(checklist),
+            checklist_expected_revision:
+              expectedChecklistRevision ?? card.checklist_revision,
+            checklist_edited_at: new Date().toISOString(),
+          }
+        : {}),
+    })
+    .eq("id", cardId)
+    .eq("updated_at", card.updated_at)
+    .select("id")
+    .maybeSingle();
   if (error) return { ok: false, error: error.message };
+  if (!saved)
+    return {
+      ok: false,
+      error: "The card changed. Reload before saving your draft.",
+    };
   await c.db.from("card_events").insert({
     card_id: cardId,
     actor: c.me.email,
     kind: "edited",
     payload: { body: true },
   });
+  refreshBoards();
   return { ok: true };
 }
 
@@ -865,4 +916,72 @@ export async function refreshBoard(
 ): Promise<{ cards: Card[]; lanes: Lane[] }> {
   const { cards, lanes } = await loadBoard(projectSlug, boardSlug);
   return { cards, lanes };
+}
+
+/** The authorized parent update and its child mutations commit together. */
+export async function saveCardChecklist(
+  cardId: string,
+  revision: number,
+  items: { id?: string; label: string; completed: boolean }[],
+): Promise<
+  | { ok: true; items: CardChecklistItem[]; revision: number }
+  | { ok: false; error: string }
+> {
+  const c = await ctx();
+  if (!c) return { ok: false, error: "Not signed in." };
+  const parsed = z
+    .object({
+      cardId: z.string().uuid(),
+      revision: z.number().int().nonnegative(),
+      items: z.array(
+        z.object({
+          id: z.string().uuid().optional(),
+          label: z
+            .string()
+            .trim()
+            .min(1)
+            .refine((v) => !/[\r\n]/.test(v)),
+          completed: z.boolean(),
+        }),
+      ),
+    })
+    .safeParse({ cardId, revision, items });
+  if (!parsed.success)
+    return {
+      ok: false,
+      error: "Each checklist item needs a non-empty single-line label.",
+    };
+  const { data, error } = await c.db
+    .from("cards")
+    .update({
+      checklist_input: { present: true, items: parsed.data.items },
+      checklist_expected_revision: revision,
+      checklist_edited_at: new Date().toISOString(),
+    })
+    .eq("id", cardId)
+    .select("id")
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Card not found or access denied." };
+  const { data: card, error: readError } = await c.db
+    .from("cards")
+    .select(
+      "checklist_revision,card_checklist_items(id,label,completed,position)",
+    )
+    .eq("id", cardId)
+    .single();
+  if (readError || !card)
+    return {
+      ok: false,
+      error: "Saved, but could not reload the checklist. Reload this card.",
+    };
+  refreshBoards();
+  revalidatePath("/p/[project]/b/[board]/cockpit", "layout");
+  return {
+    ok: true,
+    items: (card.card_checklist_items as CardChecklistItem[]).sort(
+      (a, b) => a.position - b.position,
+    ),
+    revision: card.checklist_revision,
+  };
 }

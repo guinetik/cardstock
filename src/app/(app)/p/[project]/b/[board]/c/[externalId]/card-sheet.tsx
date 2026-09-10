@@ -1,8 +1,10 @@
+import { writeChecklist } from "@cardstock/core";
 import { notFound, redirect } from "next/navigation";
 import Link from "@/components/activity-link";
 import { CardCloneButton } from "@/components/board/card-clone-button";
 import { CardDownloadButton } from "@/components/board/card-download-button";
 import { CardHistory } from "@/components/board/card-history";
+import { CardChecklist } from "@/components/card-checklist";
 import { CardReferenceScope } from "@/components/card-reference-scope";
 import { CardSaveScope } from "@/components/card-save-scope";
 import { EpicLabel } from "@/components/epic-label";
@@ -16,6 +18,7 @@ import {
 import { cardTemplate } from "@/lib/card-template";
 import { splitIssueBody } from "@/lib/issue-body";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
+import type { CardChecklistItem } from "@/lib/types";
 import { EFFORT_LABEL, PRIORITY_LABEL } from "@/lib/types";
 import { CardEditor } from "./card-editor";
 import { IssueBodyPanel } from "./issue-body-panel";
@@ -114,6 +117,17 @@ export async function CardSheet({
   const people = await loadProjectRoster(db, b.project_id);
   const lane = (lanes ?? []).find((l) => l.id === card.lane_id);
   const issue = splitIssueBody(card.body_md);
+  const { data: checklist, error: checklistError } = await db
+    .from("cards")
+    .select(
+      "checklist_revision,checklist_present,card_checklist_items(id,label,completed,position)",
+    )
+    .eq("id", card.id)
+    .single();
+  if (checklistError) throw new Error("Could not load the checklist.");
+  const checklistItems = (
+    (checklist?.card_checklist_items ?? []) as CardChecklistItem[]
+  ).sort((a, b) => a.position - b.position);
   const boardPath = `/p/${project}/b/${board}`;
   const html = renderCardMarkdown(
     issue.body.replace(
@@ -168,7 +182,13 @@ export async function CardSheet({
               initialValues={{
                 title: card.title,
                 summary: card.summary ?? "",
-                bodyMarkdown: issue.body,
+                bodyMarkdown: writeChecklist(issue.body, {
+                  present: checklist?.checklist_present ?? false,
+                  items: checklistItems.map((i) => ({
+                    label: i.label,
+                    completed: false,
+                  })),
+                }),
                 epicId: card.epic_id,
                 assigneeId: people.some(
                   (person) => person.memberId === card.assignee_id,
@@ -301,11 +321,18 @@ export async function CardSheet({
         </dl>
 
         <IssueBodyPanel
+          checklistRevision={checklist?.checklist_revision ?? 0}
+          hasChecklist={checklistItems.length > 0}
           cardId={card.id}
           bodyMarkdown={issue.body}
           bodyHtml={html}
         />
 
+        <CardChecklist
+          cardId={card.id}
+          items={checklistItems}
+          revision={checklist?.checklist_revision ?? 0}
+        />
         <IssueComments
           cardId={card.id}
           boardPath={boardPath}

@@ -141,7 +141,7 @@ export async function init(args: string[], cwd: string): Promise<number> {
       `Seed ${seed} is retained as a provisioning/recovery reference; no SQL is executed.`,
     );
     notes.push(
-      "Use status or sync --dry-run to preview board changes, then sync against a protocol-4 server. Provisioning remains administrator-only; use delete for explicit card removal. Reproducing project-specific validation rules is not a cutover requirement.",
+      "Use status or sync --dry-run to preview board changes, then sync against a protocol-5 server. Provisioning remains administrator-only; use delete for explicit card removal. Reproducing project-specific validation rules is not a cutover requirement.",
     );
     if (!values.remote)
       notes.push(

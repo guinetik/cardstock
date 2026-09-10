@@ -164,6 +164,8 @@ async function fileThePlan(
       board_id: boardId,
       ...row.patch.columns,
     };
+    if (prev && columns.checklist_input !== undefined)
+      columns.checklist_expected_revision = prev.checklist_revision;
     if (row.patch.epic !== undefined)
       columns.epic_id = row.patch.epic ? await epic(row.patch.epic) : null;
     if ("assignee" in columns)

@@ -3,11 +3,18 @@
 Command-line companion for [Cardstock](https://github.com/guinetik/cardstock).
 Initialize tracker configuration, validate Markdown offline, preview changes, and
 sync Markdown with the board using explicit conflict resolution and recovery.
-Apply requires a server deployed with sync protocol 4 and its database migrations.
+Apply requires a server deployed with sync protocol 5 and its database migrations.
 
 Requires Node.js 22 or newer. Bun is only needed by package developers.
 
-## Features in 0.4.0
+## Features in 0.5.0
+
+Version 0.5.0 adds database-managed checklist items using `## Checklist` in Markdown.
+Checklist items sync independently of the card body; concurrent checklist changes require
+`--ours <id>:checklist` or `--theirs <id>:checklist`. A missing section preserves remote
+items on first contact; removing a tracked section clears the list.
+
+## Previous releases
 
 Version 0.4.0 adds explicit deletion and requires sync protocol 4. Version 0.3.0
 does not support deletion and uses sync protocol 3.
@@ -23,7 +30,7 @@ does not support deletion and uses sync protocol 3.
 - Explicit single/bulk card deletion, retained deletion snapshots, recoverable
   local backups, and delete-versus-edit conflicts across checkouts.
 
-This release requires sync protocol 4 for writes. Upgrade the server and database
+This release requires sync protocol 5 for writes. Upgrade the server and database
 before upgrading a tracker client; older apply protocols are refused, not silently
 downgraded. See [Generic fields and audience](#generic-fields-and-audience) and
 [Interrupted sync and recovery](#interrupted-sync-and-recovery).
@@ -31,7 +38,7 @@ downgraded. See [Generic fields and audience](#generic-fields-and-audience) and
 ## Install and connect
 
 ```sh
-npm install -g @guinetik/cardstock-cli@0.4.0
+npm install -g @guinetik/cardstock-cli@0.5.0
 cardstock --version
 mkdir tracker
 cardstock init --project acme --board product --dir tracker --remote https://cardstock.example.com
@@ -51,7 +58,7 @@ before applying; never delete a baseline to force a result.
 Or run without a global installation (pin the same version for repeatable use):
 
 ```sh
-npx --yes @guinetik/cardstock-cli@0.4.0 --version
+npx --yes @guinetik/cardstock-cli@0.5.0 --version
 ```
 
 Licensed under GPL-3.0-only; see LICENSE.
@@ -385,7 +392,7 @@ before it was installed cannot be reconstructed and remain missing-identity
 conflicts. Tombstones remain until explicit restoration or deletion of the parent
 board; there is no automatic expiry, CLI purge or reuse of deleted IDs.
 
-Deployment: apply `20260916000000_cli_card_deletion.sql`, deploy the protocol-4
+Deployment: apply migrations through `20260919000000_card_checklist.sql` and run `etl/backfill-checklist.ts --apply`, deploy the protocol-5
 server, then upgrade the CLI. Complete pending operations with their matching
 client/server before upgrading. This release refuses older servers for writes;
 the new server refuses protocol-3 writes. Provisioning remains administrator-only:

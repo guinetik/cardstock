@@ -136,9 +136,9 @@ export async function executeSync(
     const snapshot = async () => {
       const raw = await getJson(`${url}/sync`, credential.token);
       const meta = remoteMetadataSchema.parse(raw);
-      if (meta.syncProtocol !== 4)
+      if (meta.syncProtocol !== 5)
         throw new Error(
-          "Remote lacks sync protocol 4 (explicit deletion); deploy the server and deletion migration first",
+          "Remote lacks sync protocol 5 (checklist); deploy the server and checklist migration first",
         );
       const snap = remoteSnapshotSchema.parse(raw);
       if (
@@ -299,7 +299,7 @@ export async function executeSync(
         redirect: "error",
         signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
-          protocol: 4,
+          protocol: 5,
           operationId: journal.id,
           cards: writes,
           groupAliases: config.mapping?.group_aliases ?? {},
@@ -316,7 +316,7 @@ export async function executeSync(
       }
       const result = z
         .object({
-          protocol: z.literal(4),
+          protocol: z.literal(5),
           operationId: z.literal(journal.id),
           applied: z.array(
             z.object({

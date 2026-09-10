@@ -1,6 +1,5 @@
 "use client";
 
-import { scaleBand } from "d3-scale";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { CockpitTask, TaskSignal } from "@/lib/cockpit";
@@ -39,21 +38,10 @@ export function TaskMap({
       a.external_id.localeCompare(b.external_id)
     );
   });
-  const cols = Math.min(
-    large ? 24 : 16,
-    Math.max(6, Math.ceil(Math.sqrt(sorted.length * (large ? 2.8 : 2)))),
-  );
-  const rows = Math.max(1, Math.ceil(sorted.length / cols));
-  const width = large ? 720 : 320;
-  const height = Math.max(28, rows * (large ? 25 : 20));
-  const x = scaleBand<number>()
-    .domain(Array.from({ length: cols }, (_, i) => i))
-    .range([0, width])
-    .padding(0.18);
-  const y = scaleBand<number>()
-    .domain(Array.from({ length: rows }, (_, i) => i))
-    .range([0, height])
-    .padding(0.18);
+  const taskHeight = large ? 28 : 24;
+  const minimumWidth = large ? 72 : 64;
+  const segmentWidth = large ? 18 : 16;
+  const inset = 4;
   const [tip, setTip] = useState<{
     task: CockpitTask;
     x: number;
@@ -61,22 +49,33 @@ export function TaskMap({
   } | null>(null);
 
   return (
-    <div className="cockpit-map relative" data-testid="task-map">
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="block w-full"
+    <div
+      className="cockpit-map relative min-w-0 max-w-full overflow-x-auto p-0.5"
+      data-testid="task-map"
+    >
+      <nav
+        className="flex flex-wrap gap-3"
         aria-label={`${tasks.length} tasks`}
       >
-        {sorted.map((task, i) => {
-          const cx = x(i % cols) ?? 0;
-          const cy = y(Math.floor(i / cols)) ?? 0;
+        {sorted.map((task) => {
           const signal = SIGNAL[task.signal];
+          const checklist = (task.card_checklist_items ?? [])
+            .slice()
+            .sort((a, b) => a.position - b.position);
+          const completed = checklist.filter((s) => s.completed).length;
+          const taskWidth = Math.max(
+            minimumWidth,
+            checklist.length * segmentWidth + inset * 2,
+          );
+          const innerWidth = taskWidth - inset * 2;
           const href = `${cardBase}/${task.external_id}?from=cockpit&epic=${encodeURIComponent(task.epic_id ?? "")}`;
           return (
             <a
               key={task.id}
+              className="block shrink-0"
+              style={{ width: taskWidth, height: taskHeight }}
               href={href}
-              aria-label={`#${task.external_id} ${task.title}. ${signal.label}.`}
+              aria-label={`#${task.external_id} ${task.title}. ${signal.label}.${checklist.length ? ` ${completed}/${checklist.length} checklist items completed.` : ""}`}
               onPointerEnter={(e) =>
                 setTip({ task, x: e.clientX, y: e.clientY })
               }
@@ -90,32 +89,61 @@ export function TaskMap({
               }}
               onBlur={() => setTip(null)}
             >
-              <rect
-                x={cx}
-                y={cy}
-                width={x.bandwidth()}
-                height={y.bandwidth()}
-                rx="1"
-                fill={signal.color}
-                className="cockpit-task-square"
-              />
-              {signal.mark && x.bandwidth() >= 12 && (
-                <text
-                  x={cx + x.bandwidth() / 2}
-                  y={cy + y.bandwidth() / 2 + 3.5}
-                  textAnchor="middle"
-                  fontSize="9"
-                  fontWeight="700"
-                  fill="var(--pen-ink)"
-                  pointerEvents="none"
-                >
-                  {signal.mark}
-                </text>
-              )}
+              <span className="sr-only">
+                #{task.external_id} {task.title} — {signal.label}
+              </span>
+              <svg
+                width={taskWidth}
+                height={taskHeight}
+                viewBox={`0 0 ${taskWidth} ${taskHeight}`}
+                className="block"
+                aria-hidden="true"
+              >
+                <rect
+                  x={1}
+                  y={1}
+                  width={taskWidth - 2}
+                  height={taskHeight - 2}
+                  rx="1"
+                  fill={signal.color}
+                  className="cockpit-task-square"
+                />
+                {checklist.map((item, n) => (
+                  <rect
+                    key={item.id}
+                    x={inset + (n * innerWidth) / checklist.length}
+                    y={inset}
+                    width={innerWidth / checklist.length}
+                    height={taskHeight - inset * 2}
+                    fill={
+                      item.completed
+                        ? "var(--pen-green)"
+                        : "var(--color-grey-faint)"
+                    }
+                    stroke="white"
+                    strokeWidth={1}
+                    data-completed={item.completed}
+                    pointerEvents="none"
+                  />
+                ))}
+                {signal.mark && !checklist.length && (
+                  <text
+                    x={taskWidth / 2}
+                    y={taskHeight / 2 + 3.5}
+                    textAnchor="middle"
+                    fontSize="9"
+                    fontWeight="700"
+                    fill="var(--pen-ink)"
+                    pointerEvents="none"
+                  >
+                    {signal.mark}
+                  </text>
+                )}
+              </svg>
             </a>
           );
         })}
-      </svg>
+      </nav>
       {tip && typeof document !== "undefined"
         ? createPortal(
             <div
@@ -143,6 +171,16 @@ export function TaskMap({
                 {tip.task.target_date ? ` · due ${tip.task.target_date}` : ""}
               </span>
               {tip.task.needs && <span>Needs {tip.task.needs}</span>}
+              {!!tip.task.card_checklist_items?.length && (
+                <span>
+                  {
+                    tip.task.card_checklist_items.filter((s) => s.completed)
+                      .length
+                  }
+                  /{tip.task.card_checklist_items.length} checklist items
+                  completed
+                </span>
+              )}
             </div>,
             document.body,
           )
@@ -154,6 +192,9 @@ export function TaskMap({
 export function TaskLegend() {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] uppercase tracking-[0.09em] text-[var(--color-grey)]">
+      <span>
+        Background: task status · green segments: completed checklist items
+      </span>
       {(
         Object.entries(SIGNAL) as [TaskSignal, (typeof SIGNAL)[TaskSignal]][]
       ).map(([key, item]) => (

@@ -234,7 +234,7 @@ export function CockpitView({
         <div className="paper-card paper-card--static p-3">
           {cardCount > 0 ? (
             <>
-              <LaneMap href={boardHref} rows={laneRows} />
+              <LaneMap href={boardHref} rows={laneRows} labels />
               <p className="binder-count mt-2">
                 {cardCount} card{cardCount === 1 ? "" : "s"}
               </p>

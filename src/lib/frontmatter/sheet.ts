@@ -1,3 +1,9 @@
+import {
+  type ChecklistSection,
+  checklistSection,
+  parseChecklist,
+  sameChecklist,
+} from "@cardstock/core";
 /**
  * A card as a sheet: the values a tracker file states, in file form.
  *
@@ -38,6 +44,7 @@ export interface CardSheet {
   color: string | null;
   extra: Record<string, unknown>;
   bodyMd: string;
+  checklist?: ChecklistSection;
 }
 
 type Scalar = string | number | null;
@@ -76,7 +83,7 @@ export type SheetKey = keyof typeof SHEET_KEYS;
 export const SHEET_KEY_ORDER = Object.keys(SHEET_KEYS) as SheetKey[];
 
 export interface Change {
-  key: SheetKey | "body";
+  key: SheetKey | "body" | "checklist";
   from: string | null;
   to: string | null;
 }
@@ -90,7 +97,8 @@ export function sheetFromFrontmatter(
 ): CardSheet {
   const iso = (v: string | null | undefined) =>
     v && /^\d{4}-\d{2}-\d{2}$/.test(v.trim()) ? v.trim() : null;
-  const bodyMd = bodyWithoutH1(body);
+  const parsedChecklist = parseChecklist(bodyWithoutH1(body));
+  const bodyMd = parsedChecklist.body.trim();
   return {
     externalId: String(fm.id),
     title: fm.title,
@@ -119,6 +127,7 @@ export function sheetFromFrontmatter(
     color: fm.color ?? null,
     extra,
     bodyMd,
+    checklist: checklistSection(parsedChecklist),
   };
 }
 
@@ -158,5 +167,17 @@ export function diffSheets(
   }
   if (present.has("body") && file.bodyMd !== board.bodyMd)
     changes.push({ key: "body", from: null, to: null });
+  if (
+    file.checklist?.present &&
+    !sameChecklist(
+      file.checklist,
+      board.checklist ?? { present: false, items: [] },
+    )
+  )
+    changes.push({
+      key: "checklist",
+      from: JSON.stringify(board.checklist?.items ?? []),
+      to: JSON.stringify(file.checklist.items),
+    });
   return changes;
 }

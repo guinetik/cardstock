@@ -2049,6 +2049,25 @@
     border: 1px solid var(--border-hairline);
     border-radius: var(--radius-card);
   }
+  .lane-map--labeled {
+    margin-top: 1.75rem;
+  }
+  .lane-map-label {
+    position: absolute;
+    top: -1.4rem;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-grey);
+    font-family: var(--font-sys);
+    font-size: 11px;
+    line-height: 1rem;
+  }
+  .lane-map--labeled .lane-map-tip {
+    bottom: calc(100% + 1.65rem);
+  }
   .lane-map-col[data-kind="inbox"],
   .lane-map-col[data-kind="archive"] {
     background: var(--surface-well);

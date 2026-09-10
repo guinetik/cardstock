@@ -9,6 +9,10 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { GET as getMetadata } from "@/app/api/v1/boards/[project]/[board]/route";
 import { POST as applyRoute } from "@/app/api/v1/boards/[project]/[board]/sync/apply/route";
 import { GET as getSnapshot } from "@/app/api/v1/boards/[project]/[board]/sync/route";
+import { applyPlan } from "@/lib/import/apply";
+import { loadBoardState } from "@/lib/import/board-state";
+import { boardCards } from "@/lib/import/export-board";
+import { planImport } from "@/lib/import/plan";
 import { syncColumns, syncRequestSchema, syncSnapshot } from "./sync";
 import { newToken } from "./token";
 
@@ -80,12 +84,124 @@ describe.skipIf(!local)("transactional CLI sync", () => {
     operation = randomUUID(),
     actor = member,
   ) =>
-    db.rpc("cli_apply_sync_v4", {
+    db.rpc("cli_apply_sync_v5", {
       p_board: board,
       p_member: actor,
       p_operation: operation,
       p_cards: cards.map((card) => syncColumns(card, {})),
     });
+
+  test("checklist writes are atomic, revision checked, independently exported and restored", async () => {
+    const text = sheet(
+      71,
+      "## Ask\nKeep body.\n\n## Checklist\n- [x] First\n- [ ] Second\n",
+    );
+    expect((await apply([request(71, text)])).error).toBeNull();
+    let snap = (await snapshot()).cards.find((c) => c.externalId === "71")!;
+    const read = () =>
+      db
+        .from("cards")
+        .select(
+          "body_md,body_edited_at,status,checklist_revision,checklist_present,card_checklist_items(id,label,completed,position)",
+        )
+        .eq("id", snap.cardId!)
+        .single();
+    let card = (await read()).data!;
+    expect(card.body_md).toBe("## Ask\nKeep body.");
+    expect(card.card_checklist_items).toHaveLength(2);
+    expect(snap.markdown).toBe(text);
+    const initialRevision = snap.revision;
+    const items = card.card_checklist_items.sort(
+      (a, b) => a.position - b.position,
+    );
+    const changed = [{ ...items[1], completed: true }, items[0]];
+    expect(
+      (
+        await db
+          .from("cards")
+          .update({
+            checklist_input: { present: true, items: changed },
+            checklist_expected_revision: card.checklist_revision,
+            checklist_edited_at: new Date().toISOString(),
+          })
+          .eq("id", snap.cardId!)
+      ).error,
+    ).toBeNull();
+    const stale = await db
+      .from("cards")
+      .update({
+        body_md: "Must roll back",
+        checklist_input: { present: true, items: [] },
+        checklist_expected_revision: card.checklist_revision,
+      })
+      .eq("id", snap.cardId!);
+    expect(stale.error?.code).toBe("23514");
+    card = (await read()).data!;
+    expect(card.body_md).toBe("## Ask\nKeep body.");
+    expect(card.body_edited_at).toBeNull();
+    expect(card.status).toBe("backlog");
+    snap = (await snapshot()).cards.find((c) => c.externalId === "71")!;
+    expect(snap.revision).not.toBe(initialRevision);
+    expect(snap.markdown).toContain("- [x] Second\n- [x] First");
+    const stableIds = card.card_checklist_items.map((i) => i.id).sort();
+    expect(
+      (await apply([request(71, snap.markdown, snap.cardId, snap.revision)]))
+        .error,
+    ).toBeNull();
+    card = (await read()).data!;
+    expect(card.card_checklist_items.map((i) => i.id).sort()).toEqual(
+      stableIds,
+    );
+    const invalid = await db
+      .from("cards")
+      .update({
+        body_md: "Must also roll back",
+        checklist_input: {
+          present: true,
+          items: [{ label: "", completed: true }],
+        },
+      })
+      .eq("id", snap.cardId!);
+    expect(invalid.error?.code).toBe("22023");
+    expect((await read()).data?.body_md).toBe("## Ask\nKeep body.");
+    snap = (await snapshot()).cards.find((c) => c.externalId === "71")!;
+    expect(
+      (
+        await apply([
+          {
+            ...request(71, snap.markdown, snap.cardId, snap.revision),
+            deleted: true,
+          },
+        ])
+      ).error,
+    ).toBeNull();
+    const dead = (await snapshot()).cards.find((c) => c.externalId === "71")!;
+    expect(dead.markdown).toContain("- [x] Second");
+    expect(
+      (await apply([request(71, dead.markdown, dead.cardId, dead.revision)]))
+        .error,
+    ).toBeNull();
+    card = (await read()).data!;
+    expect(card.card_checklist_items).toHaveLength(2);
+    expect(
+      (
+        await db
+          .from("cards")
+          .update({ checklist_input: { present: true, items: [] } })
+          .eq("id", snap.cardId!)
+      ).error,
+    ).toBeNull();
+    const empty = (await snapshot()).cards.find((c) => c.externalId === "71")!;
+    expect(empty.markdown).toContain("## Checklist");
+    expect(empty.markdown).not.toContain("- [x]");
+    // Remove fixture so other tests can make exact snapshot count assertions.
+    await db.from("cards").delete().eq("id", snap.cardId!);
+    await db
+      .from("cli_card_tombstones")
+      .delete()
+      .eq("board_id", board)
+      .eq("external_id", "71");
+  });
 
   test("creates cards and links in one batch, retaining exact nested source bytes", async () => {
     const first = sheet(1).replace("tags: [bug]", "tags: [bug]\nrelates: [2]");
@@ -103,6 +219,76 @@ describe.skipIf(!local)("transactional CLI sync", () => {
       .eq("from_card", snap.cards[0].cardId);
     expect(links.data).toHaveLength(1);
   });
+  test("web import and export preserve, replace and explicitly clear checklist", async () => {
+    const lane = await db
+      .from("lanes")
+      .insert({
+        board_id: board,
+        key: "checklist-import",
+        name: "Import",
+        kind: "inbox",
+        position: 0,
+      })
+      .select("id")
+      .single();
+    if (lane.error) throw lane.error;
+    const text = sheet(
+      72,
+      "## Ask\nKeep body.\n\n## Checklist\n- [x] Existing\n",
+    );
+    const file = { name: "72.md", text };
+    let state = await loadBoardState(db, board);
+    expect(
+      (
+        await applyPlan(
+          db,
+          state,
+          planImport([file], state),
+          "test@example.test",
+        )
+      ).created,
+    ).toBe(1);
+    state = await loadBoardState(db, board);
+    const id = state.cards.get("72")!.id;
+    expect(state.cards.get("72")!.body_md).not.toContain("Checklist");
+    const noSection = {
+      name: "72.md",
+      text: sheet(72, "## Ask\nChanged body."),
+    };
+    await applyPlan(
+      db,
+      state,
+      planImport([noSection], state),
+      "test@example.test",
+    );
+    state = await loadBoardState(db, board);
+    expect(state.cards.get("72")!.card_checklist_items).toHaveLength(1);
+    const exported = new TextDecoder().decode(
+      (await boardCards(db, board)).cards["72.md"],
+    );
+    expect(exported).toContain("- [x] Existing");
+    const back = planImport([{ name: "72.md", text: exported }], state).rows[0];
+    expect(back.verdict).not.toBe("error");
+    if (back.verdict === "changed") expect(back.changes).toHaveLength(0);
+    const clear = {
+      name: "72.md",
+      text: sheet(72, "## Ask\nChanged body.\n\n## Checklist\n"),
+    };
+    await applyPlan(db, state, planImport([clear], state), "test@example.test");
+    state = await loadBoardState(db, board);
+    expect(state.cards.get("72")!.card_checklist_items).toEqual([]);
+    expect(
+      new TextDecoder().decode((await boardCards(db, board)).cards["72.md"]),
+    ).toContain("## Checklist");
+    await db.from("cards").delete().eq("id", id);
+    await db
+      .from("cli_card_tombstones")
+      .delete()
+      .eq("board_id", board)
+      .eq("external_id", "72");
+    await db.from("lanes").delete().eq("id", lane.data.id);
+  });
+
   test("removes optional fields and ignores legacy body ownership", async () => {
     const first = (await snapshot()).cards.find(
       (card) => card.externalId === "1",
@@ -237,7 +423,7 @@ describe.skipIf(!local)("transactional CLI sync", () => {
     );
     expect(
       (
-        await anon.rpc("cli_apply_sync_v4", {
+        await anon.rpc("cli_apply_sync_v5", {
           p_board: board,
           p_member: member,
           p_operation: randomUUID(),
@@ -695,7 +881,7 @@ test("sync wire validation rejects mismatched identity/revision pairs and duplic
   ).toBe(false);
   expect(
     syncRequestSchema.safeParse({
-      protocol: 4,
+      protocol: 5,
       operationId: randomUUID(),
       cards: [
         {
@@ -715,7 +901,7 @@ test("sync wire validation rejects mismatched identity/revision pairs and duplic
   };
   expect(
     syncRequestSchema.safeParse({
-      protocol: 4,
+      protocol: 5,
       operationId: randomUUID(),
       cards: [card, card],
     }).success,

@@ -138,7 +138,7 @@ export function EpicDetail({
             Move things on the board →
           </Link>
         </div>
-        <LaneMap href={boardHref} rows={laneRows} marks />
+        <LaneMap href={boardHref} rows={laneRows} marks labels />
       </section>
 
       <section className="mt-6">

@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import {
+  checklistSection,
   type Fields,
   markdownFromFields,
+  parseChecklist,
   readSyncFrontmatter,
   rebaseMarkdown,
   stableJson,
@@ -15,7 +17,7 @@ import type { CardSheet } from "@/lib/frontmatter/sheet";
 import { writeSheet } from "@/lib/frontmatter/write";
 
 export const syncRequestSchema = z.strictObject({
-  protocol: z.literal(4),
+  protocol: z.literal(5),
   operationId: z.string().uuid(),
   cards: z
     .array(
@@ -61,6 +63,7 @@ export function syncColumns(
   );
   if (String(fm.id) !== card.externalId)
     throw new Error("Markdown identity does not match request");
+  const checklist = parseChecklist(bodyWithoutH1(parsed.body));
   return {
     externalId: card.externalId,
     cardId: card.cardId,
@@ -90,7 +93,8 @@ export function syncColumns(
       shipped_on: isoOrNull(fm.shipped),
       needs: fm.needs ?? null,
       summary: fm.summary ?? null,
-      body_md: bodyWithoutH1(parsed.body),
+      body_md: checklist.body.trim(),
+      checklist_input: checklistSection(checklist),
       priority: fm.priority ?? valueToPriority(fm.value ?? null),
       effort: fm.effort ?? null,
       planned_start_date: isoOrNull(fm.planned_start),
@@ -137,7 +141,8 @@ function legacySheet(id: string, p: Fields): CardSheet {
     color: get("color"),
     extra: {},
     bodyMd: p.body,
-  } as CardSheet;
+    checklist: p.checklist,
+  } as unknown as CardSheet;
 }
 
 export async function syncSnapshot(
@@ -163,6 +168,15 @@ export async function syncSnapshot(
     }[];
   };
   const cards = raw.cards.map((card) => {
+    // Retained deletion snapshots created before checklist still embed the list.
+    if (!("checklist" in card.projection)) {
+      const parsed = parseChecklist(String(card.projection.body ?? ""));
+      card.projection = {
+        ...card.projection,
+        body: parsed.body.trim(),
+        checklist: checklistSection(parsed) as unknown as Fields[string],
+      };
+    }
     if (
       !["all", "internal"].includes(
         String(card.projection["frontmatter.audience"]),
@@ -210,7 +224,7 @@ export async function syncSnapshot(
     .update(stableJson({ cards, tagGroups: raw.tagGroups }))
     .digest("hex");
   return {
-    syncProtocol: 4,
+    syncProtocol: 5,
     project,
     board,
     etag,

@@ -41,7 +41,7 @@ cards or fields (for example --ours 17:body --theirs 18:frontmatter.priority).
 An existence conflict is a whole-card delete-versus-edit choice: selecting the
 deleted side deletes; selecting surviving local content restores the hosted card.
 Explicit deletion: cardstock delete <id> --dry-run (see cardstock delete --help).
-Without --dry-run, sync applies the resolved plan through transactional protocol 4.
+Without --dry-run, sync applies the resolved plan through transactional protocol 5.
 sync --resume retries the recorded operation; --abort archives it without rollback.
 --recover-lock reclaims a same-machine lock only when its process has exited.
 --adopt-identities explicitly upgrades a legacy baseline to current immutable IDs.
@@ -179,7 +179,8 @@ export async function preview(
     if (
       metadata.syncProtocol === 2 ||
       metadata.syncProtocol === 3 ||
-      metadata.syncProtocol === 4
+      metadata.syncProtocol === 4 ||
+      metadata.syncProtocol === 5
     ) {
       const raw = await getJson(`${url}/sync`, credential.token);
       metadata = remoteMetadataSchema.parse(raw);
@@ -220,9 +221,9 @@ export async function preview(
   }
   if (!snapshot || !metadata)
     throw new Error("No board snapshot was returned.");
-  if (deleteIds && metadata.syncProtocol !== 4)
+  if (deleteIds && metadata.syncProtocol !== 5)
     throw new Error(
-      "Deletion requires sync protocol 4; deploy the deletion migration and server first",
+      "Deletion requires sync protocol 5; deploy the deletion migration and server first",
     );
   if (stableJson(local) !== stableJson(await loadLocal()))
     throw new Error(

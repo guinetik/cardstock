@@ -1,3 +1,4 @@
+import type { ChecklistItem } from "@cardstock/core";
 import type { Person } from "@/lib/assignee";
 import type { Change } from "@/lib/frontmatter/sheet";
 
@@ -41,6 +42,10 @@ export interface ExistingCard {
   summary_edited_at: string | null;
   body_md: string | null;
   body_edited_at: string | null;
+  checklist_present?: boolean;
+  checklist_edited_at?: string | null;
+  checklist_revision?: number;
+  card_checklist_items?: (ChecklistItem & { id: string; position: number })[];
   lane_id: string | null;
   rank: number;
   priority: 1 | 2 | 3 | null;

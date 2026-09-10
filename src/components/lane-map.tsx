@@ -21,11 +21,14 @@ export function LaneMap({
   href,
   rows,
   marks = false,
+  labels = false,
   maxRows = LANE_MAP_MAX_ROWS,
 }: {
   href: string;
   rows: LaneMicrocosmRow[];
   marks?: boolean;
+  /** Show lane names above the columns, truncating to each column's width. */
+  labels?: boolean;
   /** Row cap per lane; overflow becomes a final “+N more” row. */
   maxRows?: number;
 }) {
@@ -34,7 +37,7 @@ export function LaneMap({
   return (
     <Link
       href={href}
-      className={marks ? "lane-map lane-map--marked" : "lane-map"}
+      className={`lane-map${marks ? " lane-map--marked" : ""}${labels ? " lane-map--labeled" : ""}`}
       aria-label={summary}
       tabIndex={-1}
     >
@@ -44,6 +47,11 @@ export function LaneMap({
           className={`lane-map-col ${laneColorModifier(row.color) ?? ""}`}
           data-kind={row.kind}
         >
+          {labels && (
+            <span className="lane-map-label" aria-hidden="true">
+              {row.name}
+            </span>
+          )}
           <span className="lane-map-tip" aria-hidden="true">
             {row.name} · {row.count}
           </span>

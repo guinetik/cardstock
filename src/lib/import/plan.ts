@@ -1,3 +1,4 @@
+import { parseChecklist } from "@cardstock/core";
 /**
  * Dry run: what filing these sheets on this board would do. Pure — the same
  * files and board state always give the same plan, which is why the applier
@@ -107,6 +108,13 @@ export function sheetFromCard(
     color: card.color,
     extra: card.frontmatter_extra ?? {},
     bodyMd: card.body_md ?? "",
+    checklist: {
+      present: card.checklist_present ?? false,
+      items: (card.card_checklist_items ?? [])
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map(({ label, completed }) => ({ label, completed })),
+    },
   };
 }
 
@@ -147,6 +155,10 @@ function columnsFor(sheet: CardSheet, changes: Change[], isNew: boolean) {
   }
   set("color", () => ({ color: sheet.color }));
   set("body", () => ({ body_md: sheet.bodyMd, body_edited_at: null }));
+  if (sheet.checklist?.present && (isNew || keys.has("checklist"))) {
+    cols.checklist_input = sheet.checklist;
+    cols.checklist_edited_at = null;
+  }
   return cols;
 }
 
@@ -188,7 +200,12 @@ export function planImport(
       // Same bytes as last time and the sheet is already stored: nothing to do.
       // A card imported before sheets were stored has the hash but not the
       // text, and must be recalibrated once so its download can be a line edit.
-      if (prev && prev.source_hash === parsed.hash && prev.has_source_text) {
+      if (
+        prev &&
+        prev.source_hash === parsed.hash &&
+        prev.has_source_text &&
+        !parseChecklist(parsed.body).present
+      ) {
         rows.push({ id, title: fm.title, verdict: "unchanged" });
         counts.unchanged++;
         continue;

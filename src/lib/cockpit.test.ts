@@ -182,3 +182,27 @@ describe("buildCockpitModel", () => {
     expect(model.unassigned).toHaveLength(1);
   });
 });
+
+test("checklist completion does not alter epic delivery calculations", () => {
+  const base = {
+    cards: [card({ status: "wip", effort: "H" })],
+    lanes,
+    epics: [epic()],
+    snapshots: [],
+    moves: [],
+    now: new Date("2026-03-01T12:00:00Z"),
+  };
+  const before = buildCockpitModel(base).active[0];
+  const after = buildCockpitModel({
+    ...base,
+    cards: base.cards.map((c) => ({
+      ...c,
+      card_checklist_items: [
+        { id: "s", label: "Done", completed: true, position: 0 },
+      ],
+    })),
+  }).active[0];
+  expect(after.metrics).toEqual(before.metrics);
+  expect(after.outlook).toBe(before.outlook);
+  expect(after.tasks[0].signal).toBe(before.tasks[0].signal);
+});

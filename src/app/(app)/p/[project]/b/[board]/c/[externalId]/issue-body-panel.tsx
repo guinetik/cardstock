@@ -21,15 +21,23 @@ export function IssueBodyPanel({
   cardId,
   bodyMarkdown,
   bodyHtml,
+  checklistRevision = 0,
+  hasChecklist = false,
 }: {
   cardId: string;
   bodyMarkdown: string;
   bodyHtml: string;
+  checklistRevision?: number;
+  hasChecklist?: boolean;
 }) {
   const router = useRouter();
   const saves = useCardSaves();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(bodyMarkdown);
+  const [editBase, setEditBase] = useState({
+    body: bodyMarkdown,
+    revision: checklistRevision,
+  });
   const [failed, setFailed] = useState(false);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -47,7 +55,11 @@ export function IssueBodyPanel({
   function save() {
     start(async () => {
       const r = await saves.run("body", () =>
-        trackActivity("saving", () => updateCardBody(cardId, draft), cardId),
+        trackActivity(
+          "saving",
+          () => updateCardBody(cardId, draft, editBase.body, editBase.revision),
+          cardId,
+        ),
       );
       setMsg(r.ok ? null : r.error);
       if (r.ok) {
@@ -65,6 +77,7 @@ export function IssueBodyPanel({
     import("./issue-body-editor")
       .then(() => {
         setDraft(bodyMarkdown);
+        setEditBase({ body: bodyMarkdown, revision: checklistRevision });
         setEditing(true);
       })
       .catch(() => setFailed(true));
@@ -107,6 +120,11 @@ export function IssueBodyPanel({
   return (
     <div className="mt-6 space-y-3">
       <Editor markdown={draft} onChange={setDraft} />
+      {hasChecklist && /^## Checklist\s*$/im.test(draft) && (
+        <output className="block text-sm">
+          Saving this Checklist section will replace the existing checklist.
+        </output>
+      )}
       <div className="flex items-center gap-2">
         <Button
           type="button"

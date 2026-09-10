@@ -1,3 +1,4 @@
+export * from "./checklist";
 export * from "./config";
 export * from "./scheme";
 export * from "./sync-materialize";

@@ -44,6 +44,7 @@ const EDIT_ORDER = [
   "summary",
   "tags",
   "body",
+  "checklist",
   "color",
 ] as const;
 
@@ -275,6 +276,29 @@ function editField(key: EditFieldKey, value: unknown): string {
       return "changed the tags";
     case "body":
       return "edited the write-up";
+    case "checklist": {
+      const change = asPayload(value);
+      const before = Array.isArray(change.before)
+        ? change.before.map(asPayload)
+        : [];
+      const after = Array.isArray(change.after)
+        ? change.after.map(asPayload)
+        : [];
+      if (after.length > before.length)
+        return `added ${after.length - before.length} checklist item${after.length - before.length === 1 ? "" : "s"}`;
+      if (after.length < before.length)
+        return `removed ${before.length - after.length} checklist item${before.length - after.length === 1 ? "" : "s"}`;
+      const changed = after.filter(
+        (item, i) =>
+          item.label === before[i]?.label &&
+          item.completed !== before[i]?.completed,
+      );
+      if (changed.length === 1)
+        return `${changed[0].completed ? "completed" : "reopened"} checklist item “${changed[0].label}”`;
+      if (after.every((item, i) => item.label === before[i]?.label))
+        return "updated checklist completion";
+      return "edited or reordered the checklist";
+    }
     case "color":
       return "changed the color";
     default: {

@@ -191,6 +191,21 @@ describe("created", () => {
 });
 
 describe("edited", () => {
+  test("describes checklist item changes using the checklist payload", () => {
+    const open = { label: "Review", completed: false };
+    const done = { ...open, completed: true };
+    const facts = (before: (typeof open)[], after: (typeof open)[]) =>
+      formatCardEvent(
+        ev({ kind: "edited", payload: { checklist: { before, after } } }),
+        lanes,
+        opts,
+      ).facts;
+    expect(facts([], [open])).toBe("added 1 checklist item");
+    expect(facts([], [open, open])).toBe("added 2 checklist items");
+    expect(facts([open], [])).toBe("removed 1 checklist item");
+    expect(facts([open], [done])).toBe("completed checklist item “Review”");
+    expect(facts([done], [open])).toBe("reopened checklist item “Review”");
+  });
   test("known fields in order, values only where specified", () => {
     expect(
       formatCardEvent(

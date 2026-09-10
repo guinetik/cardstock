@@ -338,3 +338,44 @@ describe("laneNameFromKey", () => {
     expect(laneNameFromKey("step")).toBe("Step");
   });
 });
+
+describe("checklist import", () => {
+  const existing = {
+    checklist_present: true,
+    card_checklist_items: [
+      { id: "s", position: 0, label: "Existing", completed: true },
+    ],
+  };
+  test("extracts on create, preserves absent sections, clears explicit empty sections", () => {
+    const created = planImport(
+      [sheet(1, "", "## Ask\nHi.\n\n## Checklist\n- [ ] New")],
+      state(),
+    ).rows[0];
+    expect(created.verdict).toBe("new");
+    if (created.verdict !== "new") throw new Error("expected new");
+    expect(created.patch.columns.body_md).toBe("## Ask\nHi.");
+    expect(created.patch.columns.checklist_input).toEqual({
+      present: true,
+      items: [{ label: "New", completed: false }],
+    });
+    const missing = planImport([sheet(1, "")], state([existing])).rows[0];
+    if (missing.verdict === "changed")
+      expect(missing.patch.columns).not.toHaveProperty("checklist_input");
+    const cleared = planImport(
+      [sheet(1, "", "## Ask\n\nHi.\n\n## Checklist\n")],
+      state([existing]),
+    ).rows[0];
+    expect(cleared.verdict).toBe("changed");
+    if (cleared.verdict !== "changed") throw new Error("expected changed");
+    expect(cleared.patch.columns.checklist_input).toEqual({
+      present: true,
+      items: [],
+    });
+    expect(cleared.changes.map((c) => c.key)).toEqual(["checklist"]);
+  });
+  test("malformed sections block the import", () => {
+    expect(planImport([sheet(1, "", "## Checklist\nnotes")], state()).ok).toBe(
+      false,
+    );
+  });
+});

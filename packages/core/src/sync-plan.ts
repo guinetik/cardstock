@@ -1,5 +1,6 @@
 import { parseDocument } from "yaml";
 import { z } from "zod";
+import { checklistSection, parseChecklist } from "./checklist";
 import type { Config } from "./config";
 import { bodyWithoutH1, parseFile } from "./parse";
 import { validateFrontmatter } from "./schema";
@@ -180,7 +181,9 @@ export function comparisonFields(
       normalized = jsonValue(data[key] ?? null);
     fields[`frontmatter.${key}`] = normalized;
   }
-  fields.body = bodyWithoutH1(parsed.body);
+  const checklist = parseChecklist(bodyWithoutH1(parsed.body));
+  fields.body = checklist.body.trim();
+  fields.checklist = checklistSection(checklist) as unknown as Value;
   // Omission is the default classification, including pre-audience baselines.
   fields["frontmatter.audience"] = data.audience ?? "all";
   fields["frontmatter.epic"] = data.epic || null;
@@ -403,6 +406,12 @@ export function planSync(input: {
         continue;
       }
       let direction: FieldChange["direction"] = "conflict";
+      if (
+        !base &&
+        field === "checklist" &&
+        !(l.value as { present?: boolean })?.present
+      )
+        direction = "download";
       if (base) {
         if (same(l, b)) direction = "download";
         else if (same(r, b)) direction = "upload";

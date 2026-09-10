@@ -13,7 +13,13 @@ export const POST = withToken(
     let cards: ReturnType<typeof syncColumns>[];
     let operationId: string;
     try {
-      const body = syncRequestSchema.parse(await request.json());
+      const raw = await request.json();
+      if (raw.protocol !== 5)
+        return apiError(
+          "invalid_request",
+          "Upgrade the Cardstock CLI: this server requires sync protocol 5 for checklist.",
+        );
+      const body = syncRequestSchema.parse(raw);
       operationId = body.operationId;
       cards = body.cards.map((card) => syncColumns(card, body.groupAliases));
     } catch (error) {
@@ -22,7 +28,7 @@ export const POST = withToken(
         error instanceof Error ? error.message : "Invalid sync request",
       );
     }
-    const { data, error } = await db.rpc("cli_apply_sync_v4", {
+    const { data, error } = await db.rpc("cli_apply_sync_v5", {
       p_board: board.id,
       p_member: member.id,
       p_operation: operationId,
@@ -38,6 +44,6 @@ export const POST = withToken(
       throw new Error(error.message);
     }
     scheduleWatchMail();
-    return apiJson({ protocol: 4, operationId, ...data });
+    return apiJson({ protocol: 5, operationId, ...data });
   },
 );

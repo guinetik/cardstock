@@ -82,6 +82,11 @@ for (const row of plan.rows) {
     delete row.patch.columns.summary;
     row.changes = row.changes.filter((c) => c.key !== "summary");
   }
+  if (prev?.checklist_edited_at) {
+    delete row.patch.columns.checklist_input;
+    delete row.patch.columns.checklist_edited_at;
+    row.changes = row.changes.filter((c) => c.key !== "checklist");
+  }
   if (prev?.body_edited_at) {
     delete row.patch.columns.body_md;
     delete row.patch.columns.body_edited_at;

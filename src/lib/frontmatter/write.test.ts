@@ -281,3 +281,27 @@ describe("writeSheet: an aliased tag group", () => {
     expect(out).toBe(file);
   });
 });
+
+describe("checklist export", () => {
+  test("untouched sections retain exact bytes and a checkbox edit changes only its marker", () => {
+    const source = `${FILE}\n## Checklist\n- [ ] One\n- [X] Two\n\n## Notes\nPreserve.\n`;
+    const sheet = sheetOf(source);
+    expect(sheet.bodyMd).not.toContain("## Checklist");
+    expect(writeSheet(source, sheet)).toBe(source);
+    const out = writeSheet(source, {
+      ...sheet,
+      checklist: {
+        present: true,
+        items: [
+          { label: "One", completed: true },
+          { label: "Two", completed: true },
+        ],
+      },
+    });
+    expect(out).toContain("## Checklist\n- [x] One\n- [x] Two\n\n## Notes");
+    expect(out.slice(0, out.indexOf("## Checklist"))).toBe(
+      source.slice(0, source.indexOf("## Checklist")),
+    );
+    expect(writeSheet(out, sheetOf(out))).toBe(out);
+  });
+});

@@ -1,3 +1,8 @@
+import {
+  composeChecklist,
+  parseChecklist,
+  writeChecklist,
+} from "@cardstock/core";
 /**
  * Writing a sheet back out.
  *
@@ -219,10 +224,18 @@ export function writeSheet(
 
   // Body: untouched, appended to, or replaced — in that order of preference.
   const base = bodyWithoutH1(srcBody);
+  const bodyMd = sheet.checklist
+    ? composeChecklist(sheet.bodyMd, sheet.checklist, base)
+    : sheet.bodyMd;
   let outBody: string[];
-  if (sheet.bodyMd === base) outBody = body;
-  else if (base && sheet.bodyMd.startsWith(base)) {
-    const tail = sheet.bodyMd.slice(base.length).replace(/^\n+/, "");
+  if (bodyMd === base) outBody = body;
+  else if (
+    sheet.checklist &&
+    parseChecklist(base).body.trim() === sheet.bodyMd.trim()
+  ) {
+    outBody = writeChecklist(srcBody, sheet.checklist).split(/\r?\n/);
+  } else if (base && bodyMd.startsWith(base)) {
+    const tail = bodyMd.slice(base.length).replace(/^\n+/, "");
     const trimmed = [...body];
     while (trimmed.length && !trimmed[trimmed.length - 1].trim()) trimmed.pop();
     outBody = [...trimmed, "", ...tail.split("\n"), ""];
@@ -230,7 +243,7 @@ export function writeSheet(
     outBody = [
       `# #${sheet.externalId} — ${sheet.title}`,
       "",
-      ...sheet.bodyMd.replace(/\n+$/, "").split("\n"),
+      ...bodyMd.replace(/\n+$/, "").split("\n"),
       "",
     ];
   }
@@ -258,7 +271,10 @@ export function cardToMarkdown(sheet: CardSheet): string {
     "---",
     `# #${sheet.externalId} — ${sheet.title}`,
     "",
-    sheet.bodyMd.replace(/\n+$/, ""),
+    (sheet.checklist
+      ? writeChecklist(sheet.bodyMd, sheet.checklist)
+      : sheet.bodyMd
+    ).replace(/\n+$/, ""),
   );
   return `${lines.join("\n")}\n`;
 }

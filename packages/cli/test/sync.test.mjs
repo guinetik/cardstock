@@ -41,7 +41,7 @@ async function setup(t) {
     writes: 0,
     receipts: new Map(),
     hook: null,
-    protocol: 4,
+    protocol: 5,
     drop: false,
     revision: 0,
   };
@@ -112,7 +112,7 @@ async function setup(t) {
         });
         state.writes++;
       }
-      const receipt = { protocol: 4, operationId: body.operationId, applied };
+      const receipt = { protocol: 5, operationId: body.operationId, applied };
       state.receipts.set(body.operationId, receipt);
       if (state.drop) {
         state.drop = false;
@@ -548,7 +548,7 @@ test("unsupported server cannot receive writes; legacy baseline adoption is expl
   c.state.protocol = 2;
   assert.equal((await c.cli("sync")).code, 2);
   assert.equal(c.state.writes, 0);
-  c.state.protocol = 4;
+  c.state.protocol = 5;
   const baseline = JSON.parse(await readFile(file, "utf8"));
   delete baseline.cards[0].cardId;
   await writeFile(file, JSON.stringify(baseline));

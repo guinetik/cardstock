@@ -6,6 +6,13 @@ import {
   stringify,
   visit,
 } from "yaml";
+import {
+  type ChecklistSection,
+  checklistSection,
+  composeChecklist,
+  parseChecklist,
+  writeChecklist,
+} from "./checklist";
 import type { Config } from "./config";
 import {
   comparisonFields,
@@ -148,6 +155,7 @@ function patchFields(
     yaml += appended;
   }
   let body = target.slice(a.bodyStart);
+  const originalSection = checklistSection(parseChecklist(body));
   if (fields.includes("body")) {
     const h1 = /^\s*# [^\r\n]*(?:\r?\n|$)/.exec(body)?.[0] ?? "";
     const rest = body.slice(h1.length);
@@ -158,6 +166,14 @@ function patchFields(
     body =
       h1 + (h1 && !h1.endsWith("\n") ? a.nl : "") + leading + value + trailing;
   }
+  if (fields.includes("checklist"))
+    body = composeChecklist(
+      body,
+      donorFields.checklist as unknown as ChecklistSection,
+      target.slice(a.bodyStart),
+    );
+  else if (fields.includes("body"))
+    body = composeChecklist(body, originalSection, target.slice(a.bodyStart));
   return (
     target.slice(0, a.start) + yaml + target.slice(a.end, a.bodyStart) + body
   );
@@ -169,7 +185,7 @@ export function markdownFromFields(externalId: string, fields: Fields): string {
       .filter(([key]) => key.startsWith("frontmatter."))
       .map(([key, value]) => [key.slice(12), value]),
   );
-  return `---\n${stringify({ id: Number(externalId), ...frontmatter })}---\n# #${externalId} — ${frontmatter.title}\n\n${fields.body ?? ""}\n`;
+  return `---\n${stringify({ id: Number(externalId), ...frontmatter })}---\n# #${externalId} — ${frontmatter.title}\n\n${writeChecklist(String(fields.body ?? ""), (fields.checklist ?? { present: false, items: [] }) as unknown as ChecklistSection)}\n`;
 }
 
 /** Rebase only database fields that changed since the stored source projection. */
@@ -179,6 +195,14 @@ export function rebaseMarkdown(
   previous: Fields,
   current: Fields,
 ): string {
+  if (!("checklist" in previous)) {
+    const parsed = parseChecklist(String(previous.body ?? ""));
+    previous = {
+      ...previous,
+      body: parsed.body.trim(),
+      checklist: checklistSection(parsed) as unknown as Fields[string],
+    };
+  }
   const keys = [
     ...new Set([...Object.keys(previous), ...Object.keys(current)]),
   ].filter((key) => stableJson(previous[key]) !== stableJson(current[key]));
@@ -255,6 +279,17 @@ export function materializeSync(
     const uploads = card.changes
       .filter((change) => change.direction === "upload")
       .map((change) => change.field);
+    // A deliberate removal is exported as an explicit empty section so a later
+    // web import can distinguish clearing from an older file that omits it.
+    if (
+      uploads.includes("checklist") &&
+      !(left.checklist as unknown as ChecklistSection).present &&
+      (right.checklist as unknown as ChecklistSection).present
+    ) {
+      left.checklist = { present: true, items: [] };
+      right.checklist = left.checklist;
+      downloads.push("checklist");
+    }
     const after = {
       local: patchFields(localText, remoteText, downloads, right),
       remote: patchFields(remoteText, localText, uploads, left),

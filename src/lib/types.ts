@@ -38,7 +38,15 @@ export interface TagGroup {
   tags: Tag[];
 }
 
+export interface CardChecklistItem {
+  id: string;
+  label: string;
+  completed: boolean;
+  position: number;
+}
+
 export interface Card {
+  card_checklist_items?: CardChecklistItem[];
   /** This member's watch, loaded under row-level security. */
   watching?: boolean;
   id: string;

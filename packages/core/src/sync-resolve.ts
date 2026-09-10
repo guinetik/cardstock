@@ -85,12 +85,13 @@ export function parseConflictSelections(
     ...ours.map((value) => ({ value, side: "ours" as const })),
     ...theirs.map((value) => ({ value, side: "theirs" as const })),
   ].map(({ value, side }) => {
-    const match = /^([1-9]\d*)(?::(existence|body|frontmatter\..+))?$/.exec(
-      value,
-    );
+    const match =
+      /^([1-9]\d*)(?::(existence|body|checklist|frontmatter\..+))?$/.exec(
+        value,
+      );
     if (!match)
       throw new Error(
-        `Use --${side} <id> or --${side} <id>:<existence|body|frontmatter.key>`,
+        `Use --${side} <id> or --${side} <id>:<existence|body|checklist|frontmatter.key>`,
       );
     return {
       externalId: match[1],
