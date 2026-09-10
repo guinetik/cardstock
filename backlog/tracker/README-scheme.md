@@ -55,13 +55,25 @@ Both bare tags (`enhancement`, `card`) and qualified references (`kind:enhanceme
 
 ## Filing a new item
 
-Cards can also be created on the site. Preview and sync the hosted board before
-allocating an ID; never pick one by listing the folder alone. The CLI has no
-`next-id` command. Choose an unused ID above both local IDs and the live/deleted
-IDs in the current scoped baseline (its path is shown by `status --json`). Deleted
-IDs remain reserved. This is not a reservation against concurrent creation:
-preview again before uploading and reconcile identity collisions explicitly,
-never resolve them by forcing content over an existing card.
+Cards can also be created on the site, so never pick an ID by listing the folder
+alone. `cardstock new "<title>"` does the allocation: it asks the board for its
+snapshot — live cards plus the deleted IDs, which stay reserved — takes the
+maximum against the local files too, and writes `<id>.md` here. It writes only
+that file; the card is not created on the board until you sync.
+
+```sh
+cardstock new "Cards do not show how old they are" --tags bug,card
+```
+
+`--summary`, `--epic`, `--area`, `--tags`, `--status`, `--lane`, `--effort` and
+`--priority` override the defaults; the result is checked against this scheme
+before anything is written. To allocate by hand instead, choose an unused ID
+above both local IDs and the live/deleted IDs in the current scoped baseline
+(its path is shown by `status --json`).
+
+Either way this is not a reservation against concurrent creation: preview again
+before uploading and reconcile identity collisions explicitly, never resolve them
+by forcing content over an existing card.
 
 **A new card never starts at a gate.** However finished the code is, a card you create begins in `unsorted`, or in `now` if you are about to work it. Filing is not a promotion.
 

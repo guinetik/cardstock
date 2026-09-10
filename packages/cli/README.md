@@ -13,6 +13,7 @@ Version 0.4.0 adds explicit deletion and requires sync protocol 4. Version 0.3.0
 does not support deletion and uses sync protocol 3.
 
 - Portable `cardstock.json` configuration and offline Markdown validation.
+- Board-allocated card IDs with `cardstock new`, counting reserved deleted IDs.
 - Browser-approved sign-in; no database credentials or app checkout required.
 - Read-only status and dry-run plans with field-level uploads, downloads and conflicts.
 - Bidirectional sync using a saved baseline, explicit `ours`/`theirs` choices,
@@ -65,6 +66,7 @@ specific tracker and `--remote <url>` overrides its configured server.
 | Command | Effect |
 | --- | --- |
 | `validate --json` | Offline checks; no writes. |
+| `new "<title>" --json` | GET the board for the next free ID and write `<id>.md`; no board writes. |
 | `status --json` or `sync --dry-run --json` | GET-only plan; no tracker/baseline changes. |
 | `baseline --json` | Save agreed state locally; no board writes. |
 | `sync --json` | Apply both directions and save verified baseline checkpoints. |
@@ -188,6 +190,43 @@ token remotely and removes the local credential.
 
 Pass `--remote` or configure a `remote` URL with `cardstock init`. Use
 `--no-browser` to print the approval URL without opening it.
+
+## File a new card
+
+`cardstock new "<title>"` allocates the next card ID and writes `<id>.md` in the
+configured tracker directory.
+
+```sh
+cardstock new "Cards do not show how old they are" --tags bug,card
+cardstock new "Board is slow to load" --summary "It takes ages to appear." --json
+```
+
+The ID comes from the board, not from the folder. The snapshot lists live cards
+and the IDs of deleted ones, which stay reserved, and local files are counted too,
+so an unsynced card cannot be handed out twice. This is why the command requires a
+configured remote and a signed-in session: an ID picked offline can collide with a
+card someone created on the site. It is still not a reservation against concurrent
+creation — preview before uploading, as in [Preview and baseline](#preview-and-baseline).
+
+The file is written and nothing else. No card is created on the board and no
+baseline is touched; run `validate`, then `sync`, once the `## Ask` says what was
+actually asked.
+
+| Flag | Default |
+|---|---|
+| `--summary <text>` | the title, because an open item needs a nonempty summary |
+| `--status <status>` | `backlog` |
+| `--lane <lane>` | `unsorted` |
+| `--epic <name>` | `Board & cards`; `--epic ""` writes no epic |
+| `--area <name>` | `UI` |
+| `--tags <tag,tag>` | `enhancement` |
+| `--effort H\|M\|L`, `--priority 1\|2\|3` | omitted |
+
+A new card never starts at a gate: the status and lane defaults keep filing
+separate from promotion. The result is checked against `cardstock.json`'s scheme
+before anything is written, so an unknown tag, a status its lane cannot hold, or a
+missing required section fails with the same diagnostics `validate` would print,
+and no file is created.
 
 ## Preview and baseline
 

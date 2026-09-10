@@ -8,6 +8,7 @@ import { findConfig } from "./config";
 import { credentialFor, removeCredential, saveCredential } from "./credentials";
 import { DELETE_HELP, deleteCards } from "./delete";
 import { INIT_HELP, init } from "./init";
+import { NEW_HELP, newCard } from "./new";
 import { PREVIEW_HELP, preview } from "./preview";
 import { executeSync } from "./sync-execute";
 
@@ -15,6 +16,8 @@ const HELP = `Usage: cardstock <command>
 
   init --project <slug> --board <slug> [--dir tracker] [--remote <url>]
   init --from <board.json> [--out <file>] [--remote <url>] [--dry-run] [--json]
+  new <title> [--summary <text>] [--epic <name>] [--area <name>] [--tags <t,t>]
+              [--status <status>] [--lane <lane>] [--remote <url>] [--json]
   validate [--config <file>] [--json]
   status [--config <file>] [--remote <url>] [--json]
   sync [--dry-run] [--config <file>] [--remote <url>] [--json]
@@ -28,6 +31,7 @@ const HELP = `Usage: cardstock <command>
   --help, -h
 
 init writes cardstock.json without replacing an existing file.
+new asks the board for the next unused card ID and writes <id>.md in the tracker.
 validate discovers cardstock.json in this directory or its parents and checks <id>.md files.
 login opens Cardstock in a browser and stores its credential outside the repository.`;
 
@@ -71,9 +75,15 @@ const wait = (milliseconds: number) =>
 
 export async function run(args: string[], cwd: string): Promise<number> {
   const json =
-    ["validate", "init", "status", "sync", "baseline", "delete"].includes(
-      args[0],
-    ) && args.includes("--json");
+    [
+      "validate",
+      "init",
+      "new",
+      "status",
+      "sync",
+      "baseline",
+      "delete",
+    ].includes(args[0]) && args.includes("--json");
   try {
     if (args.length === 1 && ["--version", "-v"].includes(args[0])) {
       console.log(version);
@@ -100,6 +110,10 @@ export async function run(args: string[], cwd: string): Promise<number> {
         console.log(INIT_HELP);
         return 0;
       }
+      if (command === "new") {
+        console.log(NEW_HELP);
+        return 0;
+      }
       if (command === "login") {
         console.log(LOGIN_HELP);
         return 0;
@@ -112,6 +126,7 @@ export async function run(args: string[], cwd: string): Promise<number> {
     if (command === "init") {
       return await init(args.slice(1), cwd);
     }
+    if (command === "new") return await newCard(args.slice(1), cwd);
     if (command === "delete") return await deleteCards(args.slice(1), cwd);
     if (command === "sync" && !args.slice(1).some((arg) => arg === "--dry-run"))
       return await executeSync(args.slice(1), cwd);

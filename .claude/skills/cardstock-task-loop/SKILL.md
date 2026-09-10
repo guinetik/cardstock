@@ -58,11 +58,16 @@ Hap and Sanjay's feedback on cardstock itself usually arrives as an aside inside
 
 **A new card never starts at a lane that implies work has begun.** File into `unsorted`, or `now` only if you are about to work it immediately. Filing is not a promotion.
 
-Sync first and follow the ID-allocation guidance in `backlog/tracker/README-scheme.md`.
-The CLI has no `next-id` command; the scoped baseline includes both live and reserved
-deleted IDs. A fresh snapshot is not an ID reservation. If concurrent creation
-causes a collision, reconcile it without overwriting the existing card. Write the
-file per the scheme, validate, preview, then sync and commit when authorized.
+Sync first, then let `bun run cli new "<title>"` allocate the ID: it reads the
+board's snapshot, which carries both live and reserved deleted IDs, counts the
+local files too, and writes the scaffolded `<id>.md`. A fresh snapshot is not an
+ID reservation. If concurrent creation causes a collision, reconcile it without
+overwriting the existing card. Fill in the `## Ask` in the asker's words, validate,
+preview, then sync and commit when authorized. `new` defaults to `status: backlog`
+and `lane: unsorted` — leave it there unless you are about to work it.
+
+See the ID-allocation guidance in `backlog/tracker/README-scheme.md` for the
+manual path.
 
 ## Phase 1 — Claim
 
