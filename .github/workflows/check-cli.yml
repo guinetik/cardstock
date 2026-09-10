@@ -42,4 +42,4 @@ jobs:
           test "$(cardstock --version)" = "$version"
           test "$(cardstock -v)" = "$version"
           if cardstock sync; then echo '::error::Unconfigured sync succeeded'; exit 1; fi
-          CARDSTOCK_TEST_ENTRY="$(npm root -g)/@guinetik/cardstock-cli/dist/index.js" node --test packages/cli/test/sync.test.mjs
+          CARDSTOCK_TEST_ENTRY="$(npm root -g)/@guinetik/cardstock-cli/dist/index.js" node --test packages/cli/test/new.test.mjs packages/cli/test/sync.test.mjs

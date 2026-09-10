@@ -1,31 +1,78 @@
 import { expect, test } from "@playwright/test";
-import { admin, OWNER, signIn } from "./support/sign-in";
+import { admin, attachToProject, OWNER, signIn } from "./support/sign-in";
 
-const BOARD = "/p/demo/b/backlog";
+let BOARD = "";
+let projectId = "";
 let boardId = "";
 let marker = "";
 
 test.beforeEach(async () => {
+  if (
+    !["localhost", "127.0.0.1"].includes(
+      new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname,
+    )
+  )
+    throw new Error("Clone tests require local Supabase.");
   marker = `Clone regression ${Date.now()}`;
+  const slug = `e2e-clone-${crypto.randomUUID()}`;
+  const { data: project, error: projectError } = await admin
+    .from("projects")
+    .insert({ slug, name: "Clone regression" })
+    .select("id")
+    .single();
+  if (projectError) throw projectError;
+  projectId = project.id;
+  await attachToProject(OWNER, slug, "admin");
   const { data, error } = await admin
     .from("boards")
-    .select("id, projects!inner(slug)")
-    .eq("slug", "backlog")
-    .eq("projects.slug", "demo")
+    .insert({ project_id: projectId, slug: "work", name: "Clone tests" })
+    .select("id")
     .single();
-  expect(error).toBeNull();
-  boardId = data!.id;
+  if (error) throw error;
+  boardId = data.id;
+  BOARD = `/p/${slug}/b/work`;
+  const lanes = await admin.from("lanes").insert([
+    {
+      board_id: boardId,
+      key: "unsorted",
+      name: "Unsorted",
+      kind: "inbox",
+      position: 0,
+    },
+    {
+      board_id: boardId,
+      key: "archive",
+      name: "Archive",
+      kind: "archive",
+      position: 1,
+    },
+  ]);
+  if (lanes.error) throw lanes.error;
+  const epic = await admin
+    .from("epics")
+    .insert({ board_id: boardId, source_name: "Clone epic" });
+  if (epic.error) throw epic.error;
+  const group = await admin
+    .from("tag_groups")
+    .insert({ board_id: boardId, key: "kind", name: "Kind" })
+    .select("id")
+    .single();
+  if (group.error) throw group.error;
+  const tags = await admin.from("tags").insert([
+    { group_id: group.data.id, key: "bug", name: "Bug" },
+    { group_id: group.data.id, key: "enhancement", name: "Enhancement" },
+  ]);
+  if (tags.error) throw tags.error;
 });
 
 test.afterEach(async () => {
-  // Only this test's source and copies; leave the existing demo cards intact.
-  if (boardId && marker) {
-    const { error } = await admin
-      .from("cards")
-      .delete()
-      .eq("board_id", boardId)
-      .eq("summary", marker);
+  // Deleting only cards leaves reserved IDs behind. Drop the isolated project
+  // so neither fixtures nor their tombstones affect a real board's numbering.
+  if (projectId) {
+    const { error } = await admin.from("projects").delete().eq("id", projectId);
     expect(error).toBeNull();
+    projectId = "";
+    boardId = "";
   }
 });
 
@@ -55,7 +102,7 @@ async function seedSource(archived = false) {
     .from("cards")
     .insert({
       board_id: boardId,
-      external_id: String(Date.now()),
+      external_id: "1",
       lane_id: lane.id,
       rank: -10,
       title: marker,
@@ -146,6 +193,7 @@ test("clone an archived card into an editable fresh card without changing its so
   expect(error).toBeNull();
   expect(copy!.id).not.toBe(source.id);
   expect(copy!.external_id).not.toBe(source.external_id);
+  expect(copy!.external_id).toBe("2");
   expect(copy).toMatchObject({
     title,
     summary: marker,

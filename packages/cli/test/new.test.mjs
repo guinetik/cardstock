@@ -183,6 +183,22 @@ test("a deleted card's ID stays reserved", async (t) => {
   assert.equal(JSON.parse(result.stdout).id, 31);
 });
 
+test("a clean board ending at 13 allocates 14, then counts the unsynced local card", async (t) => {
+  const { cli } = await setup(t, {
+    cards: [13, 2, 9, 1].map((id) => ({
+      externalId: String(id),
+      revision: `r${id}`,
+      markdown: sheet,
+    })),
+  });
+  const first = await cli("new", "Checklist review", "--json");
+  assert.equal(first.code, 0, first.stderr);
+  assert.equal(JSON.parse(first.stdout).id, 14);
+  const second = await cli("new", "Next review", "--json");
+  assert.equal(second.code, 0, second.stderr);
+  assert.equal(JSON.parse(second.stdout).id, 15);
+});
+
 test("overrides land in the frontmatter", async (t) => {
   const { tracker, cli } = await setup(t);
   const result = await cli(
