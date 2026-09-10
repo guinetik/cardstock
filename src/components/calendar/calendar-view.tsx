@@ -488,25 +488,9 @@ export function CalendarView(props: {
             </div>
           )}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-            {boardBase ? (
-              <nav
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
-                aria-label="Board views"
-              >
-                <Link className="paper-link" href={`${boardBase}/cockpit`}>
-                  Epic Cockpit
-                </Link>
-                <Link className="paper-link" href={`${boardBase}/timeline`}>
-                  Timeline
-                </Link>
-                <Link className="paper-link" href={`${boardBase}/priorities`}>
-                  Priorities
-                </Link>
-                <Link className="paper-link" href={`${boardBase}/manage`}>
-                  Configuration
-                </Link>
-              </nav>
-            ) : (
+            {/* A board calendar gets its sibling views from the topbar; the
+                project calendar has no board there to hang them off. */}
+            {boardBase ? null : (
               <nav
                 className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
                 aria-label="Project views"

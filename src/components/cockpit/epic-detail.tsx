@@ -90,22 +90,10 @@ export function EpicDetail({
           </p>
           <nav
             className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
-            aria-label="Board views"
+            aria-label="Up from this epic"
           >
             <Link className="paper-link" href={boardHref}>
               Board
-            </Link>
-            <Link className="paper-link" href={`${boardHref}/timeline`}>
-              Timeline
-            </Link>
-            <Link className="paper-link" href={`${boardHref}/calendar`}>
-              Calendar
-            </Link>
-            <Link className="paper-link" href={`${boardHref}/priorities`}>
-              Priorities
-            </Link>
-            <Link className="paper-link" href={`${boardHref}/manage`}>
-              Configuration
             </Link>
             <Link
               className="paper-link"

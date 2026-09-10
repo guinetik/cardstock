@@ -213,26 +213,11 @@ export default async function TimelinePage(
           Work begins at its raised date. The watchlist calls out anything still
           unplanned after {watchDays} days.
         </p>
-        <nav
-          className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
-          aria-label="Board views"
-        >
-          <Link className="paper-link" href={`${back}/cockpit`}>
-            Epic Cockpit
-          </Link>
-          <Link className="paper-link" href={`${back}/calendar`}>
-            Calendar
-          </Link>
-          <Link className="paper-link" href={`${back}/priorities`}>
-            Priorities
-          </Link>
-          <Link className="paper-link" href={`${back}/manage`}>
-            Configuration
-          </Link>
+        <p className="mt-2 text-[12.5px]">
           <Link className="paper-link" href={`/p/${project}#settings-heading`}>
             {watchDays}-day project window
           </Link>
-        </nav>
+        </p>
       </header>
 
       <div className="my-5 flex flex-wrap gap-x-6 gap-y-2 border-b border-[var(--border-hairline)] pb-5 text-xs text-[var(--color-grey)]">

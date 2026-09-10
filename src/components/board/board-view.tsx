@@ -861,42 +861,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
           <b className="font-medium text-[var(--color-ink)]">{unsorted}</b>{" "}
           unsorted
         </span>
-        <nav
-          className="flex items-center gap-4 pb-0.5 text-[12.5px]"
-          aria-label="Board views"
-        >
-          <a
-            className="paper-link"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/cockpit`}
-          >
-            Epic Cockpit
-          </a>
-          <a
-            className="paper-link"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/calendar`}
-          >
-            Calendar
-          </a>
-          <a
-            className="paper-link"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/timeline`}
-          >
-            Timeline
-          </a>
-          <a
-            className="paper-link"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/priorities`}
-          >
-            Priorities
-          </a>
-          <a
-            className="paper-link"
-            href={`/p/${data.project.slug}/b/${data.board.slug}/manage`}
-          >
-            Configuration
-          </a>
-        </nav>
-        <fieldset className="m-0 ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 border-0 p-0 pb-0.5">
+        <fieldset className="m-0 flex flex-wrap items-center gap-x-4 gap-y-2 border-0 p-0 pb-0.5">
           <legend className="sr-only">Board actions</legend>
           <fieldset
             className="m-0 flex items-center gap-1 border-0 p-0"

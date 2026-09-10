@@ -4,7 +4,6 @@ import { CardTemplateEditor } from "@/app/(app)/p/[project]/card-template-editor
 import { GatesEditor } from "@/app/(app)/p/[project]/gates-editor";
 import { ProjectSection } from "@/app/(app)/p/[project]/project-section";
 import { TaxonomyEditor } from "@/app/(app)/p/[project]/taxonomy-editor";
-import Link from "@/components/activity-link";
 import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { currentAccess } from "@/lib/access-server";
 import { loadBoardManage } from "@/lib/board-manage-data";
@@ -37,7 +36,6 @@ export default async function BoardManagePage(
   const access = await currentAccess(data.project.id);
   if (!access) notFound();
 
-  const boardHref = `/p/${data.project.slug}/b/${data.board.slug}`;
   const groups = [...data.groups]
     .sort((a, b) => a.position - b.position)
     .map((group, i) => ({
@@ -67,23 +65,6 @@ export default async function BoardManagePage(
             Concepts and gates for {data.board.name}. People, boards, and the
             forgotten-work window stay on the project.
           </p>
-          <nav
-            className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
-            aria-label="Board views"
-          >
-            <Link className="paper-link" href={`${boardHref}/cockpit`}>
-              Epic Cockpit
-            </Link>
-            <Link className="paper-link" href={`${boardHref}/timeline`}>
-              Timeline
-            </Link>
-            <Link className="paper-link" href={`${boardHref}/calendar`}>
-              Calendar
-            </Link>
-            <Link className="paper-link" href={`${boardHref}/priorities`}>
-              Priorities
-            </Link>
-          </nav>
         </div>
         <div className="letterhead-aside">
           <span className="folder-stamp" aria-hidden="true">

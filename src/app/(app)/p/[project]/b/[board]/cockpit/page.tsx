@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Link from "@/components/activity-link";
 import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { CockpitView } from "@/components/cockpit/cockpit-view";
 import { buildCockpitModel } from "@/lib/cockpit";
@@ -34,26 +33,6 @@ export default async function CockpitPage(props: {
           The whole delivery fleet, without the task-level noise. Open an epic
           when a signal needs explanation.
         </p>
-        <nav
-          className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px]"
-          aria-label="Board views"
-        >
-          <Link className="paper-link" href={`${boardBase}/timeline`}>
-            Timeline
-          </Link>
-          <Link
-            className="paper-link"
-            href={`/p/${project}/b/${board}/calendar`}
-          >
-            Calendar
-          </Link>
-          <Link className="paper-link" href={`${boardBase}/priorities`}>
-            Priorities
-          </Link>
-          <Link className="paper-link" href={`${boardBase}/manage`}>
-            Configuration
-          </Link>
-        </nav>
       </header>
       <CockpitView
         model={model}
