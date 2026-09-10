@@ -114,6 +114,10 @@ when checking completion. Exit 1 signals conflicts/validation failures; exit 2
 signals configuration, authentication, filesystem, network or execution failure.
 Errors can occur after a remote commit: inspect the journal before retrying.
 
+An already-synced tracker checks one snapshot and returns without creating a
+journal or rewriting its baseline (`baseline.saved: false`). When cards change,
+only cards needing publication or a refreshed baseline enter the recovery journal.
+
 Keep `.cardstock/`, `*.md.cardstock-*.before` and `*.md.cardstock-*.tmp` out of Git.
 Never commit credentials or print tokens, never infer deletion from a missing card
 file, and never overwrite a corrupt baseline or live lock. Recovery is described

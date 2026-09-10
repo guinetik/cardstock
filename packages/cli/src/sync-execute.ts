@@ -242,7 +242,33 @@ export async function executeSync(
       }
       if (stableJson(local) !== stableJson(await loadLocal()))
         throw new Error("Local files changed during planning; retry");
-      journal = prepareJournal(scope, before, intents);
+      const baselined = new Map(
+        baseline?.cards.map((card) => [card.externalId, card]),
+      );
+      // Already-current cards need neither publication nor another checkpoint.
+      // Compare the full saved snapshot so first contact, equal edits, identity
+      // adoption and revision-only changes still advance through verification.
+      const pending = intents.filter(
+        (intent) =>
+          intent.writeLocal ||
+          intent.writeRemote ||
+          stableJson(baselined.get(intent.externalId)) !==
+            stableJson({ ...intent.before.remote, file: intent.file }),
+      );
+      if (baseline && !pending.length && !deleteIds) {
+        if ((await readOptional(baselinePath)) !== before)
+          throw new Error("Baseline changed during planning; retry");
+        report({
+          ok: true,
+          dryRun: false,
+          clean: plan.clean,
+          applied: [],
+          baseline: { path: baselinePath, saved: false },
+          remaining: plan.counts,
+        });
+        return 0;
+      }
+      journal = prepareJournal(scope, before, pending);
       await store.create(journal);
     }
     const recoveryDiagnostics = validateTracker(

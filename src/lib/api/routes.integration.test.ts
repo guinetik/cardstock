@@ -63,6 +63,7 @@ describe.skipIf(!local)("/api/v1 board routes", () => {
     const vocabulary = await getBoard(request(), params);
     expect(vocabulary.status).toBe(200);
     const body = await vocabulary.json();
+    expect(body.syncProtocol).toBe(5);
     expect(body.lanes.length).toBeGreaterThan(0);
     expect(body.etag).toMatch(/^[0-9a-f]{32}$/);
   });

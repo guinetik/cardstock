@@ -186,6 +186,123 @@ async function setup(t) {
   return { cwd, tracker, state, cli, baseline };
 }
 
+async function addAgreedCards(c, count) {
+  for (let id = 2; id <= count; id++) {
+    const markdown = sheet(id);
+    c.state.cards.push({
+      externalId: String(id),
+      cardId: randomUUID(),
+      revision: "original",
+      markdown,
+    });
+    await writeFile(path.join(c.tracker, `${id}.md`), markdown);
+  }
+}
+
+test("clean 29-card sync needs one snapshot and leaves baseline and journal files untouched", async (t) => {
+  const c = await setup(t);
+  await addAgreedCards(c, 29);
+  const baseline = await c.baseline();
+  const before = await readFile(baseline, "utf8");
+  const stateFiles = await readdir(path.dirname(baseline));
+  c.state.requests.length = 0;
+  const result = await c.cli("sync");
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(result.data.clean, true);
+  assert.equal(result.data.baseline.saved, false);
+  assert.deepEqual(result.data.applied, []);
+  assert.deepEqual(c.state.requests, ["GET /api/v1/boards/demo/test/sync"]);
+  assert.equal(await readFile(baseline, "utf8"), before);
+  assert.deepEqual(await readdir(path.dirname(baseline)), stateFiles);
+});
+
+test("one edit on a 29-card board only journals and rechecks the changed card", async (t) => {
+  const c = await setup(t);
+  await addAgreedCards(c, 29);
+  await c.baseline();
+  await writeFile(path.join(c.tracker, "1.md"), `${sheet()}Local change.\n`);
+  c.state.requests.length = 0;
+  const result = await c.cli("sync");
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(result.data.clean, true);
+  assert.deepEqual(result.data.applied, ["1"]);
+  assert.equal(
+    c.state.requests.filter((request) => request.startsWith("GET")).length,
+    4,
+  );
+  const journal = JSON.parse(await readFile(result.data.journal, "utf8"));
+  assert.deepEqual(
+    journal.entries.map((entry) => entry.intent.externalId),
+    ["1"],
+  );
+  assert.equal((await c.cli("status")).data.clean, true);
+});
+
+test("a skipped card edited remotely during sync stays pending against its old baseline", async (t) => {
+  const c = await setup(t);
+  await addAgreedCards(c, 2);
+  const baseline = await c.baseline();
+  await writeFile(path.join(c.tracker, "1.md"), `${sheet()}Local change.\n`);
+  c.state.hook = async (req) => {
+    if (req.method === "POST") {
+      c.state.cards[1].markdown += "Concurrent hosted change.\n";
+      c.state.cards[1].revision = "concurrent";
+    }
+  };
+  const result = await c.cli("sync");
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(result.data.clean, false);
+  assert.equal(result.data.remaining.downloads, 1);
+  assert.equal(await readFile(path.join(c.tracker, "2.md"), "utf8"), sheet(2));
+  assert.equal(
+    JSON.parse(await readFile(baseline, "utf8")).cards.find(
+      (card) => card.externalId === "2",
+    ).markdown,
+    sheet(2),
+  );
+});
+
+test("equal edits and revision-only changes still refresh the saved baseline", async (t) => {
+  const c = await setup(t);
+  const baseline = await c.baseline();
+  for (const markdown of [
+    `${sheet()}Agreed edit.\n`,
+    `${sheet()}Agreed edit.\n`,
+  ]) {
+    await writeFile(path.join(c.tracker, "1.md"), markdown);
+    c.state.cards[0].markdown = markdown;
+    c.state.cards[0].revision = randomUUID();
+    const result = await c.cli("sync");
+    assert.equal(result.code, 0, result.stdout);
+    assert.equal(result.data.clean, true);
+    assert.equal(result.data.baseline.saved, true);
+    const saved = JSON.parse(await readFile(baseline, "utf8")).cards[0];
+    assert.equal(saved.markdown, markdown);
+    assert.equal(saved.revision, c.state.cards[0].revision);
+    assert.equal(c.state.writes, 0);
+  }
+});
+
+test("clean sync still rejects tracker scheme violations", async (t) => {
+  const c = await setup(t);
+  await c.baseline();
+  const file = path.join(c.cwd, "cardstock.json");
+  const config = JSON.parse(await readFile(file, "utf8"));
+  config.scheme = {
+    required_keys: ["id", "title", "status", "tags"],
+    statuses: ["backlog"],
+    lanes: ["unsorted"],
+    sizes: ["H", "M", "L"],
+    priorities: ["1", "2", "3"],
+    required_sections: ["## Missing section"],
+  };
+  await writeFile(file, JSON.stringify(config));
+  const result = await c.cli("sync");
+  assert.equal(result.code, 1, result.stdout);
+  assert.ok(result.data.diagnostics.length);
+  assert.equal(c.state.writes, 0);
+});
+
 test("sync merges disjoint edits, publishes both sides and advances a clean baseline", async (t) => {
   const c = await setup(t),
     baseline = await c.baseline();
