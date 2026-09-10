@@ -5,6 +5,7 @@ import { currentAccess } from "@/lib/access-server";
 import { CARD_TEMPLATE_MAX, CARD_TEMPLATE_SETTING } from "@/lib/card-template";
 import { GATES_SETTING, validateGatesForSave } from "@/lib/gates";
 import { cleanName, keyFromName } from "@/lib/keys";
+import { STENCIL_NAME_MAX, stencilInputSchema } from "@/lib/stencils";
 import { currentMember, supabaseServer } from "@/lib/supabase/server";
 import {
   MAX_FORGOTTEN_AFTER_DAYS,
@@ -422,4 +423,191 @@ export async function updateCardTemplate(
   revalidatePath(`/p/${projectSlug}/b/${boardSlug}`);
   revalidatePath(`/p/${projectSlug}/b/${boardSlug}/manage`);
   return { message: "Template saved." };
+}
+
+/* ------------------------------------------------------------------ stencils
+ * A stencil is a reusable card shape. Editing one never touches a card already
+ * stamped from it — the same promise the card template makes.
+ */
+
+export type StencilResult = { error?: string } | null;
+
+function revalidateStencils() {
+  revalidatePath("/p/[project]/b/[board]/manage", "page");
+  revalidatePath("/p/[project]/b/[board]", "page");
+}
+
+/**
+ * Board-scoped writes need project admin, exactly as the card template does.
+ * Returns the project id so callers can bind the target board to it — the
+ * slug names who must hold canManage; the board decides where the write lands.
+ */
+async function requireBoardManager(
+  projectSlug: string,
+): Promise<{ error: string } | { projectId: string }> {
+  const denied = await requireMember();
+  if (denied) return { error: denied };
+  const db = await supabaseServer();
+  const { data: project } = await db
+    .from("projects")
+    .select("id")
+    .eq("slug", projectSlug)
+    .maybeSingle();
+  if (!project) return { error: "Project not found." };
+  const access = await currentAccess(project.id);
+  return access?.canManage
+    ? { projectId: project.id }
+    : { error: "Only an owner or project admin can change stencils." };
+}
+
+/** The board must belong to the project whose canManage was just checked. */
+async function boardInProject(
+  boardId: string,
+  projectId: string,
+): Promise<boolean> {
+  const db = await supabaseServer();
+  const { data: board } = await db
+    .from("boards")
+    .select("project_id")
+    .eq("id", boardId)
+    .maybeSingle();
+  return board?.project_id === projectId;
+}
+
+/** Same binding for a stencil, resolved through its board. */
+async function stencilInProject(
+  stencilId: string,
+  projectId: string,
+): Promise<boolean> {
+  const db = await supabaseServer();
+  const { data: stencil } = await db
+    .from("card_stencils")
+    .select("board_id")
+    .eq("id", stencilId)
+    .maybeSingle();
+  return !!stencil && boardInProject(stencil.board_id, projectId);
+}
+
+export async function createStencil(
+  _prev: StencilResult,
+  form: FormData,
+): Promise<StencilResult> {
+  const projectSlug = String(form.get("projectSlug") ?? "");
+  const gate = await requireBoardManager(projectSlug);
+  if ("error" in gate) return { error: gate.error };
+  const boardId = String(form.get("boardId") ?? "");
+  const name = cleanName(String(form.get("name") ?? ""));
+  if (!boardId || !(await boardInProject(boardId, gate.projectId)))
+    return { error: "Board not found." };
+  if (!name) return { error: "A stencil needs a name." };
+  if (name.length > STENCIL_NAME_MAX)
+    return { error: "That name is too long for a menu." };
+
+  const db = await supabaseServer();
+  const { error } = await db
+    .from("card_stencils")
+    .insert({ board_id: boardId, name });
+  if (error)
+    return {
+      error:
+        error.code === "23505"
+          ? `This board already has a stencil called “${name}”.`
+          : error.message,
+    };
+  revalidateStencils();
+  return null;
+}
+
+export async function saveStencil(
+  _prev: StencilResult,
+  form: FormData,
+): Promise<StencilResult> {
+  const projectSlug = String(form.get("projectSlug") ?? "");
+  const gate = await requireBoardManager(projectSlug);
+  if ("error" in gate) return { error: gate.error };
+  const stencilId = String(form.get("stencilId") ?? "");
+  if (!stencilId || !(await stencilInProject(stencilId, gate.projectId)))
+    return { error: "Stencil not found." };
+  const parsed = stencilInputSchema.safeParse({
+    name: form.get("name") ?? "",
+    title: form.get("title") ?? "",
+    summary: form.get("summary") ?? "",
+    body: form.get("body") ?? "",
+    area: form.get("area") ?? "",
+    effort: form.get("effort") ?? "",
+    tagIds: form.getAll("tagIds"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { name, title, summary, body, area, effort, tagIds } = parsed.data;
+
+  const db = await supabaseServer();
+  // Validate the complete selection before replacing existing tags.
+  const { data: stencil } = await db
+    .from("card_stencils")
+    .select("board_id")
+    .eq("id", stencilId)
+    .single();
+  if (!stencil) return { error: "Stencil not found." };
+  if (tagIds.length) {
+    const { data: tags, error } = await db
+      .from("tags")
+      .select("id, tag_groups!inner(board_id)")
+      .in("id", tagIds)
+      .eq("tag_groups.board_id", stencil.board_id);
+    if (error || tags?.length !== tagIds.length)
+      return { error: "Choose tags from this board." };
+  }
+  const { error } = await db
+    .from("card_stencils")
+    .update({
+      name,
+      title: title || null,
+      summary: summary || null,
+      body_md: body,
+      area: area || null,
+      effort: effort || null,
+    })
+    .eq("id", stencilId);
+  if (error)
+    return {
+      error:
+        error.code === "23505"
+          ? `This board already has a stencil called “${name}”.`
+          : error.message,
+    };
+
+  // Tags are replaced wholesale: the form carries the complete set. The two
+  // writes are not atomic; a failure between them leaves the stencil tagless,
+  // which the next save repairs. Accepted for board configuration.
+  const { error: cleared } = await db
+    .from("card_stencil_tags")
+    .delete()
+    .eq("stencil_id", stencilId);
+  if (cleared) return { error: cleared.message };
+  if (tagIds.length) {
+    const { error: added } = await db
+      .from("card_stencil_tags")
+      .insert(tagIds.map((tag_id) => ({ stencil_id: stencilId, tag_id })));
+    if (added) return { error: added.message };
+  }
+  revalidateStencils();
+  return null;
+}
+
+/** Deleting a stencil never touches cards stamped from it. */
+export async function deleteStencil(
+  _prev: StencilResult,
+  form: FormData,
+): Promise<StencilResult> {
+  const projectSlug = String(form.get("projectSlug") ?? "");
+  const gate = await requireBoardManager(projectSlug);
+  if ("error" in gate) return { error: gate.error };
+  const stencilId = String(form.get("stencilId") ?? "");
+  if (!stencilId || !(await stencilInProject(stencilId, gate.projectId)))
+    return { error: "Which stencil?" };
+  const db = await supabaseServer();
+  const { error } = await db.from("card_stencils").delete().eq("id", stencilId);
+  if (error) return { error: error.message };
+  revalidateStencils();
+  return null;
 }

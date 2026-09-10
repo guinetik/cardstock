@@ -78,6 +78,7 @@ import {
 } from "@/lib/lane-view";
 import { notificationPrefs } from "@/lib/notify";
 import { rankBetween } from "@/lib/rank";
+import { type CardStencil, stencilInitialValues } from "@/lib/stencils";
 import { forgottenAfterDays, timelineToday } from "@/lib/timeline";
 import type { BoardData, Card, Lane } from "@/lib/types";
 import { CardCreateDialog } from "./card-create-dialog";
@@ -202,6 +203,7 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
   const [laneDialog, setLaneDialog] = useState<LaneDialogMode>(null);
   const [laneAction, setLaneAction] = useState<LaneActionMode>(null);
   const [cardLane, setCardLane] = useState<Lane | null>(null);
+  const [cardStencil, setCardStencil] = useState<CardStencil | null>(null);
   // Cards left open on the desk. Per tab, on purpose: a pin is a reading aid.
   const [pinned, setPinned] = useState<ReadonlySet<string>>(() => new Set());
   const [findOpen, setFindOpen] = useState(false);
@@ -989,7 +991,13 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
         epics={data.epics}
         people={data.people}
         bodyTemplate={cardTemplate(data.board.settings)}
-        onClose={() => setCardLane(null)}
+        initialValues={
+          cardStencil ? stencilInitialValues(cardStencil) : undefined
+        }
+        onClose={() => {
+          setCardLane(null);
+          setCardStencil(null);
+        }}
         onCreate={addCard}
       />
       <CardReferenceScope cards={cards} scope="board" />
@@ -1065,7 +1073,11 @@ export function BoardView({ data, me }: { data: BoardData; me: Me }) {
                         !filters.showArchived &&
                         lane.id !== foundCard?.lane_id
                       }
-                      onAddCard={() => setCardLane(lane)}
+                      stencils={data.stencils}
+                      onAddCard={(stencil) => {
+                        setCardStencil(stencil ?? null);
+                        setCardLane(lane);
+                      }}
                       lanePinned={pinnedLane === lane.id}
                       onPinLane={(on) => pinLane(lane.id, on)}
                       manage={{

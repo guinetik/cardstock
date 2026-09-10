@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import { type Person, personLabel } from "@/lib/assignee";
 import { resolveBoardGates } from "@/lib/gates";
+import { loadStencils } from "@/lib/stencil-data";
 import { supabaseServer } from "@/lib/supabase/server";
 import { timelineMilestones } from "@/lib/timeline";
 import type { BoardData, Card, Epic, Lane, TagGroup } from "@/lib/types";
@@ -73,6 +74,7 @@ export async function loadBoard(
     { data: epics },
     people,
     { data: watches, error: watchError },
+    stencils,
   ] = await Promise.all([
     db
       .from("lanes")
@@ -114,6 +116,7 @@ export async function loadBoard(
       .from("card_watches")
       .select("card_id, cards!inner(board_id)")
       .eq("cards.board_id", board.id),
+    loadStencils(db, board.id),
   ]);
 
   if (watchError) throw new Error("Could not load card watches.");
@@ -157,5 +160,6 @@ export async function loadBoard(
       delivered_at: c.shipped_on ?? deliveredAt.get(c.id) ?? null,
     })) as Card[],
     people,
+    stencils,
   };
 }

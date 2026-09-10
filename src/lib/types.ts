@@ -1,5 +1,6 @@
 import type { Person } from "@/lib/assignee";
 import type { CardColor } from "./card-color";
+import type { CardStencil } from "./stencils";
 
 export type LaneKind =
   | "inbox"
@@ -114,6 +115,7 @@ export interface EpicSnapshot {
 }
 
 export interface BoardData {
+  stencils: CardStencil[];
   project: {
     id: string;
     slug: string;

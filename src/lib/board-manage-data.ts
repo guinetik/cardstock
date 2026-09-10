@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { loadStencils } from "@/lib/stencil-data";
+import type { CardStencil } from "@/lib/stencils";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { LaneKind } from "@/lib/types";
 
@@ -21,6 +23,7 @@ export interface BoardManageGroup {
 
 /** One board's identity, lanes, and taxonomy for the manage page. */
 export interface BoardManageData {
+  stencils: CardStencil[];
   project: { id: string; slug: string; name: string };
   board: {
     id: string;
@@ -65,14 +68,18 @@ export async function loadBoardManage(
   const board = data as BoardRow | null;
   if (!board) notFound();
 
-  const { data: groups } = await db
-    .from("tag_groups")
-    .select("id, key, name, position, tags(id, key, name)")
-    .eq("board_id", board.id)
-    .order("position");
+  const [{ data: groups }, stencils] = await Promise.all([
+    db
+      .from("tag_groups")
+      .select("id, key, name, position, tags(id, key, name)")
+      .eq("board_id", board.id)
+      .order("position"),
+    loadStencils(db, board.id),
+  ]);
 
   return {
     project,
+    stencils,
     board: {
       id: board.id,
       slug: board.slug,

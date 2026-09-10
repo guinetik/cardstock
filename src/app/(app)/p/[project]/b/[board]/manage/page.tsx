@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { CardTemplateEditor } from "@/app/(app)/p/[project]/card-template-editor";
 import { GatesEditor } from "@/app/(app)/p/[project]/gates-editor";
 import { ProjectSection } from "@/app/(app)/p/[project]/project-section";
+import { StencilsEditor } from "@/app/(app)/p/[project]/stencils-editor";
 import { TaxonomyEditor } from "@/app/(app)/p/[project]/taxonomy-editor";
 import { BoardBreadcrumbs } from "@/components/board-breadcrumbs";
 import { currentAccess } from "@/lib/access-server";
@@ -92,6 +93,18 @@ export default async function BoardManagePage(
             (data.board.settings ?? {}) as Record<string, unknown>,
           )}
           canEdit={access.canManage}
+        />
+      </ProjectSection>
+
+      <ProjectSection id="stencils-heading" title="stencils">
+        <StencilsEditor
+          boardId={data.board.id}
+          projectSlug={data.project.slug}
+          boardSlug={data.board.slug}
+          stencils={data.stencils}
+          groups={groups}
+          canEdit={access.canManage}
+          cardTemplate={cardTemplate(data.board.settings)}
         />
       </ProjectSection>
 

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { laneColorModifier } from "@/lib/card-color";
 import type { BoardGate } from "@/lib/gates";
+import type { CardStencil } from "@/lib/stencils";
 import type { Card, Lane, TagGroup } from "@/lib/types";
 import { CardItem, SortableCard } from "./card-item";
 
@@ -186,7 +187,8 @@ export function LaneColumn(props: {
   watchDays: number;
   gates: readonly BoardGate[];
   hiddenByDefault: boolean;
-  onAddCard: () => void;
+  onAddCard: (stencil?: CardStencil) => void;
+  stencils?: CardStencil[];
   lanePinned: boolean;
   onPinLane: (on: boolean) => void;
   manage?: {
@@ -268,17 +270,47 @@ export function LaneColumn(props: {
           </span>
         )}
         <span className="ml-auto flex items-center gap-0.5">
-          {lane.kind !== "archive" && (
-            <button
-              type="button"
-              className={TOOL}
-              title={`Add card to ${lane.name}`}
-              aria-label={`Add card to ${lane.name}`}
-              onClick={props.onAddCard}
-            >
-              <Plus size={14} />
-            </button>
-          )}
+          {lane.kind !== "archive" &&
+            (props.stencils?.length ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <button
+                      type="button"
+                      className={TOOL}
+                      title={`Add card to ${lane.name}`}
+                      aria-label={`Add card to ${lane.name}`}
+                    />
+                  }
+                >
+                  <Plus size={14} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64">
+                  <DropdownMenuItem onClick={() => props.onAddCard()}>
+                    Blank card
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {props.stencils.map((stencil) => (
+                    <DropdownMenuItem
+                      key={stencil.id}
+                      onClick={() => props.onAddCard(stencil)}
+                    >
+                      {stencil.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <button
+                type="button"
+                className={TOOL}
+                title={`Add card to ${lane.name}`}
+                aria-label={`Add card to ${lane.name}`}
+                onClick={() => props.onAddCard()}
+              >
+                <Plus size={14} />
+              </button>
+            ))}
           {props.manage && (
             <DropdownMenu>
               <DropdownMenuTrigger

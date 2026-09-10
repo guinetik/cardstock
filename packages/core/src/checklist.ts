@@ -49,7 +49,10 @@ function headings(markdown: string) {
   return found;
 }
 
-export function parseChecklist(markdown: string): ParsedChecklist {
+export function parseChecklist(
+  markdown: string,
+  { allowUnbulletedItems = false }: { allowUnbulletedItems?: boolean } = {},
+): ParsedChecklist {
   const all = headings(markdown);
   const sections = all.filter(
     (h) => h.level === 2 && h.title.toLowerCase() === "checklist",
@@ -65,7 +68,9 @@ export function parseChecklist(markdown: string): ParsedChecklist {
   const items: ChecklistItem[] = [];
   for (const line of markdown.slice(heading.end, end).split(/\r?\n/)) {
     if (!line.trim()) continue;
-    const item = /^[-*+] \[([ xX])\][ \t]+(.+?)\s*$/.exec(line);
+    const item =
+      /^[-*+] \[([ xX])\][ \t]+(.+?)\s*$/.exec(line) ??
+      (allowUnbulletedItems ? /^\[([ xX])\][ \t]+(.+?)\s*$/.exec(line) : null);
     if (!item || !item[2].trim())
       throw new Error(
         "Checklist must be a flat checklist with non-empty labels; move notes and nested items outside ## Checklist.",
