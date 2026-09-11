@@ -13,7 +13,7 @@ Delete only the named cards, using their saved identity baseline. The list file
 contains one positive card ID per line; blank lines and # comments are ignored.
 Preview first. Concurrent edits are conflicts: ours means delete, theirs means
 keep the hosted card. Missing tracker files never request a deletion.
-Local originals remain in .cardstock-<operation>.before backups beside the files.
+Local originals remain in .cardstock/ backups beside the recovery journal.
 Interrupted operations use cardstock sync --resume (or --abort).`;
 
 export async function deleteCards(args: string[], cwd: string) {

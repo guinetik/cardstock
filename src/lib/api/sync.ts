@@ -150,10 +150,15 @@ export async function syncSnapshot(
   boardId: string,
   project: string,
   board: string,
+  card?: string,
 ) {
-  const { data, error } = await db.rpc("cli_sync_snapshot_v4", {
-    p_board: boardId,
-  });
+  const { data, error } = await db.rpc(
+    card ? "cli_sync_card_snapshot" : "cli_sync_snapshot_v4",
+    {
+      p_board: boardId,
+      ...(card ? { p_external_id: card } : {}),
+    },
+  );
   if (error) throw new Error(`Sync snapshot unavailable: ${error.message}`);
   const raw = data as {
     tagGroups: { key: string; tags: { key: string }[] }[];

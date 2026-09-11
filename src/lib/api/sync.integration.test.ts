@@ -627,7 +627,7 @@ describe.skipIf(!local)("transactional CLI sync", () => {
         const handler =
           req.method === "POST"
             ? applyRoute
-            : req.url?.endsWith("/sync")
+            : new URL(request.url).pathname.endsWith("/sync")
               ? getSnapshot
               : getMetadata;
         const response = await handler(request, ctx);
@@ -690,6 +690,15 @@ describe.skipIf(!local)("transactional CLI sync", () => {
         );
       let result = await cli("baseline");
       expect(result.code, result.stdout).toBe(0);
+      for (const query of ["card=0", "card=abc", "card=1&card=2", "card="]) {
+        const response = await getSnapshot(
+          new Request(`http://localhost/sync?${query}`, {
+            headers: { authorization: `Bearer ${token.plaintext}` },
+          }),
+          ctx,
+        );
+        expect(response.status).toBe(422);
+      }
       const target = path.join(tracker, "4.md"),
         original = await readFile(target, "utf8");
       await writeFile(target, `${original}CLI edit.\n`);
@@ -697,8 +706,9 @@ describe.skipIf(!local)("transactional CLI sync", () => {
         (card) => card.externalId === "4",
       )!;
       await db.from("cards").update({ status: "held" }).eq("id", row.cardId);
-      result = await cli("sync");
+      result = await cli("sync", "--card", "4");
       expect(result.code, result.stdout).toBe(0);
+      expect(JSON.parse(result.stdout).card).toBe("4");
       expect(JSON.parse(result.stdout).clean).toBe(true);
       const changed = await readFile(target, "utf8");
       expect(changed).toContain("status: held");
@@ -711,7 +721,7 @@ describe.skipIf(!local)("transactional CLI sync", () => {
         .from("cards")
         .update({ audience: "internal", area: "A new web area" })
         .eq("id", row.cardId);
-      result = await cli("sync");
+      result = await cli("sync", "--card", "4");
       expect(result.code, result.stdout).toBe(0);
       expect(await readFile(target, "utf8")).toContain("audience: internal");
       expect(await readFile(target, "utf8")).toContain("area: A new web area");
@@ -852,6 +862,67 @@ describe.skipIf(!local)("transactional CLI sync", () => {
     expect(alive.cardId).toBe(first.cardId);
     expect(alive.markdown).toContain("Explicit survivor.");
     expect((await apply([deletion])).error?.code).toBe("23514");
+  });
+
+  test("single-card snapshots match full snapshots, include tombstones and enforce board scope", async () => {
+    expect((await apply([request(801), request(802)])).error).toBeNull();
+    const full = await snapshot();
+    const selected = await syncSnapshot(db, board, "test", "test", "801");
+    expect(selected.cards).toEqual(
+      full.cards.filter((card) => card.externalId === "801"),
+    );
+    expect(selected.tagGroups).toEqual(full.tagGroups);
+    const other = full.cards.find((card) => card.externalId === "802")!;
+    expect(
+      (
+        await apply([
+          request(
+            802,
+            sheet(802, "Unrelated change."),
+            other.cardId,
+            other.revision,
+          ),
+        ])
+      ).error,
+    ).toBeNull();
+    expect(await syncSnapshot(db, board, "test", "test", "801")).toEqual(
+      selected,
+    );
+    expect(
+      (await syncSnapshot(db, board, "test", "test", "99999")).cards,
+    ).toEqual([]);
+    expect(
+      (await syncSnapshot(db, randomUUID(), "test", "test", "801")).cards,
+    ).toEqual([]);
+    const card = selected.cards[0];
+    expect(
+      (
+        await apply([
+          {
+            ...request(801, card.markdown, card.cardId, card.revision),
+            deleted: true,
+          },
+        ])
+      ).error,
+    ).toBeNull();
+    const dead = await syncSnapshot(db, board, "test", "test", "801");
+    expect(dead.cards).toEqual(
+      (await snapshot()).cards.filter((item) => item.externalId === "801"),
+    );
+    expect(dead.cards[0].deleted).toBe(true);
+    const anon = createClient(
+      url!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false } },
+    );
+    expect(
+      (
+        await anon.rpc("cli_sync_card_snapshot", {
+          p_board: board,
+          p_external_id: "801",
+        })
+      ).error,
+    ).not.toBeNull();
   });
 
   test("administrator deletes capture tombstones, including cards with tags and links", async () => {

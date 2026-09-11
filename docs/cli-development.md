@@ -68,6 +68,15 @@ not force it for private repositories. See the
 
 ## Releases
 
+CLI 0.6.0 adds `sync --card <id>` and `status --card <id>`, with the selection
+saved in recovery journals. New backups are stored under
+`.cardstock/<scope>.json.backups/<operation>/`; old journals retain their original
+backup locations. The existing protocol-5 apply endpoint is unchanged.
+Deploy migration `20260921000000_cli_single_card_sync.sql` before the updated web
+server to enable `GET .../sync?card=<id>`. It computes projections/revisions only
+for the selected live card or tombstone while retaining board tag vocabulary.
+Older servers may ignore this query; the CLI also filters locally for compatibility.
+
 Commit the workspace setup before running the helper. It refuses a dirty tree.
 
 ```powershell

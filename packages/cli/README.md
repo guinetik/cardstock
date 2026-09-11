@@ -7,14 +7,25 @@ Apply requires a server deployed with sync protocol 5 and its database migration
 
 Requires Node.js 22 or newer. Bun is only needed by package developers.
 
-## Features in 0.5.0
+## Features in 0.6.0
+
+Sync one card with `cardstock sync --card 19`. Preview it with
+`cardstock sync --card 19 --dry-run` or `cardstock status --card 19`.
+Only that card is read locally, validated, uploaded/downloaded and checkpointed;
+unrelated changes and conflicts stay pending. JSON includes `card: "19"`, and
+`clean`/`remaining` describe only that card. Use plain `status` for the whole board.
+New recovery backups live under `.cardstock/` instead of beside Markdown files.
+
+Deploy migration `20260921000000_cli_single_card_sync.sql` and the updated server
+to fetch snapshots for just the selected card. Older protocol-5 servers still
+work, but return full board snapshots. The write protocol remains 5.
+
+## Previous releases
 
 Version 0.5.0 adds database-managed checklist items using `## Checklist` in Markdown.
 Checklist items sync independently of the card body; concurrent checklist changes require
 `--ours <id>:checklist` or `--theirs <id>:checklist`. A missing section preserves remote
 items on first contact; removing a tracked section clears the list.
-
-## Previous releases
 
 Version 0.4.0 adds explicit deletion and requires sync protocol 4. Version 0.3.0
 does not support deletion and uses sync protocol 3.
@@ -38,7 +49,7 @@ downgraded. See [Generic fields and audience](#generic-fields-and-audience) and
 ## Install and connect
 
 ```sh
-npm install -g @guinetik/cardstock-cli@0.5.0
+npm install -g @guinetik/cardstock-cli@0.6.0
 cardstock --version
 mkdir tracker
 cardstock init --project acme --board product --dir tracker --remote https://cardstock.example.com
@@ -58,7 +69,7 @@ before applying; never delete a baseline to force a result.
 Or run without a global installation (pin the same version for repeatable use):
 
 ```sh
-npx --yes @guinetik/cardstock-cli@0.5.0 --version
+npx --yes @guinetik/cardstock-cli@0.6.0 --version
 ```
 
 Licensed under GPL-3.0-only; see LICENSE.
@@ -77,6 +88,9 @@ specific tracker and `--remote <url>` overrides its configured server.
 | `status --json` or `sync --dry-run --json` | GET-only plan; no tracker/baseline changes. |
 | `baseline --json` | Save agreed state locally; no board writes. |
 | `sync --json` | Apply both directions and save verified baseline checkpoints. |
+| `sync --card 19 --dry-run --json` | Preview only #19; no writes. |
+| `sync --card 19 --json` | Sync only #19, preserving other cards and their baselines. |
+| `status --card 19 --json` | Check only #19; `clean` describes that card. |
 | `sync --ours 19:body --json` | Choose local content for that conflicting field only. |
 | `sync --theirs 19:frontmatter.priority --json` | Choose the board value for that conflicting field only. |
 | `delete 19 --dry-run --json` | Preview explicit deletion of only #19; no writes. |
@@ -117,6 +131,12 @@ Errors can occur after a remote commit: inspect the journal before retrying.
 An already-synced tracker checks one snapshot and returns without creating a
 journal or rewriting its baseline (`baseline.saved: false`). When cards change,
 only cards needing publication or a refreshed baseline enter the recovery journal.
+
+For one-card work, add `--card <id>` to the status, preview and sync commands above.
+It supports local-only cards, remote-only cards and deletion tombstones. A missing
+ID is an error; a missing local file still never requests deletion. Conflict
+choices must refer to that card. Resume uses the saved selection automatically;
+`--card` cannot be combined with `--resume`, `--abort`, `baseline` or `delete`.
 
 Keep `.cardstock/`, `*.md.cardstock-*.before` and `*.md.cardstock-*.tmp` out of Git.
 Never commit credentials or print tokens, never infer deletion from a missing card
@@ -359,7 +379,7 @@ or archived, not deleted. Agents must have user authorization for the selected I
 
 Each deleted identity stays reserved remotely with its last sheet snapshot and a
 new revision. Ordinary sync carries that deletion to other checkouts. Unchanged
-local copies move to `17.md.cardstock-<operation>.before`; locally edited copies
+local copies move to `.cardstock/<scope>.json.backups/<operation>/17.md.before`; locally edited copies
 produce an `existence` conflict. The JSON plan reports `delete_remote`,
 `delete_local`, or `restore_remote` explicitly; `existence` values are booleans
 (`false` means deleted). Never interpret an absent API card as a tombstone.
@@ -452,11 +472,17 @@ owners and live processes require inspection, never automatic lock stealing.
 
 Local files are staged and flushed, then published with an exclusive filesystem
 link so a file that appears concurrently is never overwritten. An existing file
-is first moved to its per-operation `.before` name and checked again. A crash in
+is first moved to its per-operation `.before` name and checked again. New backups
+are stored at `.cardstock/<scope>.json.backups/<operation>/<id>.md.before`, beside
+the baseline and journal. A crash in
 that brief filename gap is recoverable with `--resume`; file contents are never
-published partially. Displaced originals are retained to preserve writes from
+published partially. If tracker and configuration are on different filesystems,
+backups stay beside the Markdown files so the move remains atomic.
+Displaced originals are retained to preserve writes from
 editors holding an old file descriptor. These backups and journal archives contain
-Markdown, not credentials. Add these patterns to each tracker's ignore file:
+Markdown, not credentials. Journals from older releases still recover backups
+beside the original files; existing backups are not moved or deleted. Finish new
+operations with CLI 0.6.0 or newer. Add these patterns to each tracker's ignore file:
 
 ```gitignore
 .cardstock/
@@ -469,6 +495,11 @@ editor changes have been reconciled. Hard-link publication requires a filesystem
 that supports hard links; an unsupported filesystem stops with originals retained.
 File data is flushed; directory durability follows platform filesystem guarantees
 (Windows does not expose POSIX directory fsync through Node).
+
+`.before` files are intentional recovery copies, not sync inputs. They remain
+after success because an editor can still hold and write the displaced original.
+There is no automatic expiry. Once the operation is verified and editors have
+closed or reopened the affected files, obsolete backups can be removed manually.
 
 Apply exits 0 when the recorded operation completes without remaining conflicts,
 1 for plan/validation conflicts, and 2 for failed or interrupted execution. JSON

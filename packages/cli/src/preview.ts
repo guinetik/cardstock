@@ -25,14 +25,23 @@ import {
 import { loadConfig } from "./config";
 import { credentialFor } from "./credentials";
 import { readOptional } from "./sync-files";
+import {
+  loadSelectedCard,
+  parseCard,
+  requireSelectedCard,
+  selectBaseline,
+} from "./sync-selection";
 
-export const PREVIEW_HELP = `Usage: cardstock status [--config <file>] [--remote <url>] [--json]
-       cardstock sync [--dry-run] [--config <file>] [--remote <url>] [--json]
+export const PREVIEW_HELP = `Usage: cardstock status [--card <id>] [--config <file>] [--remote <url>] [--json]
+       cardstock sync [--card <id>] [--dry-run] [--config <file>] [--remote <url>] [--json]
                                [--ours <id>[:<field>]] [--theirs <id>[:<field>]]
        cardstock baseline [--config <file>] [--remote <url>] [--json]
 
 status and sync --dry-run read local files, the saved baseline and authenticated
 board snapshots. They write no files and make no changes to the board.
+--card limits reads, validation, changes and the reported clean state to one card.
+Other cards and their baselines are preserved. Resume remembers the selected card;
+do not pass --card with --resume, --abort or baseline.
 baseline explicitly saves agreed state in .cardstock/ beside the configuration;
 it refuses while local and remote cards differ. Missing baselines never pick a winner.
 ours means local Markdown; theirs means the hosted board. Selections resolve only
@@ -101,6 +110,7 @@ export async function preview(
     args,
     options: {
       config: { type: "string" },
+      card: { type: "string" },
       remote: { type: "string" },
       json: { type: "boolean" },
       "dry-run": { type: "boolean" },
@@ -108,6 +118,9 @@ export async function preview(
       theirs: { type: "string", multiple: true },
     },
   });
+  const selectedCard = parseCard(values.card);
+  if (selectedCard && (command === "baseline" || deleteIds))
+    throw new Error("--card is only valid for status and sync");
   if (
     command !== "sync" &&
     (values["dry-run"] !== undefined || values.ours || values.theirs)
@@ -157,6 +170,7 @@ export async function preview(
       );
   }
   const loadLocal = async () => {
+    if (selectedCard) return loadSelectedCard(tracker, selectedCard);
     const entries = await readdir(tracker, { withFileTypes: true });
     return Promise.all(
       entries
@@ -174,7 +188,17 @@ export async function preview(
   const url = `${remote}/api/v1/boards/${encodeURIComponent(config.project)}/${encodeURIComponent(config.board)}`;
   let snapshot: RemoteSnapshot | undefined;
   let metadata: RemoteMetadata | undefined;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  if (selectedCard) {
+    const raw = await getJson(
+      `${url}/sync?card=${selectedCard}`,
+      credential.token,
+    );
+    metadata = remoteMetadataSchema.parse(raw);
+    snapshot = remoteSnapshotSchema.parse(raw);
+    if (metadata.project !== config.project || metadata.board !== config.board)
+      throw new Error("Snapshot identity does not match the configured board.");
+  }
+  for (let attempt = 0; !selectedCard && attempt < 3; attempt++) {
     metadata = remoteMetadataSchema.parse(await getJson(url, credential.token));
     if (
       metadata.syncProtocol === 2 ||
@@ -221,6 +245,13 @@ export async function preview(
   }
   if (!snapshot || !metadata)
     throw new Error("No board snapshot was returned.");
+  if (selectedCard) {
+    snapshot.cards = snapshot.cards.filter(
+      (card) => card.externalId === selectedCard,
+    );
+    baseline = selectBaseline(baseline, selectedCard);
+    requireSelectedCard(selectedCard, local, snapshot.cards, baseline);
+  }
   if (deleteIds && metadata.syncProtocol !== 5)
     throw new Error(
       "Deletion requires sync protocol 5; deploy the deletion migration and server first",
@@ -287,6 +318,7 @@ export async function preview(
   const result = {
     ok: ok && (command !== "baseline" || saved),
     dryRun: command !== "baseline",
+    ...(selectedCard ? { card: selectedCard } : {}),
     remote,
     project: config.project,
     board: config.board,
@@ -297,6 +329,7 @@ export async function preview(
   };
   if (values.json) console.log(JSON.stringify(result, null, 2));
   else {
+    if (selectedCard) console.log(`Selected card: #${selectedCard}`);
     console.log(
       `${config.project}/${config.board}: ${plan.counts.uploads} upload, ${plan.counts.downloads} download, ${plan.counts.equal} equal changes, ${plan.counts.conflicts} conflicts.`,
     );

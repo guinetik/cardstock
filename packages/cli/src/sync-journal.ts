@@ -40,6 +40,11 @@ const journalSchema = z.strictObject({
   scope: baselineSchema.shape.scope,
   // Compare the exact original baseline when the executor is ready to advance it.
   baselineBefore: z.string().nullable(),
+  card: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .optional(),
+  backups: z.literal("state").optional(),
   entries: z.array(
     z.strictObject({
       intent: intentSchema,
@@ -57,6 +62,7 @@ function validate(value: unknown): SyncJournal {
     const { intent } = entry;
     if (
       seen.has(intent.externalId) ||
+      (journal.card !== undefined && intent.externalId !== journal.card) ||
       intent.file !== `${intent.externalId}.md` ||
       (intent.before.remote &&
         intent.before.remote.externalId !== intent.externalId) ||
@@ -99,6 +105,7 @@ export function prepareJournal(
   scope: SyncJournal["scope"],
   baselineBefore: string | null,
   intents: SyncIntent[],
+  options: Pick<SyncJournal, "card" | "backups"> = {},
 ): SyncJournal {
   return validate({
     version: 1,
@@ -106,6 +113,7 @@ export function prepareJournal(
     generation: 0,
     scope,
     baselineBefore,
+    ...options,
     entries: intents.map((intent) => ({ intent, phase: "prepared" })),
   });
 }
@@ -217,6 +225,8 @@ export class JournalStore {
       before.id !== after.id ||
       after.generation !== before.generation + 1 ||
       before.baselineBefore !== after.baselineBefore ||
+      before.card !== after.card ||
+      before.backups !== after.backups ||
       stableJson(before.entries.map((entry) => entry.intent)) !==
         stableJson(after.entries.map((entry) => entry.intent))
     )

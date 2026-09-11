@@ -7,9 +7,17 @@ import { loadBoardState } from "@/lib/import/board-state";
 import { planImport } from "@/lib/import/plan";
 import type { SheetFile } from "@/lib/import/types";
 
-export const GET = withToken(async ({ db, board, project }) =>
-  apiJson(await syncSnapshot(db, board.id, project.slug, board.slug)),
-);
+export const GET = withToken(async ({ db, board, project }, request) => {
+  const cards = new URL(request.url).searchParams.getAll("card");
+  if (cards.length > 1 || (cards.length === 1 && !/^[1-9]\d*$/.test(cards[0])))
+    return apiError(
+      "invalid_request",
+      "card must be a single positive card ID.",
+    );
+  return apiJson(
+    await syncSnapshot(db, board.id, project.slug, board.slug, cards[0]),
+  );
+});
 
 interface SyncCard {
   externalId: string;

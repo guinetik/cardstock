@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { link, readdir, unlink } from "node:fs/promises";
+import { link, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import {
@@ -22,6 +22,7 @@ import { credentialFor } from "./credentials";
 import { getJson, normalizeRemote } from "./preview";
 import {
   acquireSyncLock,
+  localBackupPath,
   publishLocal,
   readOptional,
   replaceState,
@@ -33,6 +34,12 @@ import {
   verifyLocal,
   verifyRemote,
 } from "./sync-journal";
+import {
+  loadSelectedCard,
+  parseCard,
+  requireSelectedCard,
+  selectBaseline,
+} from "./sync-selection";
 
 export async function executeSync(
   args: string[],
@@ -43,6 +50,7 @@ export async function executeSync(
     args,
     options: {
       config: { type: "string" },
+      card: { type: "string" },
       remote: { type: "string" },
       json: { type: "boolean" },
       ours: { type: "string", multiple: true },
@@ -53,11 +61,14 @@ export async function executeSync(
       "adopt-identities": { type: "boolean" },
     },
   });
+  let selectedCard = parseCard(values.card);
+  if (selectedCard && deleteIds)
+    throw new Error("--card cannot be combined with deletion");
   if (values.resume && values.abort)
     throw new Error("Choose --resume or --abort, not both");
   if (
     (values.resume || values.abort) &&
-    (values.ours || values.theirs || values["adopt-identities"])
+    (values.ours || values.theirs || values["adopt-identities"] || selectedCard)
   )
     throw new Error(
       "Recovery uses the recorded intent; do not supply new choices",
@@ -87,7 +98,9 @@ export async function executeSync(
     values["recover-lock"],
   );
   let journal: SyncJournal | null = null;
-  const report = (data: unknown) =>
+  const report = (data: unknown) => {
+    if (selectedCard && data && typeof data === "object")
+      data = { card: selectedCard, ...data };
     console.log(
       values.json
         ? JSON.stringify(data, null, 2)
@@ -95,12 +108,18 @@ export async function executeSync(
           ? data
           : JSON.stringify(data, null, 2),
     );
+  };
   try {
     if (values["recover-lock"]) {
       const releaseJournal = await acquireSyncLock(`${store.file}.lock`, true);
       await releaseJournal();
     }
     journal = await store.read();
+    if (journal) selectedCard = journal.card;
+    const backupDirectory = () =>
+      journal?.backups === "state"
+        ? `${baselinePath}.backups/${journal.id}`
+        : undefined;
     const archive = async (label: string) => {
       if (!journal) throw new Error("No pending sync");
       const target = `${store.file}.${journal.id}.${label}`;
@@ -134,13 +153,21 @@ export async function executeSync(
       );
     const url = `${remote}/api/v1/boards/${encodeURIComponent(config.project)}/${encodeURIComponent(config.board)}`;
     const snapshot = async () => {
-      const raw = await getJson(`${url}/sync`, credential.token);
+      const raw = await getJson(
+        `${url}/sync${selectedCard ? `?card=${selectedCard}` : ""}`,
+        credential.token,
+      );
       const meta = remoteMetadataSchema.parse(raw);
       if (meta.syncProtocol !== 5)
         throw new Error(
           "Remote lacks sync protocol 5 (checklist); deploy the server and checklist migration first",
         );
       const snap = remoteSnapshotSchema.parse(raw);
+      // Older protocol-5 servers may ignore the filter. Still limit the plan locally.
+      if (selectedCard)
+        snap.cards = snap.cards.filter(
+          (card) => card.externalId === selectedCard,
+        );
       if (
         meta.project !== config.project ||
         meta.board !== config.board ||
@@ -151,6 +178,7 @@ export async function executeSync(
       return { ...meta, cards: snap.cards };
     };
     const loadLocal = async () => {
+      if (selectedCard) return loadSelectedCard(tracker, selectedCard);
       const entries = await readdir(tracker, { withFileTypes: true });
       const files = entries
         .filter((entry) => /^\d+\.md$/.test(entry.name))
@@ -169,11 +197,13 @@ export async function executeSync(
     let observed = await snapshot();
     if (!journal) {
       const before = await readOptional(baselinePath);
-      const baseline =
+      const fullBaseline =
         before === null ? undefined : baselineSchema.parse(JSON.parse(before));
+      const baseline = selectBaseline(fullBaseline, selectedCard);
       if (baseline && stableJson(baseline.scope) !== stableJson(scope))
         throw new Error("Baseline belongs to another board or tracker");
       const local = await loadLocal();
+      requireSelectedCard(selectedCard, local, observed.cards, baseline);
       const input = {
         local,
         remote: observed.cards,
@@ -268,7 +298,18 @@ export async function executeSync(
         });
         return 0;
       }
-      journal = prepareJournal(scope, before, pending);
+      // Moving originals must stay on the same filesystem to preserve atomic
+      // rename and writes through an editor's existing file descriptor.
+      const [trackerStat, stateStat] = await Promise.all([
+        stat(tracker),
+        stat(path.dirname(baselinePath)),
+      ]);
+      journal = prepareJournal(scope, before, pending, {
+        ...(selectedCard ? { card: selectedCard } : {}),
+        ...(trackerStat.dev === stateStat.dev
+          ? { backups: "state" as const }
+          : {}),
+      });
       await store.create(journal);
     }
     const recoveryDiagnostics = validateTracker(
@@ -301,7 +342,11 @@ export async function executeSync(
     for (const { intent } of journal.entries) {
       const current = await readOptional(path.join(tracker, intent.file));
       const backup = await readOptional(
-        `${path.join(tracker, intent.file)}.cardstock-${journal.id}.before`,
+        localBackupPath(
+          path.join(tracker, intent.file),
+          journal.id,
+          backupDirectory(),
+        ),
       );
       if (
         current !== intent.before.local &&
@@ -460,6 +505,7 @@ export async function executeSync(
         intent.before.local,
         intent.after.local,
         journal.id,
+        backupDirectory(),
       );
       if (entry.phase !== "verified")
         await persist(
@@ -476,8 +522,9 @@ export async function executeSync(
     const final = planSync({
       local: await loadLocal(),
       remote: observed.cards,
-      baseline: baselineSchema.parse(
-        JSON.parse((await readOptional(baselinePath))!),
+      baseline: selectBaseline(
+        baselineSchema.parse(JSON.parse((await readOptional(baselinePath))!)),
+        selectedCard,
       ),
       vocabulary: observed,
       mapping: config.mapping,

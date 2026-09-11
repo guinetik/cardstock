@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   mkdir,
   mkdtemp,
+  open,
   readdir,
   readFile,
   rm,
@@ -10,6 +11,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { materializeSync, stableJson } from "@cardstock/core";
+import { localBackupPath, publishLocal } from "../src/sync-files";
 import {
   JournalStore,
   prepareJournal,
@@ -56,6 +58,28 @@ async function setup() {
 }
 
 describe("sync recovery journal", () => {
+  test("state backups retain editor writes to displaced files and reject unsafe resume", async () => {
+    const { directory, journal } = await setup();
+    const file = path.join(directory, "1.md");
+    const backups = path.join(directory, ".cardstock", "backups", journal.id);
+    await writeFile(file, sheet);
+    const editor = await open(file, "r+");
+    try {
+      await publishLocal(file, sheet, updated, journal.id, backups);
+      expect(await readFile(file, "utf8")).toBe(updated);
+      const backup = localBackupPath(file, journal.id, backups);
+      expect(await readFile(backup, "utf8")).toBe(sheet);
+      await editor.write("EDIT", 0, "utf8");
+      await editor.sync();
+      expect(await readFile(backup, "utf8")).toStartWith("EDIT");
+      await expect(
+        publishLocal(file, sheet, updated, journal.id, backups),
+      ).rejects.toThrow("editor changed");
+      expect(await readFile(file, "utf8")).toBe(updated);
+    } finally {
+      await editor.close();
+    }
+  });
   test("deletion verifies a matching tombstone and an absent file, never a live lookalike", () => {
     const card = {
       ...baseline.cards[0],

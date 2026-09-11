@@ -98,8 +98,9 @@ export async function publishLocal(
   before: string | null,
   after: string | null,
   operation: string,
+  backupDirectory?: string,
 ) {
-  const backup = `${file}.cardstock-${operation}.before`;
+  const backup = localBackupPath(file, operation, backupDirectory);
   const temp = `${file}.cardstock-${operation}.tmp`;
   const current = await readOptional(file);
   const saved = await readOptional(backup);
@@ -119,6 +120,7 @@ export async function publishLocal(
     if (current !== null) {
       if (saved !== null)
         throw new Error(`An original is already preserved at ${backup}`);
+      await mkdir(path.dirname(backup), { recursive: true });
       await rename(file, backup);
       if ((await readOptional(backup)) !== before) {
         try {
@@ -150,6 +152,7 @@ export async function publishLocal(
         `An original is already preserved at ${backup}; inspect before retrying`,
       );
     // rename cannot overwrite an existing backup created by this executor: the scope lock serializes runs.
+    await mkdir(path.dirname(backup), { recursive: true });
     await rename(file, backup);
     if ((await readOptional(backup)) !== before) {
       try {
@@ -182,4 +185,14 @@ export async function publishLocal(
     throw new Error(
       `Concurrent local edit detected; inspect ${file} and ${backup}`,
     );
+}
+
+export function localBackupPath(
+  file: string,
+  operation: string,
+  directory?: string,
+) {
+  return directory
+    ? path.join(directory, `${path.basename(file)}.before`)
+    : `${file}.cardstock-${operation}.before`;
 }

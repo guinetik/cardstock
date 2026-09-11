@@ -44,6 +44,7 @@ async function setup(t) {
     protocol: 5,
     drop: false,
     revision: 0,
+    ignoreCardFilter: false,
   };
   const snapshot = () => ({
     syncProtocol: state.protocol,
@@ -64,7 +65,15 @@ async function setup(t) {
       if (state.hook) await state.hook(req);
       res.setHeader("content-type", "application/json");
       if (req.method === "GET") {
-        res.end(JSON.stringify(snapshot()));
+        const result = snapshot();
+        const card = new URL(req.url, "http://localhost").searchParams.get(
+          "card",
+        );
+        if (card && !state.ignoreCardFilter)
+          result.cards = result.cards.filter(
+            (item) => item.externalId === card,
+          );
+        res.end(JSON.stringify(result));
         return;
       }
       const chunks = [];
@@ -347,10 +356,13 @@ test("delete previews named IDs only, preserves backups, and never recreates tom
   assert.equal(c.state.writes, 1);
   assert.equal(result.data.remaining.uploads, 1); // #2 was not silently uploaded.
   assert.equal((await readdir(c.tracker)).includes("1.md"), false);
-  const backup = (await readdir(c.tracker)).find(
-    (file) => file.startsWith("1.md.cardstock-") && file.endsWith(".before"),
+  const journal = JSON.parse(await readFile(result.data.journal, "utf8"));
+  const backup = path.join(`${baseline}.backups`, journal.id, "1.md.before");
+  assert.equal(await readFile(backup, "utf8"), sheet());
+  assert.equal(
+    (await readdir(c.tracker)).some((file) => file.endsWith(".before")),
+    false,
   );
-  assert.equal(await readFile(path.join(c.tracker, backup), "utf8"), sheet());
   assert.equal((await c.cli("delete", "1")).code, 0);
   assert.equal(c.state.writes, 1);
   await writeFile(path.join(c.tracker, "1.md"), sheet());
@@ -469,10 +481,10 @@ test("bulk deletion resumes after a per-card deletion checkpoint", async (t) => 
   assert.equal(resumed.code, 0, resumed.stdout);
   assert.equal(resumed.data.clean, true);
   assert.equal(c.state.writes, 2);
-  assert.equal(
-    (await readdir(c.tracker)).filter((file) => file.endsWith(".before"))
-      .length,
-    2,
+  const journal = JSON.parse(await readFile(resumed.data.journal, "utf8"));
+  assert.deepEqual(
+    (await readdir(path.join(`${baseline}.backups`, journal.id))).sort(),
+    ["1.md.before", "2.md.before"],
   );
 });
 
@@ -692,6 +704,9 @@ test("resume recovers a file moved to its before-image without losing the origin
   c.state.drop = true;
   const failed = await c.cli("sync"),
     journal = JSON.parse(await readFile(failed.data.journal, "utf8"));
+  // Simulate a journal written by an older CLI, which kept backups beside cards.
+  delete journal.backups;
+  await writeFile(failed.data.journal, JSON.stringify(journal));
   await rename(
     path.join(c.tracker, "1.md"),
     `${path.join(c.tracker, "1.md")}.cardstock-${journal.id}.before`,
@@ -774,7 +789,161 @@ test("a killed CLI resumes from a per-card local/baseline checkpoint", async (t)
     await readFile(path.join(c.tracker, "2.md"), "utf8"),
     /Remote checkpoint/,
   );
-  assert.ok(
+  assert.equal(
     (await readdir(c.tracker)).some((file) => file.endsWith(".before")),
+    false,
+  );
+  const journal = JSON.parse(await readFile(resumed.data.journal, "utf8"));
+  assert.equal(
+    await readFile(
+      path.join(
+        `${resumed.data.baseline.path}.backups`,
+        journal.id,
+        "2.md.before",
+      ),
+      "utf8",
+    ),
+    sheet(2),
+  );
+});
+
+test("single-card preview and apply isolate unrelated edits, conflicts and invalid Markdown", async (t) => {
+  const c = await setup(t);
+  await addAgreedCards(c, 4);
+  const baseline = await c.baseline();
+  const before = JSON.parse(await readFile(baseline, "utf8"));
+  await writeFile(path.join(c.tracker, "1.md"), `${sheet()}Selected upload.\n`);
+  await writeFile(
+    path.join(c.tracker, "2.md"),
+    `${sheet(2)}Unrelated local edit.\n`,
+  );
+  c.state.cards[1].markdown = `${sheet(2)}Unrelated remote edit.\n`;
+  await writeFile(path.join(c.tracker, "3.md"), "invalid yaml and Markdown");
+  c.state.cards[3].markdown = "invalid remote Markdown";
+  c.state.requests.length = 0;
+  const preview = await c.cli("sync", "--card", "1", "--dry-run");
+  assert.equal(preview.code, 0, preview.stdout);
+  assert.equal(preview.data.card, "1");
+  assert.deepEqual(
+    preview.data.cards.map((card) => card.externalId),
+    ["1"],
+  );
+  assert.deepEqual(c.state.requests, [
+    "GET /api/v1/boards/demo/test/sync?card=1",
+  ]);
+  assert.deepEqual(JSON.parse(await readFile(baseline, "utf8")), before);
+  const result = await c.cli("sync", "--card", "1");
+  assert.equal(result.code, 0, result.stdout);
+  assert.equal(result.data.clean, true);
+  assert.equal(result.data.card, "1");
+  assert.deepEqual(result.data.applied, ["1"]);
+  assert.equal(c.state.writes, 1);
+  const after = JSON.parse(await readFile(baseline, "utf8"));
+  assert.deepEqual(after.cards.slice(1), before.cards.slice(1));
+  assert.equal(
+    await readFile(path.join(c.tracker, "2.md"), "utf8"),
+    `${sheet(2)}Unrelated local edit.\n`,
+  );
+  assert.equal(
+    await readFile(path.join(c.tracker, "3.md"), "utf8"),
+    "invalid yaml and Markdown",
+  );
+  assert.ok(
+    c.state.requests
+      .filter((req) => req.startsWith("GET"))
+      .every((req) => req.endsWith("?card=1")),
+  );
+  const status = await c.cli("status", "--card", "1");
+  assert.equal(status.data.clean, true, status.stdout);
+  c.state.requests.length = 0;
+  const noop = await c.cli("sync", "--card", "1");
+  assert.equal(noop.data.baseline.saved, false, noop.stdout);
+  assert.deepEqual(c.state.requests, [
+    "GET /api/v1/boards/demo/test/sync?card=1",
+  ]);
+});
+
+test("single-card download and first contact preserve other baseline entries and retained originals", async (t) => {
+  const c = await setup(t);
+  await addAgreedCards(c, 2);
+  const result = await c.cli("sync", "--card", "2");
+  assert.equal(result.code, 0, result.stdout);
+  assert.deepEqual(
+    JSON.parse(await readFile(result.data.baseline.path, "utf8")).cards.map(
+      (card) => card.externalId,
+    ),
+    ["2"],
+  );
+  c.state.cards[0].markdown = `${sheet()}Downloaded change.\n`;
+  const conflict = await c.cli("sync", "--card", "1");
+  assert.equal(conflict.code, 1, conflict.stdout);
+  const downloaded = await c.cli("sync", "--card", "1", "--theirs", "1:body");
+  assert.equal(downloaded.code, 0, downloaded.stdout);
+  assert.match(
+    await readFile(path.join(c.tracker, "1.md"), "utf8"),
+    /Downloaded change/,
+  );
+  const journal = JSON.parse(await readFile(downloaded.data.journal, "utf8"));
+  const backup = path.join(
+    `${downloaded.data.baseline.path}.backups`,
+    journal.id,
+    "1.md.before",
+  );
+  assert.equal(await readFile(backup, "utf8"), sheet());
+  assert.deepEqual((await readdir(c.tracker)).sort(), ["1.md", "2.md"]);
+});
+
+test("single-card create and missing ID handling never select other cards", async (t) => {
+  const c = await setup(t);
+  await writeFile(path.join(c.tracker, "2.md"), sheet(2));
+  assert.equal((await c.cli("sync", "--card", "2")).code, 0);
+  c.state.cards.push({
+    externalId: "3",
+    cardId: randomUUID(),
+    revision: "r3",
+    markdown: sheet(3),
+  });
+  assert.equal((await c.cli("sync", "--card", "3")).code, 0);
+  assert.equal(await readFile(path.join(c.tracker, "3.md"), "utf8"), sheet(3));
+  for (const args of [
+    ["sync", "--card", "99"],
+    ["status", "--card", "99"],
+    ["sync", "--card", "../1"],
+    ["sync", "--card", "01"],
+    ["baseline", "--card", "1"],
+    ["sync", "--card", "1", "--resume"],
+    ["sync", "--card", "1", "--abort"],
+  ]) {
+    const failed = await c.cli(...args);
+    assert.equal(failed.code, 2, failed.stdout);
+  }
+});
+
+test("single-card resume retains selection and retry ID on servers that ignore filtering", async (t) => {
+  const c = await setup(t);
+  await addAgreedCards(c, 2);
+  await c.baseline();
+  c.state.ignoreCardFilter = true;
+  await writeFile(path.join(c.tracker, "1.md"), `${sheet()}Selected upload.\n`);
+  await writeFile(path.join(c.tracker, "2.md"), "unrelated invalid file");
+  c.state.drop = true;
+  const failed = await c.cli("sync", "--card", "1");
+  assert.equal(failed.code, 2, failed.stdout);
+  const journal = JSON.parse(await readFile(failed.data.journal, "utf8"));
+  assert.equal(journal.card, "1");
+  assert.deepEqual(
+    journal.entries.map((entry) => entry.intent.externalId),
+    ["1"],
+  );
+  c.state.requests.length = 0;
+  const resumed = await c.cli("sync", "--resume");
+  assert.equal(resumed.code, 0, resumed.stdout);
+  assert.equal(resumed.data.card, "1");
+  assert.equal(c.state.receipts.size, 1);
+  assert.equal(c.state.writes, 1);
+  assert.ok(
+    c.state.requests
+      .filter((req) => req.startsWith("GET"))
+      .every((req) => req.endsWith("?card=1")),
   );
 });
